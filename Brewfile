@@ -125,6 +125,7 @@ brew 'ssh-copy-id'
 brew 'getxbook' # ebook downloader
 brew 'gist' # gist uploader
 brew 'awscli' # aws cli
+brew 'cheat' # short man page for commands
 
 # Libraries
 brew 'readline' # used by bash, postgresql, r, sqlite, tig, and more
