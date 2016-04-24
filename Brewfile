@@ -124,6 +124,7 @@ brew 'docker-machine'
 brew 'ssh-copy-id'
 brew 'getxbook' # ebook downloader
 brew 'gist' # gist uploader
+brew 'awscli' # aws cli
 
 # Libraries
 brew 'readline' # used by bash, postgresql, r, sqlite, tig, and more
