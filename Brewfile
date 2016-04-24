@@ -20,7 +20,6 @@ cask_args appdir: '/Applications'
 # Get started faster
 cask 'google-chrome-beta'
 cask 'iterm2-nightly' # terminal emulator
-cask 'sublime-text3' # code editor
 cask 'flash' # flash player plugin (pkg installer)
 
 # Install Essential Brew and Brew Casks
@@ -31,6 +30,9 @@ brew 'openssl'
 
 # Python Anaconda 3
 cask 'anaconda' unless File.directory?(ENV['HOME'] + '/anaconda3')
+
+cask 'sublime-text3' # code editor
+cask 'pycharm-ce'
 
 # -------------------------------------
 
