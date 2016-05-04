@@ -177,6 +177,7 @@ brew 'gdbm' # GNU database manager
 
 # Image, Music, Video Libararies
 brew 'homebrew/versions/openjpeg21'
+brew 'ffmpeg'
 brew 'sdl'
 brew 'sdl_image'
 brew 'sdl_mixer'
