@@ -262,7 +262,7 @@ cask 'gephi'
 cask 'pycharm'
 
 # Heroku
-brew 'heroku-toolbelt'
+brew 'heroku'
 # Shells
 brew 'bash'
 brew 'bash-completion'
