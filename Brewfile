@@ -130,6 +130,7 @@ brew 'awscli' # aws cli
 brew 'cheat' # short man page for commands
 
 # Libraries
+brew 'pandoc'
 brew 'readline' # used by bash, postgresql, r, sqlite, tig, and more
 brew 'xz' # general purpose data compresson, needed by ag, r, and imagemagick
 brew 'qt' # qt gui framework
