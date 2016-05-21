@@ -152,6 +152,7 @@ brew 'htop-osx'
 brew 'most'
 brew 'ncdu' # its like daisy disk for the command line
 brew 'pidof'
+brew 'sl'
 
 # Libraries
 brew 'pandoc'
