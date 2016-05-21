@@ -241,6 +241,7 @@ brew 'little-cms2'
 brew 'harfbuzz'
 brew 'openexr' # OpenEXR ILM Base libraries (high dynamic-range image file format)
 brew 'imagemagick', args: ['with-fontconfig', 'with-ghostscript', 'with-jp2', 'with-librsvg', 'with-libtiff', 'with-webp']
+brew 'graphicsmagick'
 
 # Languages, Compilers, and SDKs
 brew 'gcc'
