@@ -137,6 +137,7 @@ brew 'ssh-copy-id'
 brew 'getxbook' # ebook downloader
 brew 'gist' # gist uploader
 brew 'awscli' # aws cli
+brew 'ec2-api-tools'
 brew 'cheat' # short man page for commands
 brew 'docker-clean'
 brew 'dos2unix'
@@ -146,6 +147,8 @@ brew 'cowsay'
 brew 'fortune'
 brew 'archey'
 brew 'tor'
+brew 'jsonpp'
+brew 'htop-osx'
 
 # Libraries
 brew 'pandoc'
@@ -242,6 +245,7 @@ cask 'android-studio' # gui for android development
 brew 'r'
 brew 'node'
 cask 'julia'
+brew 'scala'
 brew 'maven' # java
 brew 'gradle' # java
 brew 'lua'
