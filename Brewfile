@@ -149,6 +149,8 @@ brew 'archey'
 brew 'tor'
 brew 'jsonpp'
 brew 'htop-osx'
+brew 'most'
+brew 'ncdu' # its like daisy disk for the command line
 
 # Libraries
 brew 'pandoc'
@@ -249,9 +251,13 @@ brew 'scala'
 brew 'maven' # java
 brew 'gradle' # java
 brew 'lua'
+brew 'leiningen' # clojure
+brew 'octave' # matlab-esque
+
+brew 'hdf5'
 brew 'hadoop'
 brew 'apache-spark'
-brew 'leiningen' # clojure
+
 
 brew 'pyenv'
 brew 'pyenv-which-ext'
