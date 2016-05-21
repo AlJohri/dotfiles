@@ -30,6 +30,13 @@ brew 'openssl'
 
 # Python Anaconda 3
 cask 'anaconda' unless File.directory?(ENV['HOME'] + '/anaconda3')
+cask 'charles'
+cask 'gitter'
+cask 'skitch'
+cask 'teamviewer'
+cask 'textual'
+cask 'colloquy'
+cask 'balsamiq-mockups'
 
 cask 'sublime-text3' # code editor
 cask 'pycharm-ce'
@@ -59,6 +66,9 @@ cask 'caffeine' # prevent computer from going to sleep
 cask 'fluid'
 cask 'flip4mac' # play windows media on mac (pkg installer)
 cask 'transmission'
+cask 'bartender'
+cask 'calibre'
+cask 'android-file-transfer'
 
 cask 'osxfuse'
 cask 'sshfs'
@@ -128,6 +138,14 @@ brew 'getxbook' # ebook downloader
 brew 'gist' # gist uploader
 brew 'awscli' # aws cli
 brew 'cheat' # short man page for commands
+brew 'docker-clean'
+brew 'dos2unix'
+brew 'jq'
+brew 'mackup'
+brew 'cowsay'
+brew 'fortune'
+brew 'archey'
+brew 'tor'
 
 # Libraries
 brew 'pandoc'
@@ -224,6 +242,12 @@ cask 'android-studio' # gui for android development
 brew 'r'
 brew 'node'
 cask 'julia'
+brew 'maven' # java
+brew 'gradle' # java
+brew 'lua'
+brew 'hadoop'
+brew 'apache-spark'
+brew 'leiningen' # clojure
 
 brew 'pyenv'
 brew 'pyenv-which-ext'
@@ -291,4 +315,5 @@ brew 'solr', restart_service: :changed # document search based on lucene
 brew 'memcached', restart_service: :changed
 brew 'rabbitmq', restart_service: :changed # message queue / broker
 brew 'rabbitmq-c' # message queue / broker
+brew 'zookeeper', restart_service: :changed # message queue
 brew 'kafka', restart_service: :changed # message queue
