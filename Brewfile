@@ -151,6 +151,7 @@ brew 'jsonpp'
 brew 'htop-osx'
 brew 'most'
 brew 'ncdu' # its like daisy disk for the command line
+brew 'pidof'
 
 # Libraries
 brew 'pandoc'
@@ -182,6 +183,7 @@ brew 'libmpc' # C library for the arithmetic of high precision complex numbers
 brew 'gmp' # GNU multiple precision arithmetic library
 brew 'mpfr' # C library for multiple-precision floating-point computations
 brew 'isl' # Integer Set Library for the polyhedral model
+brew 'fftw' # C routines to compute the Discrete Fourier Transform
 brew 'berkeley-db' # High performance key/value database, dependency for jack
 brew 'eigen'
 brew 'icu4c'
@@ -198,6 +200,7 @@ brew 'ilmbase'
 brew 'popt' # Library like getopt(3) with a number of enhancements
 brew 'gobject-introspection'
 brew 'gdbm' # GNU database manager
+brew 'xvid' # high-quality MPEG-4 video library
 
 # Image, Music, Video Libararies
 brew 'homebrew/versions/openjpeg21'
