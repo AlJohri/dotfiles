@@ -82,6 +82,7 @@ cask 'ccleaner'
 cask 'paintbrush' # another ms paint
 cask 'mac-linux-usb-loader' # create mac bootable usb flash drives (and potentially windows as well if uefi?)
 cask 'unetbootin' # create windows bootable usb flash drives (and potentially mac as well if uefi?)
+cask 'gfxcardstatus'
 
 # [Brew Cask] Quick Look Plugins
 # https://github.com/sindresorhus/quick-look-plugins
