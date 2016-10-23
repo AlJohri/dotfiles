@@ -29,7 +29,7 @@ cask 'xquartz' # (pkg installer)
 brew 'openssl'
 
 # Python Anaconda 3
-cask 'anaconda' unless File.directory?(ENV['HOME'] + '/anaconda3')
+# cask 'anaconda' unless File.directory?(ENV['HOME'] + '/anaconda3')
 cask 'charles'
 cask 'gitter'
 cask 'skitch'
@@ -68,21 +68,19 @@ cask 'flip4mac' # play windows media on mac (pkg installer)
 cask 'transmission'
 cask 'bartender'
 cask 'calibre'
-cask 'android-file-transfer'
+cask 'licecap' # gif creator
 
-cask 'osxfuse'
-cask 'sshfs'
+# cask 'osxfuse'
+# cask 'sshfs'
 
 # [Brew Cask] Non-essential Apps
-cask 'airserver'
-cask 'licecap' # gif creator
-cask 'macdown' # markdown editor
-cask 'audacity' # audio recording
-cask 'ccleaner'
-cask 'paintbrush' # another ms paint
-cask 'mac-linux-usb-loader' # create mac bootable usb flash drives (and potentially windows as well if uefi?)
-cask 'unetbootin' # create windows bootable usb flash drives (and potentially mac as well if uefi?)
-cask 'gfxcardstatus'
+# cask 'airserver'
+# cask 'macdown' # markdown editor
+# cask 'audacity' # audio recording
+# cask 'ccleaner'
+# cask 'paintbrush' # another ms paint
+# cask 'mac-linux-usb-loader' # create mac bootable usb flash drives (and potentially windows as well if uefi?)
+# cask 'unetbootin' # create windows bootable usb flash drives (and potentially mac as well if uefi?)
 
 # [Brew Cask] Quick Look Plugins
 # https://github.com/sindresorhus/quick-look-plugins
@@ -264,10 +262,11 @@ brew 'hdf5'
 brew 'hadoop'
 brew 'apache-spark'
 
-
-brew 'pyenv'
-brew 'pyenv-which-ext'
-brew 'pyenv-virtualenvwrapper'
+brew 'python'
+brew 'python3'
+# brew 'pyenv'
+# brew 'pyenv-which-ext'
+# brew 'pyenv-virtualenvwrapper'
 
 brew 'ruby-build'
 brew 'rbenv'
