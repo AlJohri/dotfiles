@@ -9,10 +9,18 @@ tap 'homebrew/dupes' # apps that are all provided b OS X
 tap 'homebrew/science' # scientific packages
 tap 'homebrew/binary' # closed-source packages with only binaries
 
+brew 'openssl'
+
 brew 'python'
 brew 'python3'
+brew 'pyenv'
+brew 'ruby-build'
+brew 'rbenv'
+brew 'node'
+brew 'nodenv'
 cask 'iterm2-nightly' # terminal emulator
 brew 'openssl'
 cask 'sublime-text'
 cask 'atom'
-
+brew 'the_silver_searcher'
+brew 'tree'
