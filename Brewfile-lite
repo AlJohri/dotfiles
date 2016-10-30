@@ -1,0 +1,18 @@
+cask_args appdir: '/Applications'
+tap 'homebrew/core'
+tap 'caskroom/cask' # gui apps
+tap 'caskroom/versions' # multiple versions of existing gui applications
+tap 'caskroom/fonts' # fonts
+tap 'homebrew/services' # brew services command
+tap 'homebrew/versions' # multiple versions of existing packages
+tap 'homebrew/dupes' # apps that are all provided b OS X
+tap 'homebrew/science' # scientific packages
+tap 'homebrew/binary' # closed-source packages with only binaries
+
+brew 'python'
+brew 'python3'
+cask 'iterm2-nightly' # terminal emulator
+brew 'openssl'
+cask 'sublime-text'
+cask 'atom'
+
