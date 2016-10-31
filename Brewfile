@@ -10,6 +10,7 @@ tap 'homebrew/dupes'
 tap 'homebrew/science'
 tap 'homebrew/binary'
 
+brew 'awscli'
 brew 'mas'
 brew 'node'
 brew 'nodenv'
