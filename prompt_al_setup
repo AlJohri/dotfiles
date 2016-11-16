@@ -1,45 +1,4 @@
-# From https://github.com/sorin-ionescu/prezto/blob/master/modules/prompt/functions/prompt_cloud_setup
-
-#
-# A minimal two-color theme.
-#
-# Authors:
-#   Kevin Laude <nerfyoda@gmail.com>
-#
-# Features:
-#   - One line, left aligned.
-#   - The prompt is prefixed by a character sequence of your choice.
-#   - Only displays the current directory instead of the full path.
-#   - Displays the current branch when in a git project (this requires loading
-#     the git module before prompt in ~/.zpreztorc).
-#   - Displays a character at the end of the prompt when in a git project with
-#     "dirty" files.
-#
-# Usage:
-#   This prompt's prefix symbol and colors are customizable:
-#     prompt cloud [<symbol>] [<color1>] [<color2>]
-#
-#   In ~/.zpreztorc:
-#     zstyle ':prezto:module:prompt' theme 'cloud' \
-#       ['<symbol>'] \
-#       ['<color1>'] \
-#       ['<color2>']
-#
-#   If these options are not provided, the symbol defaults to "☁" with colors
-#   cyan and green.
-#
-# Screenshots:
-#   http://i.imgur.com/mJCZ8rE.png
-#
-# Note:
-#   This is a port of the oh-my-zsh cloud theme, originally written by Phillip
-#   Ridlen <p@rdln.net> and Mark Drago <markdrago@gmail.com>
-#
-
-# Load dependencies.
-pmodload 'helper'
-
-function prompt_cloud_precmd {
+function prompt_al_precmd {
   setopt LOCAL_OPTIONS
   unsetopt XTRACE KSH_ARRAYS
 
@@ -49,7 +8,7 @@ function prompt_cloud_precmd {
   fi
 }
 
-function prompt_cloud_help {
+function prompt_al_help {
   cat <<EOT
 This prompt's prefix symbol and colors are customizable:
 
@@ -63,7 +22,7 @@ and green.
 EOT
 }
 
-function prompt_cloud_preview {
+function prompt_al_preview {
   if (( $# > 0 )); then
     prompt_preview_theme 'cloud' "$@"
   else
@@ -75,7 +34,7 @@ function prompt_cloud_preview {
   fi
 }
 
-function prompt_cloud_setup {
+function prompt_al_setup {
   setopt LOCAL_OPTIONS
   unsetopt XTRACE KSH_ARRAYS
   prompt_opts=(cr percent subst)
@@ -104,7 +63,7 @@ function prompt_cloud_setup {
   autoload -Uz add-zsh-hook
 
   # Add hook for calling git-info before each command.
-  add-zsh-hook precmd prompt_cloud_precmd
+  add-zsh-hook precmd prompt_al_precmd
 
   # Set git-info parameters.
   zstyle ':prezto:module:git:info' verbose 'yes'
@@ -115,9 +74,11 @@ function prompt_cloud_setup {
     'prompt' '%b%C%D' \
     'rprompt' ''
 
+  ret_status="%(?,%B%F{green}${prefix}%f%b,%B%F{red}${prefix})%f%b"
+
   # Define prompts.
-  PROMPT='%B%F{$primary_color}${prefix}%f%b  %B%F{$secondary_color}%c%f%b ${git_info:+${(e)git_info[prompt]}} '
+  PROMPT='$ret_status  %B%F{$secondary_color}%c%f%b ${git_info:+${(e)git_info[prompt]}} '
   RPROMPT=''
 }
 
-prompt_cloud_setup "$@"
+prompt_al_setup "$@"
