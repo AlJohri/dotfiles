@@ -47,33 +47,16 @@ quiet_which() {
 add_to_path_start "/usr/local/bin"
 add_to_path_start "/usr/local/sbin"
 
-eval "$(hub alias -s)"
-eval "$(pyenv init -)"
-eval "$(rbenv init -)"
-eval "$(nodenv init -)"
-
-# Run rbenv if it exists
-quiet_which rbenv && add_to_path_start "$(rbenv root)/shims"
+quiet_which pyenv && eval "$(pyenv init -)"
+quiet_which rbenv && eval "$(rbenv init -)"
+quiet_which nodenv && eval "$(nodenv init -)"
 
 # Aliases
-alias mkdir="mkdir -vp"
-alias df="df -H"
-alias rm="rm -iv"
-alias mv="mv -iv"
-alias zmv="noglob zmv -vW"
-alias cp="cp -irv"
-alias du="du -sh"
-alias make="nice make"
-alias less="less --ignore-case --raw-control-chars"
-alias rsync="rsync --partial --progress --human-readable --compress"
-alias rake="noglob rake"
-alias be="noglob bundle exec"
-alias gist="gist --open --copy"
-alias svn="svn-git.sh"
-alias sha256="shasum -a 256"
-alias ack="ag"
-alias z="zeus"
-alias zt="zeus test"
+alias git=hub
+alias cp='cp -irv'
+alias rm='rm -iv'
+alias mv='mv -iv'
+alias gst='git status'
 
 # Platform-specific stuff
 quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"
