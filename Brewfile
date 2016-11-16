@@ -22,6 +22,7 @@ brew 'go'
 brew 'heroku'
 brew 'hub'
 brew 'jq'
+brew 'jsonpp'
 brew 'mas'
 brew 'lua' if ENV['BREWFILE_COMPLETE']
 brew 'mercurial'
