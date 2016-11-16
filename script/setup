@@ -47,8 +47,10 @@ done
 brew bundle --global
 
 # use global python until you actually have to use pyenv
+eval "$(pyenv init -)"
 pyenv install 2.7.12 3.5.2
 pyenv global system
 
+eval "$(rbenv init -)"
 rbenv install 2.2.2 2.3.1
 rbenv global 2.2.2
