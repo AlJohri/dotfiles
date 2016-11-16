@@ -47,17 +47,17 @@ done
 brew bundle --global
 
 eval "$(pyenv init -)"
-pyenv install 2.7.12
-pyenv install 3.5.2
+pyenv install --skip-existing 2.7.12
+pyenv install --skip-existing 3.5.2
 pyenv global 2.7.12 3.5.2
 
 eval "$(rbenv init -)"
-rbenv install 2.2.2
-rbenv install 2.3.1
+rbenv install --skip-existing 2.2.2
+rbenv install --skip-existing 2.3.1
 rbenv global 2.2.2
 
 eval "$(nodenv init -)"
-nodenv install 4.6.2
-nodenv install 6.9.1
-nodenv install 7.1.0
+nodenv install --skip-existing 4.6.2
+nodenv install --skip-existing 6.9.1
+nodenv install --skip-existing 7.1.0
 nodenv global 7.1.0
