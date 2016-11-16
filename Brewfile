@@ -41,7 +41,6 @@ brew 'rbenv-default-gems'
 brew 'redis', restart_service: :changed
 brew 'ripgrep'
 brew 'ruby-build'
-brew 'scala'
 brew 'sl'
 brew 'svn'
 brew 'tig'
