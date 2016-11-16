@@ -15,16 +15,13 @@ brew 'cheat'
 brew 'colordiff'
 brew 'docker-clean'
 brew 'dos2unix'
-brew 'erlang' if ENV['BREWFILE_COMPLETE']
 brew 'gist'
-brew 'ghc' if ENV['BREWFILE_COMPLETE']
 brew 'go'
 brew 'heroku'
 brew 'hub'
 brew 'jq'
 brew 'jsonpp'
 brew 'mas'
-brew 'lua' if ENV['BREWFILE_COMPLETE']
 brew 'mercurial'
 brew 'mongodb', restart_service: :changed
 brew 'most'
@@ -78,6 +75,8 @@ if ENV['BREWFILE_COMPLETE']
 	brew 'node'
 	cask 'julia'
 	brew 'scala'
+	brew 'ghc'
+	brew 'erlang'
 	brew 'maven' # java
 	brew 'gradle' # java
 	brew 'lua'
