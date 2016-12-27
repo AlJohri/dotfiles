@@ -50,6 +50,7 @@ add_to_path_start "/usr/local/sbin"
 quiet_which pyenv && eval "$(pyenv init -)"
 quiet_which rbenv && eval "$(rbenv init -)"
 quiet_which nodenv && eval "$(nodenv init -)"
+pyenv virtualenvwrapper
 
 # Aliases
 alias git=hub
@@ -65,6 +66,7 @@ if [ $OSX ]
 then
   export GREP_OPTIONS="--color=auto"
   export CLICOLOR=1
+  export LSCOLORS=GxFxCxDxBxegedabagaced
   export VAGRANT_DEFAULT_PROVIDER="vmware_fusion"
   if quiet_which diff-highlight
   then
