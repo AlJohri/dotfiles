@@ -48,14 +48,14 @@ brew bundle --global
 
 eval "$(pyenv init -)"
 pyenv install --skip-existing 2.7.12
-pyenv install --skip-existing 3.5.2
-pyenv global 2.7.12 3.5.2
+pyenv install --skip-existing 3.6.0
+pyenv global 2.7.12 3.6.0
 
 mkdir -p ~/Library/Python/2.7/lib/python/site-packages
 echo "$(brew --prefix)/lib/python2.7/site-packages" >> ~/Library/Python/2.7/lib/python/site-packages/homebrew.pth
 
-mkdir -p ~/Library/Python/3.5/lib/python/site-packages
-echo "$(brew --prefix)/lib/python3.5/site-packages" >> ~/Library/Python/3.5/lib/python/site-packages/homebrew.pth
+mkdir -p ~/Library/Python/3.6/lib/python/site-packages
+echo "$(brew --prefix)/lib/python3.6/site-packages" >> ~/Library/Python/3.6/lib/python/site-packages/homebrew.pth
 
 eval "$(rbenv init -)"
 rbenv install --skip-existing 2.2.2
