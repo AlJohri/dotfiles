@@ -65,5 +65,5 @@ rbenv global 2.2.2
 eval "$(nodenv init -)"
 nodenv install --skip-existing 4.6.2
 nodenv install --skip-existing 6.9.1
-nodenv install --skip-existing 7.1.0
-nodenv global 7.1.0
+nodenv install --skip-existing 7.2.1
+nodenv global 7.2.1
