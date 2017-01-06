@@ -15,8 +15,9 @@ cask 'textual'
 cask 'colloquy'
 cask 'balsamiq-mockups'
 
-cask 'logitech-control-center' # to program mouse butons (pkg installer, requires input to close dialog)
-cask 'logitech-unifying' # for mouse + keyboard (pkg installer, requires input to close dialog)
+# cask 'logitech-control-center' # to program mouse butons (pkg installer, requires input to close dialog)
+# cask 'logitech-unifying' # for mouse + keyboard (pkg installer, requires input to close dialog)
+cask 'logitech-options' # new logitech thing
 
 cask 'sizeup' # snap windows by mouse
 cask 'cinch' # control window placement via hotkeys
