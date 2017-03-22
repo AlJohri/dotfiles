@@ -15,6 +15,7 @@ brew 'cheat'
 brew 'colordiff'
 brew 'docker-clean'
 brew 'dos2unix'
+brew 'duti'
 brew 'gist'
 brew 'go'
 brew 'gpg-agent'
@@ -22,6 +23,7 @@ brew 'heroku'
 brew 'hub'
 brew 'jq'
 brew 'jsonpp'
+brew 'leiningen'
 brew 'mas'
 brew 'mercurial'
 brew 'mongodb', restart_service: :changed
@@ -47,10 +49,21 @@ brew 'svn'
 brew 'tig'
 brew 'tor', restart_service: :changed
 brew 'tree'
-brew 'duti'
 brew 'reattach-to-user-namespace'
 brew 'wget'
 brew 'zsh-syntax-highlighting' # antigen ?
+brew 'memtester'
+brew 'shellcheck'
+brew 'watch'
+brew 'md5sha1sum'
+brew 'ssh-copy-id'
+brew 'ec2-api-tools'
+brew 'cowsay'
+brew 'fortune'
+brew 'archey'
+brew 'jsonpp'
+brew 'htop-osx'
+brew 'pidof'
 
 cask 'google-chrome-beta' unless File.directory?("/Applications/Google Chrome.app")
 cask 'firefoxdeveloperedition'
@@ -66,14 +79,42 @@ cask 'java' unless system '/usr/libexec/java_home --failfast'
 cask 'xquartz'
 
 cask 'keepingyouawake'
+cask 'private-internet-access'
+
+brew 'libxml2'
+brew 'xslt'
+brew 'pyqt5'
+brew 'numpy', args: ['without-python', 'with-python3']
+brew 'scipy', args: ['without-python', 'with-python3']
+brew 'matplotlib', args: ['without-python', 'with-python3', 'with-pyqt5']
+
+cask 'slack'
+cask 'vlc'
+cask 'spotify'
+cask 'dropbox'
+
+# https://github.com/sindresorhus/quick-look-plugins
+cask 'qlcolorcode'
+cask 'qlstephen'
+cask 'qlmarkdown'
+cask 'quicklook-json'
+# cask 'quicklook-csv' # csv (default csv render is better)
+cask 'webpquicklook'
+cask 'provisionql'
 
 if ENV['BREWFILE_COMPLETE']
+  
+  mas '1Password', id: 443987910
+	cask 'nteract'
+	cask 'flash'
+	cask 'logitech-unifying'
+	cask 'logitech-options'  
 
 	brew 'gcc'
 	brew 'r'
-	cask 'rstudio' # gui for R
+	cask 'rstudio'
 	brew 'android-sdk'
-	cask 'android-studio' # gui for android development
+	cask 'android-studio'
 	brew 'node'
 	cask 'julia'
 	brew 'scala'
@@ -82,16 +123,7 @@ if ENV['BREWFILE_COMPLETE']
 	brew 'maven' # java
 	brew 'gradle' # java
 	brew 'lua'
-	brew 'leiningen' # clojure
 	brew 'octave' # matlab-esque
-	brew 'mercurial'
-
-	brew 'libxml2'
-	brew 'xslt'
-	brew 'pyqt5'
-	brew 'numpy', args: ['without-python', 'with-python3']
-	brew 'scipy', args: ['without-python', 'with-python3']
-	brew 'matplotlib', args: ['without-python', 'with-python3', 'with-pyqt5']
 
 	brew 'hdf5'
 	brew 'hadoop'
@@ -115,12 +147,6 @@ if ENV['BREWFILE_EXTRA']
 	# brew 'diffutils'
 	# brew 'findutils' '--with-default-names'
 	# brew 'homebrew/dupes/grep' '--with-default-names'
-
-	mas '1Password', id: 443987910
-	cask 'nteract'
-	cask 'flash'
-	cask 'logitech-unifying'
-	cask 'logitech-options'
 
 	cask 'pgadmin3'
 	cask 'psequel'
@@ -156,40 +182,14 @@ if ENV['BREWFILE_EXTRA']
 	cask 'the-unarchiver'
 	cask 'evernote'
 	cask 'insync'
-	cask 'dropbox'
 	cask 'skype'
 	cask 'google-hangouts'
-	cask 'slack'
-	cask 'spotify'
-	cask 'vlc'
 	cask 'fluid'
 	cask 'flip4mac'
 	cask 'transmission'
 	cask 'bartender'
 	cask 'calibre'
 	cask 'licecap'
-
-	brew 'memtester'
-	brew 'shellcheck'
-	brew 'watch'
-	brew 'md5sha1sum'
-	brew 'ssh-copy-id'
-	brew 'ec2-api-tools'
-	brew 'cowsay'
-	brew 'fortune'
-	brew 'archey'
-	brew 'jsonpp'
-	brew 'htop-osx'
-	brew 'pidof'
-
-	# https://github.com/sindresorhus/quick-look-plugins
-	cask 'qlcolorcode'
-	cask 'qlstephen'
-	cask 'qlmarkdown'
-	cask 'quicklook-json'
-	# cask 'quicklook-csv' # csv (default csv render is better)
-	cask 'webpquicklook'
-	cask 'provisionql'
 
 	brew 'jack', restart_service: :changed
 
