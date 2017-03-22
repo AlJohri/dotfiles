@@ -96,14 +96,19 @@ export GOPATH=$(go env GOPATH)
 add_to_path_start "$GOPATH/bin"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
 
-# https://blog.chendry.org/2015/03/13/starting-gpg-agent-in-osx.html
-export GPG_TTY=$(tty)
-[ -f "$HOME/.gpg-agent-info" ] && source "$HOME/.gpg-agent-info"
-if [ -S "${GPG_AGENT_INFO%%:*}" ]; then
-  export GPG_AGENT_INFO
-else
-  eval $(gpg-agent --allow-preset-passphrase --daemon --write-env-file "$HOME/.gpg-agent-info")
-fi
+function startgpg() {
+  # https://wincent.com/wiki/Using_gpg-agent_on_OS_X
+  # https://blog.chendry.org/2015/03/13/starting-gpg-agent-in-osx.html
+  export GPG_TTY=$(tty)
+  [ -f "$HOME/.gpg-agent-info" ] && source "$HOME/.gpg-agent-info"
+  if [ -S "${GPG_AGENT_INFO%%:*}" ]; then
+    export GPG_AGENT_INFO
+  else
+    eval $(gpg-agent --allow-preset-passphrase --use-standard-socket --daemon --write-env-file "$HOME/.gpg-agent-info")
+  fi  
+}
+
+startgpg
 
 # Platform-specific stuff
 quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"
