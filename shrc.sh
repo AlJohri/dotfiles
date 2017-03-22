@@ -58,7 +58,24 @@ NODENV_ROOT="$HOME/.nodenv" #$(nodenv root)
 quiet_which pyenv && add_to_path_start "$PYENV_ROOT/shims"
 quiet_which rbenv && add_to_path_start "$RBENV_ROOT/shims"
 quiet_which nodenv && add_to_path_start "$NODENV_ROOT/shims"
-source $(pyenv which virtualenvwrapper_lazy.sh)
+
+# virtualenvwrapper through homebrew python3
+# will by default create all virtual environments with
+# the homebrew python3 unless you specify the "-p python3"
+# argument which will then use the python3 on the $PATH
+# export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python3
+# source /usr/local/bin/virtualenvwrapper_lazy.sh
+
+# virtualenvwrapper through default pyenv python
+# virtualenvwrapper_lazy.sh will fail without the
+# VIRTUALENVWRAPPER_SCRIPT variable because it will
+# attempt to run `which virtualenvwrapper.sh` which
+# gives it the pyenv shim instead of the real script.
+# this will make the virtualenv by default use whatever
+# python is currently active, assuming virtualenvwrapper is
+# installed in the current python
+export VIRTUALENVWRAPPER_SCRIPT="$(pyenv which virtualenvwrapper.sh)"
+source "$(pyenv which virtualenvwrapper_lazy.sh)"
 
 # Aliases
 alias ccat='pygmentize -g'

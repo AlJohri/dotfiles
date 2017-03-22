@@ -84,6 +84,8 @@ pyenv install --skip-existing 2.7.13
 pyenv install --skip-existing 3.6.0
 pyenv global 3.6.0 2.7.13
 pyenv rehash
+pip3 install virtualenvwrapper
+pip2 install virtualenvwrapper
 
 mkdir -p ~/Library/Python/2.7/lib/python/site-packages
 append_to_file "$HOME/Library/Python/2.7/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"

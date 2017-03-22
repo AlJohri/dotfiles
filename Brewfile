@@ -36,7 +36,6 @@ brew 'openssl'
 brew 'postgresql', restart_service: :changed
 brew 'postgis'
 brew 'pyenv'
-brew 'pyenv-virtualenvwrapper'
 brew 'python'
 brew 'python3'
 brew 'rbenv'
