@@ -109,97 +109,97 @@ if ENV['BREWFILE_COMPLETE']
   mas 'Wunderlist', id: 410628904
   mas 'KyPass Companion', id: 555293879
 
-	cask 'nteract'
-	cask 'flash'
-	cask 'logitech-unifying'
-	cask 'logitech-options'  
+  cask 'nteract'
+  cask 'flash'
+  cask 'logitech-unifying'
+  cask 'logitech-options'  
 
-	brew 'gcc'
-	brew 'r'
-	cask 'rstudio'
-	brew 'android-sdk'
-	cask 'android-studio'
-	brew 'node'
-	cask 'julia'
-	brew 'scala'
-	brew 'ghc'
-	brew 'erlang'
-	brew 'maven' # java
-	brew 'gradle' # java
-	brew 'lua'
-	brew 'octave' # matlab-esque
+  brew 'gcc'
+  brew 'r'
+  cask 'rstudio'
+  brew 'android-sdk'
+  cask 'android-studio'
+  brew 'node'
+  cask 'julia'
+  brew 'scala'
+  brew 'ghc'
+  brew 'erlang'
+  brew 'maven' # java
+  brew 'gradle' # java
+  brew 'lua'
+  brew 'octave' # matlab-esque
 
-	brew 'hdf5'
-	brew 'hadoop'
-	brew 'apache-spark'
-	brew 'rethinkdb', restart_service: :changed
-	brew 'elasticsearch', restart_service: :changed
-	brew 'solr', restart_service: :changed
-	brew 'memcached', restart_service: :changed
-	brew 'rabbitmq', restart_service: :changed
-	brew 'rabbitmq-c'
-	brew 'zookeeper', restart_service: :changed
-	brew 'kafka', restart_service: :changed
+  brew 'hdf5'
+  brew 'hadoop'
+  brew 'apache-spark'
+  brew 'rethinkdb', restart_service: :changed
+  brew 'elasticsearch', restart_service: :changed
+  brew 'solr', restart_service: :changed
+  brew 'memcached', restart_service: :changed
+  brew 'rabbitmq', restart_service: :changed
+  brew 'rabbitmq-c'
+  brew 'zookeeper', restart_service: :changed
+  brew 'kafka', restart_service: :changed
 end
 
 if ENV['BREWFILE_EXTRA']
 
-	# look into these more:
-	# brew 'coreutils'
-	# brew 'moreutils' # cool cmdline utilites like sponge
-	# brew 'homebrew/dupes/rsync'
-	# brew 'diffutils'
-	# brew 'findutils' '--with-default-names'
-	# brew 'homebrew/dupes/grep' '--with-default-names'
+  # look into these more:
+  # brew 'coreutils'
+  # brew 'moreutils' # cool cmdline utilites like sponge
+  # brew 'homebrew/dupes/rsync'
+  # brew 'diffutils'
+  # brew 'findutils' '--with-default-names'
+  # brew 'homebrew/dupes/grep' '--with-default-names'
 
-	cask 'pgadmin3'
-	cask 'psequel'
-	cask 'postico'
-	cask 'sqlitebrowser' # sqlite gui
-	cask 'virtualbox' # virtual os / emulators (pkg installer)
-	cask 'vagrant' # package virtual envs for development (pkg installer)
-	cask 'sequel-pro' # mysql gui
-	cask 'macfusion' # use sublime via ssh (sshfs)
-	cask 'arduino'
-	cask 'weka'
-	cask 'tabula'
-	cask 'gephi'
+  cask 'pgadmin3'
+  cask 'psequel'
+  cask 'postico'
+  cask 'sqlitebrowser' # sqlite gui
+  cask 'virtualbox' # virtual os / emulators (pkg installer)
+  cask 'vagrant' # package virtual envs for development (pkg installer)
+  cask 'sequel-pro' # mysql gui
+  cask 'macfusion' # use sublime via ssh (sshfs)
+  cask 'arduino'
+  cask 'weka'
+  cask 'tabula'
+  cask 'gephi'
 
-	cask 'airserver'
-	cask 'macdown'
-	cask 'audacity'
-	cask 'ccleaner'
-	cask 'paintbrush'
-	cask 'mac-linux-usb-loader'
-	cask 'unetbootin'
+  cask 'airserver'
+  cask 'macdown'
+  cask 'audacity'
+  cask 'ccleaner'
+  cask 'paintbrush'
+  cask 'mac-linux-usb-loader'
+  cask 'unetbootin'
 
-	cask 'charles'
-	cask 'gitter'
-	cask 'skitch'
-	cask 'teamviewer'
-	cask 'textual'
-	cask 'colloquy'
-	cask 'balsamiq-mockups'
+  cask 'charles'
+  cask 'gitter'
+  cask 'skitch'
+  cask 'teamviewer'
+  cask 'textual'
+  cask 'colloquy'
+  cask 'balsamiq-mockups'
 
-	cask 'sizeup'
-	cask 'cinch'
-	cask 'the-unarchiver'
-	cask 'evernote'
-	cask 'insync'
-	cask 'skype'
-	cask 'google-hangouts'
-	cask 'fluid'
-	cask 'flip4mac'
-	cask 'transmission'
-	cask 'bartender'
-	cask 'calibre'
-	cask 'licecap'
+  cask 'sizeup'
+  cask 'cinch'
+  cask 'the-unarchiver'
+  cask 'evernote'
+  cask 'insync'
+  cask 'skype'
+  cask 'google-hangouts'
+  cask 'fluid'
+  cask 'flip4mac'
+  cask 'transmission'
+  cask 'bartender'
+  cask 'calibre'
+  cask 'licecap'
 
-	brew 'jack', restart_service: :changed
+  brew 'jack', restart_service: :changed
 
 end
 
 # requires password
 if ENV['BREWFILE_INTERACTIVE']
-	cask 'ngrok'
+  cask 'ngrok'
 end
