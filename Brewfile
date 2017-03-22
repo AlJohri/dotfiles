@@ -105,6 +105,11 @@ cask 'provisionql'
 if ENV['BREWFILE_COMPLETE']
   
   mas '1Password', id: 443987910
+  mas 'Pocket', id: 568494494
+  mas 'DaisyDisk', id: 411643860
+  mas 'Leaf', id: 576338668
+  mas 'Wunderlist', id: 410628904
+
 	cask 'nteract'
 	cask 'flash'
 	cask 'logitech-unifying'
