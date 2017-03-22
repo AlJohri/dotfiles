@@ -62,7 +62,7 @@ then
   if [ ! -f "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/Package Control.sublime-package" ]; then
     # http://stackoverflow.com/questions/19529999/add-package-control-in-sublime-text-3-through-the-command-line
     echo "Installing Sublime Text 3 Package Manager"
-    wget https://sublime.wbond.net/Package%20Control.sublime-package -P "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
+    wget http://sublime.wbond.net/Package%20Control.sublime-package -P "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
   fi
 
   duti -s com.sublimetext.3 java all
@@ -87,11 +87,15 @@ pyenv rehash
 pip3 install virtualenvwrapper
 pip2 install virtualenvwrapper
 
+# use homebrew python 2 packages in system python and pyenv python
 mkdir -p ~/Library/Python/2.7/lib/python/site-packages
 append_to_file "$HOME/Library/Python/2.7/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
+append_to_file "$(dirname $(pyenv which python2))/../lib/python2.7/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
 
+# use homebrew python 3 packages in system python and pyenv python
 mkdir -p ~/Library/Python/3.6/lib/python/site-packages
 append_to_file "$HOME/Library/Python/3.6/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
+append_to_file "$(dirname $(pyenv which python3))/../lib/python3.6/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
 
 eval "$(rbenv init -)"
 rbenv install --skip-existing 2.2.2
