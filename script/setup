@@ -72,6 +72,9 @@ then
   duti -s com.sublimetext.3 sh all
   duti -s com.sublimetext.3 json all
   duti -s com.sublimetext.3 xml all
+  duti -s com.sublimetext.3 public.unix-executable all
+  duti -s com.sublimetext.3 public.plain-text all
+  duti -s com.sublimetext.3 public.source-code all
 fi
 
 brew bundle --global
