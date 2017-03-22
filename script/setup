@@ -56,6 +56,24 @@ append_to_file() {
   fi
 }
 
+if [ $OSX ]
+then
+  mkdir -p "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
+  if [ ! -f "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/Package Control.sublime-package" ]; then
+    # http://stackoverflow.com/questions/19529999/add-package-control-in-sublime-text-3-through-the-command-line
+    echo "Installing Sublime Text 3 Package Manager"
+    wget https://sublime.wbond.net/Package%20Control.sublime-package -P "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
+  fi
+
+  duti -s com.sublimetext.3 java all
+  duti -s com.sublimetext.3 js all
+  duti -s com.sublimetext.3 py all
+  duti -s com.sublimetext.3 rb all
+  duti -s com.sublimetext.3 sh all
+  duti -s com.sublimetext.3 json all
+  duti -s com.sublimetext.3 xml all
+fi
+
 brew bundle --global
 
 eval "$(pyenv init -)"

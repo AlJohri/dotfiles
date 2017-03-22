@@ -44,20 +44,41 @@ quiet_which() {
   which $1 &>/dev/null
 }
 
+add_to_path_start "$HOME/bin"
 add_to_path_start "/usr/local/bin"
 add_to_path_start "/usr/local/sbin"
 
 quiet_which pyenv && eval "$(pyenv init -)"
 quiet_which rbenv && eval "$(rbenv init -)"
 quiet_which nodenv && eval "$(nodenv init -)"
-pyenv virtualenvwrapper
+quiet_which pyenv && pyenv virtualenvwrapper
 
 # Aliases
+alias ccat='pygmentize -g'
 alias git=hub
 alias cp='cp -irv'
 alias rm='rm -iv'
 alias mv='mv -iv'
 alias gst='git status'
+
+export BREW_PREFIX="$(brew --prefix)"
+export EDITOR=vim
+export NLTK_DATA="$HOME/nltk_data"
+export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
+export R_HOME="$BREW_PREFIX/opt/r/R.framework/Resources"
+export RSTUDIO_WHICH_R="/usr/local/bin/R"
+export GOPATH=$(go env GOPATH)
+add_to_path_start "$GOPATH/bin"
+export ANDROID_HOME="$BREW_PREFIX/opt/android-sdk"
+
+# https://blog.chendry.org/2015/03/13/starting-gpg-agent-in-osx.html
+export GPG_TTY=$(tty)
+[ -f "$HOME/.gpg-agent-info" ] && source "$HOME/.gpg-agent-info"
+if [ -S "${GPG_AGENT_INFO%%:*}" ]; then
+  export GPG_AGENT_INFO
+else
+  eval $(gpg-agent --allow-preset-passphrase --daemon --write-env-file "$HOME/.gpg-agent-info")
+fi
 
 # Platform-specific stuff
 quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"
@@ -106,3 +127,6 @@ cd() {
 
 # Look in ./bin but do it last to avoid weird `which` results.
 force_add_to_path_start "bin"
+
+# test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+[ -f "$HOME/.workrc" ] && source "$HOME/.workrc"

@@ -19,5 +19,9 @@ setopt share_history
 # Don't hang up background jobs
 setopt no_hup
 
+# Commands that start with a space are not put in history
+setopt histignorespace
+
 source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source /usr/local/share/zsh/site-functions/_aws
+
