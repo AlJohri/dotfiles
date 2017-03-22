@@ -90,6 +90,7 @@ cask 'slack'
 cask 'vlc'
 cask 'spotify'
 cask 'dropbox'
+cask 'flash-npapi'
 
 # https://github.com/sindresorhus/quick-look-plugins
 cask 'qlcolorcode'
@@ -101,16 +102,8 @@ cask 'webpquicklook'
 cask 'provisionql'
 
 if ENV['BREWFILE_COMPLETE']
-  
-  mas '1Password', id: 443987910
-  mas 'Pocket', id: 568494494
-  mas 'DaisyDisk', id: 411643860
-  mas 'Leaf', id: 576338668
-  mas 'Wunderlist', id: 410628904
-  mas 'KyPass Companion', id: 555293879
 
   cask 'nteract'
-  cask 'flash-npapi'
 
   brew 'gcc'
   brew 'r'
@@ -121,10 +114,10 @@ if ENV['BREWFILE_COMPLETE']
   brew 'scala'
   brew 'ghc'
   brew 'erlang'
-  brew 'maven' # java
-  brew 'gradle' # java
+  brew 'maven'
+  brew 'gradle'
   brew 'lua'
-  brew 'octave' # matlab-esque
+  brew 'octave'
 
   brew 'hdf5'
   brew 'hadoop'
@@ -153,8 +146,6 @@ if ENV['BREWFILE_EXTRA']
   cask 'psequel'
   cask 'postico'
   cask 'sqlitebrowser' # sqlite gui
-  cask 'virtualbox' # virtual os / emulators (pkg installer)
-  cask 'vagrant' # package virtual envs for development (pkg installer)
   cask 'sequel-pro' # mysql gui
   cask 'osxfuse'
   cask 'macfusion' # use sublime via ssh (sshfs)
@@ -165,7 +156,6 @@ if ENV['BREWFILE_EXTRA']
 
   cask 'airserver'
   cask 'macdown'
-  cask 'audacity'
   cask 'ccleaner'
   cask 'paintbrush'
   cask 'mac-linux-usb-loader'
@@ -174,7 +164,6 @@ if ENV['BREWFILE_EXTRA']
   cask 'charles'
   cask 'gitter'
   cask 'skitch'
-  cask 'teamviewer'
   cask 'textual'
   cask 'balsamiq-mockups'
 
@@ -193,12 +182,21 @@ if ENV['BREWFILE_EXTRA']
   cask 'licecap'
 
   brew 'jack', restart_service: :changed
-
 end
 
 # requires password or interaction from user
 if ENV['BREWFILE_INTERACTIVE']
+  mas '1Password', id: 443987910
+  mas 'Pocket', id: 568494494
+  mas 'DaisyDisk', id: 411643860
+  mas 'Leaf', id: 576338668
+  mas 'Wunderlist', id: 410628904
+  mas 'KyPass Companion', id: 555293879
+
   cask 'ngrok'
   cask 'logitech-unifying'
   cask 'logitech-options'
+  cask 'virtualbox'
+  cask 'vagrant'
+  cask 'teamviewer'
 end

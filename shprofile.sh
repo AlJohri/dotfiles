@@ -1,9 +1,12 @@
+# echo "loading shprofile..."
+
 # 077 would be more secure, but 022 is more useful.
 umask 022
 
 # Save more history
 export HISTSIZE=100000
 export SAVEHIST=100000
+export HOMEBREW_PREFIX="/usr/local"
 
 # OS variables
 [ $(uname -s) = "Darwin" ] && export OSX=1 && export UNIX=1

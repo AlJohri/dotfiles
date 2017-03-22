@@ -1,4 +1,6 @@
-#!/bin/sh
+# Adapted from https://github.com/MikeMcQuaid/dotfiles/blob/master/shrc.sh
+# echo "loading shrc..."
+
 # Colourful manpages
 export LESS_TERMCAP_mb=$'\E[01;31m'
 export LESS_TERMCAP_md=$'\E[01;31m'
@@ -48,10 +50,15 @@ add_to_path_start "$HOME/bin"
 add_to_path_start "/usr/local/bin"
 add_to_path_start "/usr/local/sbin"
 
-quiet_which pyenv && eval "$(pyenv init -)"
-quiet_which rbenv && eval "$(rbenv init -)"
-quiet_which nodenv && eval "$(nodenv init -)"
-quiet_which pyenv && pyenv virtualenvwrapper
+# hardcode for speed
+PYENV_ROOT="$HOME/.pyenv" #"$(pyenv root)"
+RBENV_ROOT="$HOME/.rbenv" #"$(rbenv root)"
+NODENV_ROOT="$HOME/.nodenv" #$(nodenv root)
+
+quiet_which pyenv && add_to_path_start "$PYENV_ROOT/shims"
+quiet_which rbenv && add_to_path_start "$RBENV_ROOT/shims"
+quiet_which nodenv && add_to_path_start "$NODENV_ROOT/shims"
+source $(pyenv which virtualenvwrapper_lazy.sh)
 
 # Aliases
 alias ccat='pygmentize -g'
@@ -60,16 +67,17 @@ alias cp='cp -irv'
 alias rm='rm -iv'
 alias mv='mv -iv'
 alias gst='git status'
+alias ag='rg'
 
-export BREW_PREFIX="$(brew --prefix)"
+export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim
 export NLTK_DATA="$HOME/nltk_data"
 export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
-export R_HOME="$BREW_PREFIX/opt/r/R.framework/Resources"
+export R_HOME="$HOMEBREW_PREFIX/opt/r/R.framework/Resources"
 export RSTUDIO_WHICH_R="/usr/local/bin/R"
 export GOPATH=$(go env GOPATH)
 add_to_path_start "$GOPATH/bin"
-export ANDROID_HOME="$BREW_PREFIX/opt/android-sdk"
+export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
 
 # https://blog.chendry.org/2015/03/13/starting-gpg-agent-in-osx.html
 export GPG_TTY=$(tty)
@@ -98,7 +106,7 @@ then
 
   add_to_path_end /Applications/Xcode.app/Contents/Developer/usr/bin
   add_to_path_end /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
-  add_to_path_end "$BREW_PREFIX/opt/git/share/git-core/contrib/diff-highlight"
+  add_to_path_end "$HOMEBREW_PREFIX/opt/git/share/git-core/contrib/diff-highlight"
 
   alias ls="ls -F"
   alias ql="qlmanage -p 1>/dev/null"
@@ -114,7 +122,7 @@ fi
 quiet_which dircolors && eval $(dircolors -b)
 
 # More colours with grc
-[ -f "$BREW_PREFIX/etc/grc.bashrc" ] && source "$BREW_PREFIX/etc/grc.bashrc"
+[ -f "$HOMEBREW_PREFIX/etc/grc.bashrc" ] && source "$HOMEBREW_PREFIX/etc/grc.bashrc"
 
 # Save directory changes
 cd() {

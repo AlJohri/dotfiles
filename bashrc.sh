@@ -1,4 +1,5 @@
 # Adapted from https://github.com/MikeMcQuaid/dotfiles/blob/master/bashrc.sh
+# echo "loading bashrc..."
 
 # load shared shell configuration
 [ $(uname -s) = "Darwin" ] && source ~/.bash_profile
