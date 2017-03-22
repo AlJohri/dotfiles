@@ -1,4 +1,4 @@
-# echo "loading shprofile..."
+[ "$debug_dotfiles" = true ] && echo "loading shprofile..."
 
 # 077 would be more secure, but 022 is more useful.
 umask 022

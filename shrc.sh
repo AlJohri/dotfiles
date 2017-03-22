@@ -1,5 +1,5 @@
 # Adapted from https://github.com/MikeMcQuaid/dotfiles/blob/master/shrc.sh
-# echo "loading shrc..."
+[ "$debug_dotfiles" = true ] && echo "loading shrc..."
 
 # Colourful manpages
 export LESS_TERMCAP_mb=$'\E[01;31m'
@@ -102,10 +102,20 @@ function startgpg() {
   export GPG_TTY=$(tty)
   [ -f "$HOME/.gpg-agent-info" ] && source "$HOME/.gpg-agent-info"
   if [ -S "${GPG_AGENT_INFO%%:*}" ]; then
+    [ "$debug_dotfiles" = true ] && echo "gpg-agent already started."
     export GPG_AGENT_INFO
   else
+    [ "$debug_dotfiles" = true ] && echo "starting new gpg-agent"
     eval $(gpg-agent --allow-preset-passphrase --use-standard-socket --daemon --write-env-file "$HOME/.gpg-agent-info")
-  fi  
+  fi
+  
+  if [ "$debug_dotfiles" = true ]; then
+    USER_EMAIL="$(git config --global --get user.email)"
+    KEYGRIP=$(gpg --fingerprint --fingerprint $USER_EMAIL | grep fingerprint | tail -1 | cut -d= -f2 | sed -e 's/ //g')
+    echo "GPG_TTY=$GPG_TTY"
+    echo "GPG_AGENT_INFO=$GPG_AGENT_INFO"
+    echo "KEYGRIP=$KEYGRIP"
+  fi
 }
 
 startgpg

@@ -1,5 +1,5 @@
 # load shared shell configuration
-# echo "loading zprofile..."
+[ "$debug_dotfiles" = true ] && echo "loading zprofile..."
 
 source ~/.shprofile
 

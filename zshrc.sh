@@ -1,5 +1,6 @@
 # Adapted from https://github.com/MikeMcQuaid/dotfiles/blob/master/zshrc.sh
-# echo "loading zshrc..."
+debug_dotfiles=false
+[ "$debug_dotfiles" = true ] && echo "loading zshrc..."
 
 # load shared shell configuration
 source ~/.zprofile
