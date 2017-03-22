@@ -59,12 +59,16 @@ cask 'atom'
 cask 'iterm2'
 cask 'sublime-text'
 cask 'pycharm-ce'
-cask 'java'
+cask 'java' unless system '/usr/libexec/java_home --failfast'
 cask 'xquartz'
 
 cask 'keepingyouawake'
 
 if ENV['BREWFILE_COMPLETE']
+	
+	mas '1Password', id: 443987910
+	
+	cask 'nteract'
 
 	brew 'gcc'
 	brew 'r'
@@ -81,7 +85,15 @@ if ENV['BREWFILE_COMPLETE']
 	brew 'lua'
 	brew 'leiningen' # clojure
 	brew 'octave' # matlab-esque
-
+	brew 'mercurial'
+	
+	brew 'libxml2'
+	brew 'xslt'
+	brew 'pyqt5'
+	brew 'numpy', args: ['without-python', 'with-python3']
+	brew 'scipy', args: ['without-python', 'with-python3']
+	brew 'matplotlib', args: ['without-python', 'with-python3', 'with-pyqt5']
+	
 	brew 'hdf5'
 	brew 'hadoop'
 	brew 'apache-spark'
