@@ -102,17 +102,31 @@ sudo chown -R `whoami`:admin /usr/local/texlive
 tlmgr install collection-fontsrecommended
 ```
 
-#### Set up SSH Keys
+#### Set up SSH Key
 
 https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
 ```
 if [ ! -f "$HOME/.ssh/id_rsa" ]; then
     ssh-keygen -t rsa -C "al.johri@gmail.com"
     eval "$(ssh-agent -s)"
-    ssh-add "$HOME/.ssh/id_rsa"
+    ssh-add -K "$HOME/.ssh/id_rsa"
     pbcopy < "$HOME/.ssh/id_rsa.pub"
-    # open https://github.com/settings/ssh
+    open https://github.com/settings/ssh
 fi
+```
+
+#### Set up GPG Key
+
+```
+startgpg # defined in shrc.sh
+gpg --gen-key
+gpg --list-keys
+KEYGRIP=$(gpg --fingerprint --fingerprint al.johri@gmail.com | grep fingerprint | tail -1 | cut -d= -f2 | sed -e 's/ //g')
+echo $GPG_TTY
+echo $KEYGRIP
+echo $GPG_AGENT_INFO
+# make sure all three above are set
+/usr/local/opt/gpg-agent/libexec/gpg-preset-passphrase --preset $KEYGRIP
 ```
 
 #### python stuff
