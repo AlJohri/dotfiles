@@ -110,16 +110,13 @@ if ENV['BREWFILE_COMPLETE']
   mas 'KyPass Companion', id: 555293879
 
   cask 'nteract'
-  cask 'flash'
-  cask 'logitech-unifying'
-  cask 'logitech-options'  
+  cask 'flash-npapi'
 
   brew 'gcc'
   brew 'r'
   cask 'rstudio'
   brew 'android-sdk'
   cask 'android-studio'
-  brew 'node'
   cask 'julia'
   brew 'scala'
   brew 'ghc'
@@ -199,7 +196,9 @@ if ENV['BREWFILE_EXTRA']
 
 end
 
-# requires password
+# requires password or interaction from user
 if ENV['BREWFILE_INTERACTIVE']
   cask 'ngrok'
+  cask 'logitech-unifying'
+  cask 'logitech-options'
 end
