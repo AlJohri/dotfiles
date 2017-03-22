@@ -69,9 +69,6 @@ brew 'zzz'
 cask 'google-chrome-beta' unless File.directory?("/Applications/Google Chrome.app")
 cask 'firefoxdeveloperedition'
 cask 'docker'
-cask 'ngrok'
-cask 'virtualbox'
-cask 'vagrant'
 cask 'atom'
 cask 'iterm2'
 cask 'sublime-text'
@@ -83,7 +80,7 @@ cask 'keepingyouawake'
 cask 'private-internet-access'
 
 brew 'libxml2'
-brew 'xslt'
+brew 'libxslt'
 brew 'pyqt5'
 brew 'numpy', args: ['without-python', 'with-python3']
 brew 'scipy', args: ['without-python', 'with-python3']
@@ -200,4 +197,9 @@ if ENV['BREWFILE_EXTRA']
 
 	brew 'jack', restart_service: :changed
 
+end
+
+# requires password
+if ENV['BREWFILE_INTERACTIVE']
+	cask 'ngrok'
 end
