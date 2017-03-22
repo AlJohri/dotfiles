@@ -115,18 +115,31 @@ if [ ! -f "$HOME/.ssh/id_rsa" ]; then
 fi
 ```
 
+#### Start GPG Agent (if not already running)
+```
+startgpg # defined in shrc.sh
+```
+
 #### Set up GPG Key
 
 ```
-startgpg # defined in shrc.sh
 gpg --gen-key
-gpg --list-keys
-KEYGRIP=$(gpg --fingerprint --fingerprint al.johri@gmail.com | grep fingerprint | tail -1 | cut -d= -f2 | sed -e 's/ //g')
+```
+
+#### Change GPG Passphrase
+```
+gpg --passwd al.johri@gmail.com
+```
+
+#### Using gpg-preset-passphrase
+only applies if you set a passphrase
+```
+startgpg
 echo $GPG_TTY
-echo $KEYGRIP
 echo $GPG_AGENT_INFO
-# make sure all three above are set
-/usr/local/opt/gpg-agent/libexec/gpg-preset-passphrase --preset $KEYGRIP
+echo $KEYGRIP
+# make sure the three variables above are defined
+echo "yourphasephrasehere" | /usr/local/opt/gpg-agent/libexec/gpg-preset-passphrase -v --preset $KEYGRIP
 ```
 
 #### python stuff
