@@ -109,6 +109,7 @@ if ENV['BREWFILE_COMPLETE']
   mas 'DaisyDisk', id: 411643860
   mas 'Leaf', id: 576338668
   mas 'Wunderlist', id: 410628904
+  mas 'KyPass Companion', id: 555293879
 
 	cask 'nteract'
 	cask 'flash'
