@@ -109,9 +109,9 @@ https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-s
 if [ ! -f "$HOME/.ssh/id_rsa" ]; then
     ssh-keygen -t rsa -C "al.johri@gmail.com"
     eval "$(ssh-agent -s)"
-    ssh-add "$HOME/.ssh/id_rsa"
+    ssh-add -K "$HOME/.ssh/id_rsa"
     pbcopy < "$HOME/.ssh/id_rsa.pub"
-    # open https://github.com/settings/ssh
+    open https://github.com/settings/ssh
 fi
 ```
 
