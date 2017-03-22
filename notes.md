@@ -103,6 +103,8 @@ tlmgr install collection-fontsrecommended
 ```
 
 #### Set up SSH Keys
+
+https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
 ```
 if [ ! -f "$HOME/.ssh/id_rsa" ]; then
     ssh-keygen -t rsa -C "al.johri@gmail.com"
