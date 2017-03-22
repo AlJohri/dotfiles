@@ -156,6 +156,7 @@ if ENV['BREWFILE_EXTRA']
   cask 'virtualbox' # virtual os / emulators (pkg installer)
   cask 'vagrant' # package virtual envs for development (pkg installer)
   cask 'sequel-pro' # mysql gui
+  cask 'osxfuse'
   cask 'macfusion' # use sublime via ssh (sshfs)
   cask 'arduino'
   cask 'weka'
@@ -175,7 +176,6 @@ if ENV['BREWFILE_EXTRA']
   cask 'skitch'
   cask 'teamviewer'
   cask 'textual'
-  cask 'colloquy'
   cask 'balsamiq-mockups'
 
   cask 'sizeup'
