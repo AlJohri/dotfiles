@@ -33,6 +33,7 @@ brew 'ncdu'
 brew 'node'
 brew 'nodenv'
 brew 'openssl'
+brew 'openconnect'
 brew 'postgresql', restart_service: :changed
 brew 'postgis'
 brew 'pyenv'
