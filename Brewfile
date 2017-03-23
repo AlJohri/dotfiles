@@ -77,7 +77,6 @@ cask 'java' unless system '/usr/libexec/java_home --failfast'
 cask 'xquartz'
 
 cask 'keepingyouawake'
-cask 'private-internet-access'
 
 brew 'libxml2'
 brew 'libxslt'
@@ -91,7 +90,6 @@ cask 'vlc'
 cask 'spotify'
 cask 'dropbox'
 cask 'flash-npapi'
-cask 'pritunl'
 
 # https://github.com/sindresorhus/quick-look-plugins
 cask 'qlcolorcode'
@@ -194,10 +192,12 @@ if ENV['BREWFILE_INTERACTIVE']
   mas 'Wunderlist', id: 410628904
   mas 'KyPass Companion', id: 555293879
 
+  cask 'pritunl'
   cask 'ngrok'
   cask 'logitech-unifying'
   cask 'logitech-options'
   cask 'virtualbox'
   cask 'vagrant'
   cask 'teamviewer'
+  cask 'private-internet-access'
 end
