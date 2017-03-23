@@ -16,6 +16,7 @@ for DOTFILE in *; do
   DIRFILE="$DOTFILESDIR/$DOTFILE"
 
   echo $DOTFILE | egrep -q '(^script/$|\.txt$|\.md$)' && continue
+  echo $DOTFILE | egrep -q '(^rbenv/$|pyenv/$|nodenv/$)' && continue
 
   # Don't install some files unless you're also called Mike.
   if echo $USER | grep -vq 'mike'
@@ -38,6 +39,29 @@ for DOTFILE in *; do
     fi
   else
     cp -rv "$DIRFILE" "$HOMEFILE"
+  fi
+done
+
+mkdir -p $(pyenv root)
+mkdir -p $(rbenv root)
+mkdir -p $(nodenv root)
+
+for FOLDER in rbenv pyenv nodenv; do
+  if [ -d "$FOLDER" ]; then
+    for DOTFILE in $FOLDER/*; do
+      DIRFILE="$DOTFILESDIR/$DOTFILE"
+      HOMEFILE="$HOME/.$DOTFILE"
+      if [ -L "$HOMEFILE" ] && ! [ -d $DOTFILE ]
+      then
+        ln -sfv "$DIRFILE" "$HOMEFILE"
+      elif ! [ -d $DOTFILE ]
+      then
+        rm -v "$HOMEFILE"
+        ln -sv "$DIRFILE" "$HOMEFILE"
+      else
+        echo "ignoring $DOTFILE because it is a directory"
+      fi
+    done
   fi
 done
 
@@ -84,16 +108,16 @@ pyenv install --skip-existing 2.7.13
 pyenv install --skip-existing 3.6.0
 pyenv global 3.6.0 2.7.13
 pyenv rehash
-pip3 install virtualenvwrapper
+pip3 install -r "$(pyenv root)/default-packages"
 pip2 install virtualenvwrapper
 
 # use homebrew python 2 packages in system python and pyenv python
-mkdir -p ~/Library/Python/2.7/lib/python/site-packages
+mkdir -p "$HOME/Library/Python/2.7/lib/python/site-packages"
 append_to_file "$HOME/Library/Python/2.7/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
 append_to_file "$(dirname $(pyenv which python2))/../lib/python2.7/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
 
 # use homebrew python 3 packages in system python and pyenv python
-mkdir -p ~/Library/Python/3.6/lib/python/site-packages
+mkdir -p "$HOME/Library/Python/3.6/lib/python/site-packages"
 append_to_file "$HOME/Library/Python/3.6/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
 append_to_file "$(dirname $(pyenv which python3))/../lib/python3.6/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
 
@@ -103,7 +127,7 @@ rbenv install --skip-existing 2.4.0
 rbenv global 2.2.2
 rbenv rehash
 gem update --system
-gem install bundler
+gem install bundler --conservative
 number_of_cores=$(sysctl -n hw.ncpu)
 bundle config --global jobs $((number_of_cores - 1))
 rbenv rehash

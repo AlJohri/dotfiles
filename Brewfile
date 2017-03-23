@@ -32,6 +32,7 @@ brew 'mysql', restart_service: :changed
 brew 'ncdu'
 brew 'node'
 brew 'nodenv'
+brew 'nodenv/nodenv/nodenv-default-packages'
 brew 'openssl'
 brew 'openconnect'
 brew 'postgresql', restart_service: :changed
