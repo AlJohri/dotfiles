@@ -91,6 +91,7 @@ cask 'vlc'
 cask 'spotify'
 cask 'dropbox'
 cask 'flash-npapi'
+cask 'pritunl'
 
 # https://github.com/sindresorhus/quick-look-plugins
 cask 'qlcolorcode'
