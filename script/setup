@@ -112,14 +112,14 @@ pip3 install -r "$(pyenv root)/default-packages"
 pip2 install virtualenvwrapper
 
 # use homebrew python 2 packages in system python and pyenv python
-mkdir -p "$HOME/Library/Python/2.7/lib/python/site-packages"
-append_to_file "$HOME/Library/Python/2.7/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
-append_to_file "$(dirname $(pyenv which python2))/../lib/python2.7/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
+# mkdir -p "$HOME/Library/Python/2.7/lib/python/site-packages"
+# append_to_file "$HOME/Library/Python/2.7/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
+# append_to_file "$(dirname $(pyenv which python2))/../lib/python2.7/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
 
 # use homebrew python 3 packages in system python and pyenv python
-mkdir -p "$HOME/Library/Python/3.6/lib/python/site-packages"
-append_to_file "$HOME/Library/Python/3.6/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
-append_to_file "$(dirname $(pyenv which python3))/../lib/python3.6/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
+# mkdir -p "$HOME/Library/Python/3.6/lib/python/site-packages"
+# append_to_file "$HOME/Library/Python/3.6/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
+# append_to_file "$(dirname $(pyenv which python3))/../lib/python3.6/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
 
 eval "$(rbenv init -)"
 rbenv install --skip-existing 2.2.2

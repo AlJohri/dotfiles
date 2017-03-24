@@ -81,10 +81,10 @@ cask 'keepingyouawake'
 
 brew 'libxml2'
 brew 'libxslt'
-brew 'pyqt5'
-brew 'numpy', args: ['without-python', 'with-python3']
-brew 'scipy', args: ['without-python', 'with-python3']
-brew 'matplotlib', args: ['without-python', 'with-python3', 'with-pyqt5']
+# brew 'pyqt5'
+# brew 'numpy', args: ['without-python', 'with-python3']
+# brew 'scipy', args: ['without-python', 'with-python3']
+# brew 'matplotlib', args: ['without-python', 'with-python3', 'with-pyqt5']
 
 cask 'slack'
 cask 'vlc'
