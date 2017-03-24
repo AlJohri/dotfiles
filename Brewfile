@@ -30,6 +30,7 @@ brew 'mongodb', restart_service: :changed
 brew 'most'
 brew 'mysql', restart_service: :changed
 brew 'ncdu'
+brew 'yarn'
 brew 'node'
 brew 'nodenv'
 brew 'nodenv/nodenv/nodenv-default-packages'
@@ -120,7 +121,6 @@ if ENV['BREWFILE_COMPLETE']
   brew 'octave'
 
   brew 'hdf5'
-  brew 'hadoop'
   brew 'apache-spark'
   brew 'rethinkdb', restart_service: :changed
   brew 'elasticsearch', restart_service: :changed
