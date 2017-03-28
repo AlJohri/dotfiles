@@ -88,7 +88,7 @@ brew 'libxslt'
 # brew 'scipy', args: ['without-python', 'with-python3']
 # brew 'matplotlib', args: ['without-python', 'with-python3', 'with-pyqt5']
 
-cask 'slack'
+cask 'slack' unless File.directory?("/Applications/Slack.app")
 cask 'vlc'
 cask 'spotify'
 cask 'dropbox'
