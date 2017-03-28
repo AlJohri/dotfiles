@@ -68,7 +68,7 @@ done
 append_to_file() {
   local file="$1"
   local text="$2"
-  
+
   if [ -e "$file" ];
   then
     if ! grep -qs "^$text$" "$file"; then
@@ -123,7 +123,7 @@ pip2 install virtualenvwrapper
 
 eval "$(rbenv init -)"
 rbenv install --skip-existing 2.2.2
-rbenv install --skip-existing 2.4.0
+rbenv install --skip-existing 2.4.1
 rbenv global 2.2.2
 rbenv rehash
 gem update --system
@@ -133,8 +133,8 @@ bundle config --global jobs $((number_of_cores - 1))
 rbenv rehash
 
 eval "$(nodenv init -)"
-nodenv install --skip-existing 7.7.2
-nodenv global 7.7.2
+nodenv install --skip-existing 7.7.4
+nodenv global 7.7.4
 
 GITHUB_USER="$(git config --get github.user)"
 

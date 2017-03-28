@@ -108,7 +108,7 @@ function startgpg() {
     [ "$debug_dotfiles" = true ] && echo "starting new gpg-agent"
     eval $(gpg-agent --allow-preset-passphrase --use-standard-socket --daemon --write-env-file "$HOME/.gpg-agent-info")
   fi
-  
+
   if [ "$debug_dotfiles" = true ]; then
     USER_EMAIL="$(git config --global --get user.email)"
     KEYGRIP=$(gpg --fingerprint --fingerprint $USER_EMAIL | grep fingerprint | tail -1 | cut -d= -f2 | sed -e 's/ //g')
@@ -118,7 +118,7 @@ function startgpg() {
   fi
 }
 
-startgpg
+# startgpg
 
 # Platform-specific stuff
 quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"
