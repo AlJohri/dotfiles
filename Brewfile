@@ -9,6 +9,7 @@ tap 'homebrew/versions'
 tap 'homebrew/dupes'
 tap 'homebrew/science'
 tap 'homebrew/binary'
+tap 'nodenv/nodenv'
 
 brew 'awscli'
 brew 'cheat'
@@ -91,7 +92,6 @@ cask 'slack'
 cask 'vlc'
 cask 'spotify'
 cask 'dropbox'
-cask 'flash-npapi'
 
 # https://github.com/sindresorhus/quick-look-plugins
 cask 'qlcolorcode'
@@ -201,4 +201,5 @@ if ENV['BREWFILE_INTERACTIVE']
   cask 'vagrant'
   cask 'teamviewer'
   cask 'private-internet-access'
+  cask 'flash-npapi'
 end
