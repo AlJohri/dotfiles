@@ -24,6 +24,10 @@ shopt -s cdspell
 [ -f /etc/profile.d/bash-completion ] && source /etc/profile.d/bash-completion
 [ -f $BREW_PREFIX/etc/bash_completion ] && source $BREW_PREFIX/etc/bash_completion >/dev/null
 
+parse_git_branch() {
+     git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
+}
+
 # Colorful prompt
 if [ $USER = "root" ]
 then
@@ -32,5 +36,6 @@ elif [ -n "${SSH_CONNECTION}" ]
 then
   PS1='\[\033[01;36m\]\h\[\033[01;34m\] \W #\[\033[00m\] '
 else
-  PS1='\[\033[01;32m\]\h\[\033[01;34m\] \W #\[\033[00m\] '
+  # PS1='\[\033[01;32m\]\h\[\033[01;34m\] \W #\[\033[00m\] '
+  PS1="\u \[\033[32m\]\w\[\033[33m\]\$(parse_git_branch)\[\033[00m\] $ "
 fi
