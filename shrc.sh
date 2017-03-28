@@ -118,7 +118,7 @@ function startgpg() {
   fi
 }
 
-startgpg
+# startgpg
 
 # Platform-specific stuff
 quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"
