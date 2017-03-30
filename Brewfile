@@ -67,6 +67,8 @@ brew 'archey'
 brew 'jsonpp'
 brew 'htop-osx'
 brew 'pidof'
+brew 'ffmpeg'
+brew 'youtube-dl'
 brew 'zzz'
 
 cask 'google-chrome-beta' unless File.directory?("/Applications/Google Chrome.app")
