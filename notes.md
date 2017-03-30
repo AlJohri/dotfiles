@@ -69,6 +69,21 @@ bundle config --global jobs $((number_of_cores - 1))
 rbenv rehash
 ```
 
+#### Find latest pyenv/rbenv/nodenv minor version given a major version
+```
+find_latest_python2() {
+	pyenv install -l | grep -E '([2])\.([0-9]+)\.([0-9]+)' | grep -v - | tail -1 | sed -e 's/^ *//'
+}
+python_version2="$(find_latest_python2)"
+
+find_latest_python3() {
+	pyenv install -l | grep -E '([3])\.([0-9]+)\.([0-9]+)' | grep -v - | tail -1 | sed -e 's/^ *//'
+}
+python_version3="$(find_latest_python3)"
+
+echo "$python_version2 $python_version3"
+```
+
 #### Set up Jupyter R Kernel
 ```
 Rscript -e "install.packages(c('rzmq','repr','IRkernel','IRdisplay'), repos = c('http://irkernel.github.io/', 'http://cran.rstudio.com/')); IRkernel::installspec()"
