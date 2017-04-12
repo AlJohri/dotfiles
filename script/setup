@@ -136,6 +136,9 @@ eval "$(nodenv init -)"
 nodenv install --skip-existing 7.8.0
 nodenv global 7.8.0
 
+createuser --superuser --createdb --createrole --replication postgres || "postgres superuser, 'postgres', already exists"
+createuser --superuser --createdb --createrole --replication root || "postgres superuser, 'root', already exists"
+
 GITHUB_USER="$(git config --get github.user)"
 
 if [ -n "$GITHUB_USER" ]; then
