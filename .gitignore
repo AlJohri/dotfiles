@@ -1,3 +1,11 @@
 .DS_Store
 .npm-debug.log
-workrc.sh
+
+matplotlib
+!matplotlib/matplotlibrc
+
+rbenv
+!rbenv/default-gems
+
+pyenv
+!pyenv/default-packages

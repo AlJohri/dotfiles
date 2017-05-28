@@ -12,31 +12,40 @@ tap 'homebrew/binary'
 tap 'nodenv/nodenv'
 
 brew 'awscli'
+brew 'coreutils'
 brew 'cheat'
 brew 'colordiff'
 brew 'docker-clean'
 brew 'dos2unix'
 brew 'duti'
+brew 'fortune'
+brew 'ffmpeg'
 brew 'gist'
 brew 'go'
 brew 'gpg-agent'
 brew 'heroku'
+brew 'htop-osx'
 brew 'hub'
 brew 'jq'
 brew 'jsonpp'
 brew 'leiningen'
+brew 'libxslt'
+brew 'libxml2'
 brew 'mas'
+brew 'memtester'
 brew 'mercurial'
 brew 'mongodb', restart_service: :changed
 brew 'most'
+brew 'moreutils'
 brew 'mysql', restart_service: :changed
 brew 'ncdu'
-brew 'yarn'
 brew 'node'
 brew 'nodenv'
+brew 'nodenv/nodenv/nodenv-package-rehash'
 brew 'nodenv/nodenv/nodenv-default-packages'
 brew 'openssl'
 brew 'openconnect'
+brew 'pidof'
 brew 'postgresql', restart_service: :changed
 brew 'postgis'
 brew 'pyenv'
@@ -48,27 +57,23 @@ brew 'redis', restart_service: :changed
 brew 'ripgrep'
 brew 'ruby-build'
 brew 'sl'
+brew 'shellcheck'
 brew 'svn'
 brew 'tig'
 brew 'tor', restart_service: :changed
 brew 'tree'
 brew 'reattach-to-user-namespace'
 brew 'wget'
+brew 'yarn'
+brew 'youtube-dl'
 brew 'zsh-syntax-highlighting' # antigen ?
-brew 'memtester'
-brew 'shellcheck'
 brew 'watch'
 brew 'md5sha1sum'
 brew 'ssh-copy-id'
 brew 'ec2-api-tools'
 brew 'cowsay'
-brew 'fortune'
 brew 'archey'
 brew 'jsonpp'
-brew 'htop-osx'
-brew 'pidof'
-brew 'ffmpeg'
-brew 'youtube-dl'
 brew 'zzz'
 
 cask 'google-chrome-beta' unless File.directory?("/Applications/Google Chrome.app")
@@ -80,16 +85,7 @@ cask 'sublime-text'
 cask 'pycharm-ce'
 cask 'java' unless system '/usr/libexec/java_home --failfast'
 cask 'xquartz'
-
 cask 'keepingyouawake'
-
-brew 'libxml2'
-brew 'libxslt'
-# brew 'pyqt5'
-# brew 'numpy', args: ['without-python', 'with-python3']
-# brew 'scipy', args: ['without-python', 'with-python3']
-# brew 'matplotlib', args: ['without-python', 'with-python3', 'with-pyqt5']
-
 cask 'slack' unless File.directory?("/Applications/Slack.app")
 cask 'vlc'
 cask 'spotify'
@@ -105,9 +101,7 @@ cask 'webpquicklook'
 cask 'provisionql'
 
 if ENV['BREWFILE_COMPLETE']
-
   cask 'nteract'
-
   brew 'gcc'
   brew 'r'
   cask 'rstudio'
@@ -121,7 +115,6 @@ if ENV['BREWFILE_COMPLETE']
   brew 'gradle'
   brew 'lua'
   brew 'octave'
-
   brew 'hdf5'
   brew 'apache-spark'
   brew 'rethinkdb', restart_service: :changed
@@ -137,8 +130,6 @@ end
 if ENV['BREWFILE_EXTRA']
 
   # look into these more:
-  # brew 'coreutils'
-  # brew 'moreutils' # cool cmdline utilites like sponge
   # brew 'homebrew/dupes/rsync'
   # brew 'diffutils'
   # brew 'findutils' '--with-default-names'
