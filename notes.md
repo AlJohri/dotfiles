@@ -24,6 +24,33 @@ if [ "$REALSHELL" != "/usr/local/bin/zsh" ]; then
 fi
 ```
 
+Another approach from thoughtbot/laptop
+https://github.com/thoughtbot/laptop/blob/master/mac#L61
+```
+update_shell() {
+  local shell_path;
+  shell_path="$(which zsh)"
+
+  fancy_echo "Changing your shell to zsh ..."
+  if ! grep "$shell_path" /etc/shells > /dev/null 2>&1 ; then
+    fancy_echo "Adding '$shell_path' to /etc/shells"
+    sudo sh -c "echo $shell_path >> /etc/shells"
+  fi
+  chsh -s "$shell_path"
+}
+
+case "$SHELL" in
+  */zsh)
+    if [ "$(which zsh)" != '/bin/zsh' ] ; then
+      update_shell
+    fi
+    ;;
+  *)
+    update_shell
+    ;;
+esac
+```
+
 #### Install Ruby with Homebrew Openssl (this might happen by default now)
 ```
 RUBY_CONFIGURE_OPTS=--with-openssl-dir=/usr/local/opt/openssl rbenv install -s "$ruby_version"
@@ -40,6 +67,21 @@ number_of_cores=$(sysctl -n hw.ncpu)
 bundle config --global jobs $((number_of_cores - 1))
 
 rbenv rehash
+```
+
+#### Find latest pyenv/rbenv/nodenv minor version given a major version
+```
+find_latest_python2() {
+	pyenv install -l | grep -E '([2])\.([0-9]+)\.([0-9]+)' | grep -v - | tail -1 | sed -e 's/^ *//'
+}
+python_version2="$(find_latest_python2)"
+
+find_latest_python3() {
+	pyenv install -l | grep -E '([3])\.([0-9]+)\.([0-9]+)' | grep -v - | tail -1 | sed -e 's/^ *//'
+}
+python_version3="$(find_latest_python3)"
+
+echo "$python_version2 $python_version3"
 ```
 
 #### Set up Jupyter R Kernel
