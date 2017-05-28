@@ -50,14 +50,18 @@ add_to_path_start "$HOME/bin"
 add_to_path_start "/usr/local/bin"
 add_to_path_start "/usr/local/sbin"
 
-# hardcode for speed
-PYENV_ROOT="$HOME/.pyenv" #"$(pyenv root)"
-RBENV_ROOT="$HOME/.rbenv" #"$(rbenv root)"
-NODENV_ROOT="$HOME/.nodenv" #$(nodenv root)
 
-quiet_which pyenv && add_to_path_start "$PYENV_ROOT/shims"
-quiet_which rbenv && add_to_path_start "$RBENV_ROOT/shims"
-quiet_which nodenv && add_to_path_start "$NODENV_ROOT/shims"
+# PYENV_ROOT="$HOME/.pyenv" #"$(pyenv root)"
+# RBENV_ROOT="$HOME/.rbenv" #"$(rbenv root)"
+# NODENV_ROOT="$HOME/.nodenv" #$(nodenv root)
+# quiet_which pyenv && add_to_path_start "$PYENV_ROOT/shims"
+# quiet_which rbenv && add_to_path_start "$RBENV_ROOT/shims"
+# quiet_which nodenv && add_to_path_start "$NODENV_ROOT/shims"
+# source ~/perl5/perlbrew/etc/bashrc
+
+quiet_which pyenv && eval "$(pyenv init -)"
+quiet_which rbenv && eval "$(rbenv init -)"
+quiet_which nodenv && eval "$(nodenv init -)"
 
 # virtualenvwrapper through homebrew python3
 # will by default create all virtual environments with
