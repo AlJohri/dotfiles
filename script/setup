@@ -105,8 +105,8 @@ brew bundle --global
 
 eval "$(pyenv init -)"
 pyenv install --skip-existing 2.7.13
-pyenv install --skip-existing 3.6.0
-pyenv global 3.6.0 2.7.13
+pyenv install --skip-existing 3.6.1
+pyenv global 3.6.1 2.7.13
 pyenv rehash
 pip3 install -r "$(pyenv root)/default-packages"
 pip2 install virtualenvwrapper
@@ -124,7 +124,7 @@ pip2 install virtualenvwrapper
 eval "$(rbenv init -)"
 rbenv install --skip-existing 2.2.2
 rbenv install --skip-existing 2.4.1
-rbenv global 2.2.2
+rbenv global 2.4.1
 rbenv rehash
 gem update --system
 gem install bundler --conservative
