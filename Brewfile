@@ -163,6 +163,7 @@ if ENV['BREWFILE_EXTRA']
 
   cask 'sizeup'
   cask 'cinch'
+  cask 'carbon-copy-cloner'
   cask 'bartender'
   cask 'the-unarchiver'
   cask 'evernote'
