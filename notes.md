@@ -356,7 +356,7 @@ choco install atom sublimetext3 putty vim git.install nodejs npm ruby rubygems p
 
 #### Another Windows 7 Install Script 6/3/2017
 ```
-choco install -y javaruntime flashplayerplugin flashplayeractivex silverlight adobeair googlechrome firefox virtualclonedrive skype vlc picasa teamviewer audacity malwarebytes ccleaner dropbox insync keepass everything sublimetext3 atom f.lux vcredist2017 dotnet4.7
+choco install -y javaruntime flashplayerplugin flashplayeractivex silverlight adobeair googlechrome firefox virtualclonedrive skype vlc picasa teamviewer audacity malwarebytes ccleaner dropbox insync keepass everything sublimetext3 atom f.lux vcredist2017 dotnet4.5 dotnet4.7
 ```
 
 #### Links
