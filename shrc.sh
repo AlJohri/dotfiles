@@ -1,4 +1,4 @@
-# Adapted from https://github.com/MikeMcQuaid/dotfiles/blob/master/shrc.sh
+
 [ "$debug_dotfiles" = true ] && echo "loading shrc..."
 
 # Colourful manpages
@@ -59,18 +59,19 @@ add_to_path_start "/usr/local/sbin"
 # quiet_which nodenv && add_to_path_start "$NODENV_ROOT/shims"
 # source ~/perl5/perlbrew/etc/bashrc
 
-quiet_which pyenv && eval "$(pyenv init -)"
-quiet_which rbenv && eval "$(rbenv init -)"
-quiet_which nodenv && eval "$(nodenv init -)"
+# quiet_which pyenv && eval "$(pyenv init - --no-rehash)"
+# quiet_which rbenv && eval "$(rbenv init - --no-rehash)"
+# quiet_which nodenv && eval "$(nodenv init - --no-rehash)"
 
-# virtualenvwrapper through homebrew python3
+# **virtualenvwrapper through homebrew python3**
 # will by default create all virtual environments with
 # the homebrew python3 unless you specify the "-p python3"
 # argument which will then use the python3 on the $PATH
+
 # export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python3
 # source /usr/local/bin/virtualenvwrapper_lazy.sh
 
-# virtualenvwrapper through default pyenv python
+# **virtualenvwrapper through default pyenv python**
 # virtualenvwrapper_lazy.sh will fail without the
 # VIRTUALENVWRAPPER_SCRIPT variable because it will
 # attempt to run `which virtualenvwrapper.sh` which
@@ -78,8 +79,9 @@ quiet_which nodenv && eval "$(nodenv init -)"
 # this will make the virtualenv by default use whatever
 # python is currently active, assuming virtualenvwrapper is
 # installed in the current python
-export VIRTUALENVWRAPPER_SCRIPT="$(pyenv which virtualenvwrapper.sh)"
-source "$(pyenv which virtualenvwrapper_lazy.sh)"
+
+# export VIRTUALENVWRAPPER_SCRIPT="$(pyenv which virtualenvwrapper.sh)"
+# source "$(pyenv which virtualenvwrapper_lazy.sh)"
 
 # Aliases
 alias ccat='pygmentize -g'
@@ -89,6 +91,12 @@ alias rm='rm -iv'
 alias mv='mv -iv'
 alias gst='git status'
 alias ag='rg'
+
+function dockercleanup() {
+  docker kill $(docker ps -q)
+  docker rm $(docker ps -a -q)
+  docker rmi $(docker images -q)
+}
 
 export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim

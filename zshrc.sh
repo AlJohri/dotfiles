@@ -27,3 +27,8 @@ setopt histignorespace
 source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source /usr/local/share/zsh/site-functions/_aws
 
+eval "$(rbenv init - --no-rehash)"
+eval "$(pyenv init - --no-rehash)"
+eval "$(nodenv init - --no-rehash)"
+export VIRTUALENVWRAPPER_SCRIPT="$(pyenv which virtualenvwrapper.sh)"
+source "$(pyenv which virtualenvwrapper_lazy.sh)"
