@@ -144,19 +144,6 @@ sudo chown -R `whoami`:admin /usr/local/texlive
 tlmgr install collection-fontsrecommended
 ```
 
-#### Set up SSH Key
-
-https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
-```
-if [ ! -f "$HOME/.ssh/id_rsa" ]; then
-    ssh-keygen -t rsa -C "al.johri@gmail.com"
-    eval "$(ssh-agent -s)"
-    ssh-add -K "$HOME/.ssh/id_rsa"
-    pbcopy < "$HOME/.ssh/id_rsa.pub"
-    open https://github.com/settings/ssh
-fi
-```
-
 #### Start GPG Agent (if not already running)
 ```
 startgpg # defined in shrc.sh

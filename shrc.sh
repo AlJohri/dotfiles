@@ -46,6 +46,22 @@ quiet_which() {
   which $1 &>/dev/null
 }
 
+make_ssh_key() {
+  if [ ! -f "$HOME/.ssh/id_rsa" ]; then
+    ssh-keygen -q -t rsa -b 2048 -N "" -f "$HOME/.ssh/id_rsa" -C "al.johri@gmail.com"
+    eval "$(ssh-agent -s)"
+    if [ $OSX ]; then
+      ssh-add -K "$HOME/.ssh/id_rsa"
+    else
+      ssh-add "$HOME/.ssh/id_rsa"
+    fi
+    pbcopy < "$HOME/.ssh/id_rsa.pub"
+    open https://github.com/settings/ssh
+  else
+    echo "ssh key already exists"
+  fi
+}
+
 add_to_path_start "$HOME/bin"
 add_to_path_start "/usr/local/bin"
 add_to_path_start "/usr/local/sbin"
