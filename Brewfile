@@ -188,6 +188,7 @@ if ENV['BREWFILE_INTERACTIVE']
   mas 'Leaf', id: 576338668
   mas 'Wunderlist', id: 410628904
   mas 'KyPass Companion', id: 555293879
+  mas 'Todoist', id: 585829637
 
   cask 'pritunl'
   cask 'ngrok'
