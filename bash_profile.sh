@@ -1,5 +1,4 @@
 # Adapted from https://github.com/MikeMcQuaid/dotfiles/blob/master/bash_profile.sh
-# echo "loading bash_profile..."
 
 # load shared shell configuration
 source ~/.shprofile
