@@ -74,8 +74,8 @@ quiet_which pyenv && eval "$(pyenv init - --no-rehash)"
 quiet_which rbenv && eval "$(rbenv init - --no-rehash)"
 quiet_which nodenv && eval "$(nodenv init - --no-rehash)"
 
-quiet_which pyenv && export VIRTUALENVWRAPPER_SCRIPT="$(pyenv which virtualenvwrapper.sh)"
-quiet_which pyenv && source "$(pyenv which virtualenvwrapper_lazy.sh)"
+# quiet_which pyenv && export VIRTUALENVWRAPPER_SCRIPT="$(pyenv which virtualenvwrapper.sh)"
+# quiet_which pyenv && source "$(pyenv which virtualenvwrapper_lazy.sh)"
 
 export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim

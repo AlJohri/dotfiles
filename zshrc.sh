@@ -97,7 +97,7 @@ elif [ -n "${SSH_CONNECTION}" ]
 then
   PROMPT='%{$fg_bold[cyan]%}%m %{$fg_bold[blue]%}# %b%f'
 else
-  PROMPT='$(virtualenv_prompt_info)%{$fg_bold[green]%}%m %{$fg_bold[blue]%}# %b%f'
+  PROMPT='%{$fg_bold[green]%}%m %{$fg_bold[blue]%}# %b%f'
 fi
 RPROMPT='%{$fg_bold[red]%}$(git_branch)%{$fg_bold[yellow]%}$(svn_branch)%b[%{$fg_bold[blue]%}%~%b%f]'
 
