@@ -32,6 +32,8 @@ alias mv='mv -iv'
 alias gst='git status'
 alias ag='rg'
 alias curl='noglob curl'
+alias nchrome='open -n /Applications/Google\ Chrome.app/'
+alias pyclean='find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf'
 
 # Functions
 

@@ -74,18 +74,16 @@ quiet_which pyenv && eval "$(pyenv init - --no-rehash)"
 quiet_which rbenv && eval "$(rbenv init - --no-rehash)"
 quiet_which nodenv && eval "$(nodenv init - --no-rehash)"
 
-# quiet_which pyenv && export VIRTUALENVWRAPPER_SCRIPT="$(pyenv which virtualenvwrapper.sh)"
-# quiet_which pyenv && source "$(pyenv which virtualenvwrapper_lazy.sh)"
-
 export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim
 export NLTK_DATA="$HOME/nltk_data"
 export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
-export R_HOME="$HOMEBREW_PREFIX/opt/r/R.framework/Resources"
+export R_HOME="$HOMEBREW_PREFIX/opt/r/lib/R"
 export RSTUDIO_WHICH_R="/usr/local/bin/R"
 export GOPATH=$(go env GOPATH)
 add_to_path_start "$GOPATH/bin"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
+export PIPENV_DEFAULT_PYTHON_VERSION="3.6"
 
 if [ $OSX ]; then
   quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"
@@ -93,6 +91,8 @@ if [ $OSX ]; then
   add_to_path_end /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
   add_to_path_end "$HOMEBREW_PREFIX/opt/git/share/git-core/contrib/diff-highlight"
 fi
+
+add_to_path_end /usr/local/texlive/2017/bin/x86_64-darwin
 
 # Look in ./bin but do it last to avoid weird `which` results.
 force_add_to_path_start "bin"

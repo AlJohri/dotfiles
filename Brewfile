@@ -80,7 +80,6 @@ brew 'archey'
 brew 'jsonpp'
 
 cask 'google-chrome-beta' unless File.directory?("/Applications/Google Chrome.app")
-cask 'firefoxdeveloperedition'
 cask 'docker'
 cask 'atom'
 cask 'iterm2'

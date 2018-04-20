@@ -104,12 +104,11 @@ fi
 brew bundle --global
 
 eval "$(pyenv init -)"
-pyenv install --skip-existing 2.7.13
-pyenv install --skip-existing 3.6.1
-pyenv global 3.6.1 2.7.13
+pyenv install --skip-existing 2.7.14
+pyenv install --skip-existing 3.6.5
+pyenv global 3.6.5 2.7.14
 pyenv rehash
 pip3 install -r "$(pyenv root)/default-packages"
-pip2 install virtualenvwrapper
 
 # use homebrew python 2 packages in system python and pyenv python
 # mkdir -p "$HOME/Library/Python/2.7/lib/python/site-packages"
