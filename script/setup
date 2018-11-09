@@ -16,6 +16,7 @@ DOTFILESDIR=$(pwd -P)
 uname -s | grep -q "_NT-" && export WINDOWS=1
 
 echo "UNIX: $UNIX"
+echo "OSX: $OSX"
 echo "LINUX: $LINUX"
 echo "WINDOWS: $WINDOWS"
 
@@ -39,9 +40,11 @@ for DOTFILE in *; do
     if [ -L "$HOMEFILE" ] && ! [ -d $DOTFILE ]
     then
       ln -sfv "$DIRFILE" "$HOMEFILE"
+      echo "symlinking $DIRFILE to $HOMEFILE"
     else
       rm -rv "$HOMEFILE"
       ln -sv "$DIRFILE" "$HOMEFILE"
+      echo "symlinking $DIRFILE to $HOMEFILE"
     fi
   else
     cp -rv "$DIRFILE" "$HOMEFILE"
@@ -91,6 +94,7 @@ then
   duti -s com.sublimetext.3 public.source-code all
 fi
 
+cat $HOME/.Brewfile
 brew bundle --global || true
 
 fancy_echo "Configuring Zsh ..."
