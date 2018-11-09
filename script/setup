@@ -114,7 +114,9 @@ fancy_echo "Done Configuring Zsh!"
 
 fancy_echo "Configuring ASDF ..."
 
-git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.6.0
+if [ ! -d "$HOME/.asdf" ]; then
+  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.6.0
+fi
 
 # shellcheck disable=SC2016
 # append_to_file $HOME/.zshrc '. $HOME/.asdf/asdf.sh'

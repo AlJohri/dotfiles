@@ -100,5 +100,8 @@ RPROMPT='%{$fg_bold[red]%}$(git_branch)%{$fg_bold[yellow]%}$(svn_branch)%b[%{$fg
 # more OS X/Bash-like word jumps
 export WORDCHARS=''
 
-source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+# source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source /usr/local/share/zsh/site-functions/_aws
+source /usr/local/share/antigen/antigen.zsh
+
+antigen bundle zdharma/fast-syntax-highlighting
