@@ -15,6 +15,10 @@ DOTFILESDIR=$(pwd -P)
 [ $(uname -s) = "Linux" ] && export LINUX=1 && export UNIX=1
 uname -s | grep -q "_NT-" && export WINDOWS=1
 
+echo "UNIX: $UNIX"
+echo "LINUX: $LINUX"
+echo "WINDOWS: $WINDOWS"
+
 for DOTFILE in *; do
   HOMEFILE="$HOME/.$DOTFILE"
   [ -d $DOTFILE ] && DOTFILE="$DOTFILE/"
@@ -26,6 +30,9 @@ for DOTFILE in *; do
   # remove .sh extension
   echo $DOTFILE | grep -q '\.sh' \
     && HOMEFILE="$HOME/.$(echo $DOTFILE | sed -e 's/\.sh//')"
+    
+  echo "DIRFILE: $DIRFILE"
+  echo "HOMEFILE: $HOMEFILE"
 
   if [ $UNIX ]
   then
