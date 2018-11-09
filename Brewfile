@@ -1,9 +1,6 @@
-cask_args appdir: '/Applications'
-
 tap 'homebrew/services'
 tap 'caskroom/cask'
 tap 'caskroom/versions'
-tap 'nodenv/nodenv'
 
 brew 'openssl'
 cask 'java' unless system '/usr/libexec/java_home --failfast'
@@ -69,24 +66,24 @@ brew 'cowsay'
 brew 'archey'
 brew 'jsonpp'
 
+cask 'iterm2' unless File.directory?("/Applications/iTerm.app")
+cask 'docker' unless File.directory?("/Applications/Docker.app")
+cask 'sublime-text' unless File.directory?("/Applications/Sublime Text.app")
+cask 'visual-studio-code' unless File.directory?("/Applications/Visual Studio Code.app.app")
+
+cask 'google-chrome-canary'
 cask 'google-chrome-beta' unless File.directory?("/Applications/Google Chrome.app")
-cask 'docker'
-cask 'atom'
-cask 'iterm2'
-cask 'sublime-text'
-cask 'pycharm-ce'
-cask 'keepingyouawake'
+cask 'keepingyouawake' unless File.directory?("/Applications/KeepingYouAwake.app")
 cask 'slack' unless File.directory?("/Applications/Slack.app")
+cask 'dropbox' unless File.directory?("/Applications/Dropbox.app")
 cask 'vlc'
 cask 'spotify'
-cask 'dropbox'
 
 # https://github.com/sindresorhus/quick-look-plugins
 cask 'qlcolorcode'
 cask 'qlstephen'
 cask 'qlmarkdown'
 cask 'quicklook-json'
-# cask 'quicklook-csv' # csv (default csv render is better)
 cask 'webpquicklook'
 cask 'provisionql'
 
