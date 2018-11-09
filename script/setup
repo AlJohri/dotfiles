@@ -81,6 +81,27 @@ fi
 
 brew bundle --global || true
 
+fancy_echo "Configuring Zsh ..."
+
+shell_path=/usr/local/bin/zsh
+
+if ! grep "$shell_path" /etc/shells > /dev/null 2>&1 ; then
+  fancy_echo "Adding '$shell_path' to /etc/shells"
+  sudo sh -c "echo $shell_path >> /etc/shells"
+fi
+
+REALSHELL=$(dscl . -read "/Users/$USER/" UserShell | awk '{ print $2 }')
+if [ "$REALSHELL" != "$shell_path" ]; then
+  fancy_echo "Changing your shell from $SHELL to $shell_path ..."
+  sudo chsh -s "$shell_path" "$USER"
+fi
+
+# if [ ! -f "$HOME/.zshrc" ]; then
+#   touch "$HOME/.zshrc"
+# fi
+
+fancy_echo "Done Configuring Zsh!"
+
 fancy_echo "Configuring ASDF ..."
 
 git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.6.0
