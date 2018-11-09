@@ -31,20 +31,15 @@ for DOTFILE in *; do
   # remove .sh extension
   echo $DOTFILE | grep -q '\.sh' \
     && HOMEFILE="$HOME/.$(echo $DOTFILE | sed -e 's/\.sh//')"
-    
-  echo "DIRFILE: $DIRFILE"
-  echo "HOMEFILE: $HOMEFILE"
 
   if [ $UNIX ]
   then
     if [ -L "$HOMEFILE" ] && ! [ -d $DOTFILE ]
     then
       ln -sfv "$DIRFILE" "$HOMEFILE"
-      echo "symlinking $DIRFILE to $HOMEFILE"
     else
       rm -rfv "$HOMEFILE"
       ln -sv "$DIRFILE" "$HOMEFILE"
-      echo "symlinking $DIRFILE to $HOMEFILE"
     fi
   else
     cp -rv "$DIRFILE" "$HOMEFILE"
@@ -75,6 +70,8 @@ append_to_file() {
 
 if [ $OSX ]
 then
+  brew bundle --global || true
+
   mkdir -p "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
   if [ ! -f "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/Package Control.sublime-package" ]; then
     # http://stackoverflow.com/questions/19529999/add-package-control-in-sublime-text-3-through-the-command-line
@@ -93,9 +90,6 @@ then
   duti -s com.sublimetext.3 public.plain-text all
   duti -s com.sublimetext.3 public.source-code all
 fi
-
-cat $HOME/.Brewfile
-brew bundle --global || true
 
 fancy_echo "Configuring Zsh ..."
 
