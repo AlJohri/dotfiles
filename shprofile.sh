@@ -66,13 +66,15 @@ quiet_which() {
   which $1 &>/dev/null
 }
 
-quiet_which pyenv && export PYENV_ROOT="$HOME/.pyenv"
-quiet_which rbenv && export RBENV_ROOT="$HOME/.rbenv"
-quiet_which nodenv && export NODENV_ROOT="$HOME/.nodenv"
+# quiet_which pyenv && export PYENV_ROOT="$HOME/.pyenv"
+# quiet_which rbenv && export RBENV_ROOT="$HOME/.rbenv"
+# quiet_which nodenv && export NODENV_ROOT="$HOME/.nodenv"
 
-quiet_which pyenv && eval "$(pyenv init - --no-rehash)"
-quiet_which rbenv && eval "$(rbenv init - --no-rehash)"
-quiet_which nodenv && eval "$(nodenv init - --no-rehash)"
+# quiet_which pyenv && eval "$(pyenv init - --no-rehash)"
+# quiet_which rbenv && eval "$(rbenv init - --no-rehash)"
+# quiet_which nodenv && eval "$(nodenv init - --no-rehash)"
+
+. $HOME/.asdf/asdf.sh
 
 export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim
