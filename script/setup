@@ -42,29 +42,6 @@ for DOTFILE in *; do
   fi
 done
 
-mkdir -p $(pyenv root)
-mkdir -p $(rbenv root)
-mkdir -p $(nodenv root)
-
-for FOLDER in rbenv pyenv nodenv; do
-  if [ -d "$FOLDER" ]; then
-    for DOTFILE in $FOLDER/*; do
-      DIRFILE="$DOTFILESDIR/$DOTFILE"
-      HOMEFILE="$HOME/.$DOTFILE"
-      if [ -L "$HOMEFILE" ] && ! [ -d $DOTFILE ]
-      then
-        ln -sfv "$DIRFILE" "$HOMEFILE"
-      elif ! [ -d $DOTFILE ]
-      then
-        rm -v "$HOMEFILE"
-        ln -sv "$DIRFILE" "$HOMEFILE"
-      else
-        echo "ignoring $DOTFILE because it is a directory"
-      fi
-    done
-  fi
-done
-
 append_to_file() {
   local file="$1"
   local text="$2"
@@ -102,38 +79,6 @@ then
 fi
 
 brew bundle --global
-
-eval "$(pyenv init -)"
-pyenv install --skip-existing 2.7.14
-pyenv install --skip-existing 3.6.5
-pyenv global 3.6.5 2.7.14
-pyenv rehash
-pip3 install -r "$(pyenv root)/default-packages"
-
-# use homebrew python 2 packages in system python and pyenv python
-# mkdir -p "$HOME/Library/Python/2.7/lib/python/site-packages"
-# append_to_file "$HOME/Library/Python/2.7/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
-# append_to_file "$(dirname $(pyenv which python2))/../lib/python2.7/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python2.7/site-packages')"
-
-# use homebrew python 3 packages in system python and pyenv python
-# mkdir -p "$HOME/Library/Python/3.6/lib/python/site-packages"
-# append_to_file "$HOME/Library/Python/3.6/lib/python/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
-# append_to_file "$(dirname $(pyenv which python3))/../lib/python3.6/site-packages/homebrew.pth" "import sys; sys.path.insert(1, '$(brew --prefix)/lib/python3.6/site-packages')"
-
-eval "$(rbenv init -)"
-rbenv install --skip-existing 2.2.2
-rbenv install --skip-existing 2.4.1
-rbenv global 2.4.1
-rbenv rehash
-gem update --system
-gem install bundler --conservative
-number_of_cores=$(sysctl -n hw.ncpu)
-bundle config --global jobs $((number_of_cores - 1))
-rbenv rehash
-
-eval "$(nodenv init -)"
-nodenv install --skip-existing 7.8.0
-nodenv global 7.8.0
 
 createuser --superuser --createdb --createrole --replication postgres || "postgres superuser, 'postgres', already exists"
 createuser --superuser --createdb --createrole --replication root || "postgres superuser, 'root', already exists"
