@@ -4,6 +4,7 @@ tap 'caskroom/versions'
 
 brew 'openssl'
 cask 'java' unless system '/usr/libexec/java_home --failfast'
+cask 'java8'
 cask 'xquartz'
 
 brew 'awscli'
