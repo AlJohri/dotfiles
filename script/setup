@@ -36,6 +36,13 @@ for DOTFILE in *; do
   fi
 done
 
+fancy_echo() {
+  local fmt="$1"; shift
+
+  # shellcheck disable=SC2059
+  printf "\n$fmt\n" "$@"
+}
+
 append_to_file() {
   local file="$1"
   local text="$2"
@@ -72,7 +79,50 @@ then
   duti -s com.sublimetext.3 public.source-code all
 fi
 
-brew bundle --global
+brew bundle --global || true
+
+fancy_echo "Configuring ASDF ..."
+
+git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.6.0
+
+# shellcheck disable=SC2016
+# append_to_file $HOME/.zshrc '. $HOME/.asdf/asdf.sh'
+
+# shellcheck disable=SC1090
+. "$HOME/.asdf/asdf.sh"
+
+asdf plugin-add ruby
+asdf plugin-add python
+asdf plugin-add nodejs
+
+export NODEJS_CHECK_SIGNATURES=no
+
+latest_python2() {
+	asdf list-all python | grep -v - | grep -e "^2." | tail -1
+}
+
+latest_python3() {
+	asdf list-all python | grep -v - | grep -e "^3." | tail -1
+}
+
+latest_ruby() {
+	asdf list-all ruby | grep -v - | tail -1
+}
+
+latest_nodejs() {
+	asdf list-all nodejs | grep -v - | tail -1
+}
+
+asdf install python "$(latest_python2)"
+asdf install python "$(latest_python3)"
+asdf install ruby "$(latest_ruby)"
+asdf install nodejs "$(latest_nodejs)"
+
+asdf global python "$(latest_python3) $(latest_python2)"
+asdf global ruby "$(latest_ruby)"
+asdf global nodejs "$(latest_nodejs)"
+
+fancy_echo "Done Configuring ASDF!"
 
 createuser --superuser --createdb --createrole --replication postgres || "postgres superuser, 'postgres', already exists"
 createuser --superuser --createdb --createrole --replication root || "postgres superuser, 'root', already exists"
