@@ -1,17 +1,11 @@
 cask_args appdir: '/Applications'
 
-tap 'homebrew/core'
+tap 'homebrew/services'
 tap 'caskroom/cask'
 tap 'caskroom/versions'
-tap 'caskroom/fonts'
-tap 'caskroom/drivers'
-tap 'homebrew/services'
-tap 'homebrew/versions'
-tap 'homebrew/dupes'
-tap 'homebrew/science'
-tap 'homebrew/binary'
 tap 'nodenv/nodenv'
 
+brew 'openssl'
 cask 'java' unless system '/usr/libexec/java_home --failfast'
 cask 'xquartz'
 
@@ -19,9 +13,9 @@ brew 'awscli'
 brew 'coreutils'
 brew 'cheat'
 brew 'colordiff'
-brew 'docker-clean'
 brew 'dos2unix'
 brew 'duti'
+brew 'elasticsearch', restart_service: :changed
 brew 'fortune'
 brew 'ffmpeg'
 brew 'gist'
@@ -32,6 +26,7 @@ brew 'htop-osx'
 brew 'hub'
 brew 'jq'
 brew 'jsonpp'
+brew 'kafka'
 brew 'leiningen'
 brew 'libxslt'
 brew 'libxml2'
@@ -44,9 +39,6 @@ brew 'moreutils'
 brew 'mysql', restart_service: :changed
 brew 'ncdu'
 brew 'node'
-brew 'nodenv'
-brew 'nodenv/nodenv/nodenv-package-rehash'
-brew 'nodenv/nodenv/nodenv-default-packages'
 brew 'openssl'
 brew 'openconnect'
 brew 'pidof'
@@ -54,9 +46,7 @@ brew 'postgresql', restart_service: :changed
 brew 'postgis'
 brew 'pyenv'
 brew 'python'
-brew 'python3'
-brew 'rbenv'
-brew 'rbenv-default-gems'
+brew 'python@2'
 brew 'redis', restart_service: :changed
 brew 'ripgrep'
 brew 'ruby-build'
@@ -99,33 +89,6 @@ cask 'quicklook-json'
 # cask 'quicklook-csv' # csv (default csv render is better)
 cask 'webpquicklook'
 cask 'provisionql'
-
-if ENV['BREWFILE_COMPLETE']
-  cask 'nteract'
-  brew 'gcc'
-  brew 'r'
-  cask 'rstudio'
-  cask 'android-sdk'
-  cask 'android-studio'
-  cask 'julia'
-  brew 'scala'
-  brew 'ghc'
-  brew 'erlang'
-  brew 'maven'
-  brew 'gradle'
-  brew 'lua'
-  brew 'octave'
-  brew 'hdf5'
-  brew 'apache-spark'
-  brew 'rethinkdb', restart_service: :changed
-  brew 'elasticsearch', restart_service: :changed
-  brew 'solr', restart_service: :changed
-  brew 'memcached', restart_service: :changed
-  brew 'rabbitmq', restart_service: :changed
-  brew 'rabbitmq-c'
-  brew 'zookeeper', restart_service: :changed
-  brew 'kafka', restart_service: :changed
-end
 
 if ENV['BREWFILE_EXTRA']
 
@@ -181,19 +144,15 @@ end
 
 # requires password or interaction from user
 if ENV['BREWFILE_INTERACTIVE']
-  mas '1Password', id: 443987910
+  mas '1Password', id: 1333542190
   mas 'Pocket', id: 568494494
   mas 'DaisyDisk', id: 411643860
   mas 'Leaf', id: 576338668
-  mas 'Wunderlist', id: 410628904
-  mas 'KyPass Companion', id: 555293879
   mas 'Todoist', id: 585829637
 
-  cask 'pritunl'
   cask 'ngrok'
   cask 'caskroom/drivers/logitech-options'
   cask 'virtualbox'
-  cask 'vagrant'
   cask 'teamviewer'
   cask 'private-internet-access'
   cask 'flash-npapi'
