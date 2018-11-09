@@ -42,7 +42,7 @@ for DOTFILE in *; do
       ln -sfv "$DIRFILE" "$HOMEFILE"
       echo "symlinking $DIRFILE to $HOMEFILE"
     else
-      rm -rv "$HOMEFILE"
+      rm -rfv "$HOMEFILE"
       ln -sv "$DIRFILE" "$HOMEFILE"
       echo "symlinking $DIRFILE to $HOMEFILE"
     fi
