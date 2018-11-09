@@ -103,5 +103,7 @@ export WORDCHARS=''
 # source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source /usr/local/share/zsh/site-functions/_aws
 source /usr/local/share/antigen/antigen.zsh
-
 antigen bundle zdharma/fast-syntax-highlighting
+antigen apply
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh

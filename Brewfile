@@ -17,6 +17,7 @@ brew 'duti'
 brew 'elasticsearch', restart_service: :changed
 brew 'fortune'
 brew 'ffmpeg'
+brew 'fzf'
 brew 'gist'
 brew 'go'
 brew 'gnupg'
