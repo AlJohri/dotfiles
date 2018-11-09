@@ -124,9 +124,9 @@ fi
 # shellcheck disable=SC1090
 . "$HOME/.asdf/asdf.sh"
 
-asdf plugin-add ruby
-asdf plugin-add python
-asdf plugin-add nodejs
+asdf plugin-add ruby || true
+asdf plugin-add python || true
+asdf plugin-add nodejs || true
 
 export NODEJS_CHECK_SIGNATURES=no
 
@@ -146,10 +146,10 @@ latest_nodejs() {
 	asdf list-all nodejs | grep -v - | tail -1
 }
 
-asdf install python "$(latest_python2)"
-asdf install python "$(latest_python3)"
-asdf install ruby "$(latest_ruby)"
-asdf install nodejs "$(latest_nodejs)"
+asdf install python "$(latest_python2)" || true
+asdf install python "$(latest_python3)" || true
+asdf install ruby "$(latest_ruby)" || true
+asdf install nodejs "$(latest_nodejs)" || true
 
 asdf global python "$(latest_python3) $(latest_python2)"
 asdf global ruby "$(latest_ruby)"
@@ -157,8 +157,12 @@ asdf global nodejs "$(latest_nodejs)"
 
 fancy_echo "Done Configuring ASDF!"
 
-createuser --superuser --createdb --createrole --replication postgres || "postgres superuser, 'postgres', already exists"
-createuser --superuser --createdb --createrole --replication root || "postgres superuser, 'root', already exists"
+fancy_echo "Configuring Postgres ..."
+
+createuser --superuser --createdb --createrole --replication postgres || echo "postgres superuser, 'postgres', already exists"
+createuser --superuser --createdb --createrole --replication root || echo "postgres superuser, 'root', already exists"
+
+fancy_echo "Done Configuring Postgres!"
 
 GITHUB_USER="$(git config --get github.user)"
 
@@ -215,6 +219,8 @@ GITHUB_USER="$(git config --get github.user)"
 #   fi
 
 # fi
+
+fancy_echo "Configuring macOS settings..."
 
 # macOS defaults
 
@@ -313,5 +319,7 @@ defaults write com.apple.dock minimize-to-application -bool true
 
 # Enable highlight hover effect for the grid view of a stack (Dock)
 defaults write com.apple.dock mouse-over-hilite-stack -bool true
+
+fancy_echo "Done configuring macOS!"
 
 echo "Done. Note that some of these changes require a logout/restart to take effect."
