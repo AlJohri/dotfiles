@@ -8,7 +8,9 @@ cask 'java' unless system '/usr/libexec/java_home --failfast'
 cask 'java8'
 cask 'xquartz'
 
+brew 'antigen'
 brew 'awscli'
+brew 'bat'
 brew 'coreutils'
 brew 'cheat'
 brew 'colordiff'
@@ -78,6 +80,13 @@ cask 'slack' unless File.directory?("/Applications/Slack.app")
 cask 'dropbox' unless File.directory?("/Applications/Dropbox.app")
 cask 'vlc'
 cask 'spotify'
+cask 'yt-music'
+cask 'spectacle'
+cask 'tableplus'
+cask 'airserver'
+cask 'charles'
+cask 'google-hangouts'
+cask 'caskroom/drivers/logitech-options'
 
 # https://github.com/sindresorhus/quick-look-plugins
 cask 'qlcolorcode'
@@ -86,58 +95,46 @@ cask 'qlmarkdown'
 cask 'quicklook-json'
 cask 'webpquicklook'
 cask 'provisionql'
+cask 'skitch'
+cask 'skype'
+cask 'tabula'
+cask 'macdown'
+cask 'keybase'
 
-if ENV['BREWFILE_EXTRA']
+# cask 'pgadmin3'
+# cask 'psequel'
+# cask 'postico'
+# cask 'sqlitebrowser' # sqlite gui
+# cask 'sequel-pro' # mysql gui
 
-  # look into these more:
-  # brew 'homebrew/dupes/rsync'
-  # brew 'diffutils'
-  # brew 'findutils' '--with-default-names'
-  # brew 'homebrew/dupes/grep' '--with-default-names'
+# look into these more:
+# brew 'homebrew/dupes/rsync'
+# brew 'diffutils'
+# brew 'findutils' '--with-default-names'
+# brew 'homebrew/dupes/grep' '--with-default-names'
 
-  cask 'pgadmin3'
-  cask 'psequel'
-  cask 'postico'
-  cask 'sqlitebrowser' # sqlite gui
-  cask 'sequel-pro' # mysql gui
-  cask 'osxfuse'
-  cask 'macfusion' # use sublime via ssh (sshfs)
-  cask 'arduino'
-  cask 'weka'
-  cask 'tabula'
-  cask 'gephi'
-
-  cask 'airserver'
-  cask 'macdown'
-  cask 'ccleaner'
-  cask 'paintbrush'
-  cask 'mac-linux-usb-loader'
-  cask 'unetbootin'
-
-  cask 'charles'
-  cask 'gitter'
-  cask 'skitch'
-  cask 'textual'
-  cask 'balsamiq-mockups'
-
-  cask 'sizeup'
-  cask 'cinch'
-  cask 'carbon-copy-cloner'
-  cask 'bartender'
-  cask 'the-unarchiver'
-  cask 'evernote'
-  cask 'insync'
-  cask 'skype'
-  cask 'google-hangouts'
-  cask 'fluid'
-  cask 'flip4mac'
-  cask 'transmission'
-  cask 'bartender'
-  cask 'calibre'
-  cask 'licecap'
-
-  brew 'jack', restart_service: :changed
-end
+# cask 'osxfuse'
+# cask 'macfusion' # use sublime via ssh (sshfs)
+# cask 'arduino'
+# cask 'ccleaner'
+# cask 'paintbrush'
+# cask 'mac-linux-usb-loader'
+# cask 'unetbootin'
+# cask 'gitter'
+# cask 'textual'
+# cask 'balsamiq-mockups'
+# cask 'carbon-copy-cloner'
+# cask 'bartender'
+# cask 'the-unarchiver'
+# cask 'evernote'
+# cask 'insync'
+# cask 'fluid'
+# cask 'flip4mac'
+# cask 'transmission'
+# cask 'bartender'
+# cask 'calibre'
+# cask 'licecap'
+# brew 'jack', restart_service: :changed
 
 # requires password or interaction from user
 if ENV['BREWFILE_INTERACTIVE']
@@ -146,12 +143,13 @@ if ENV['BREWFILE_INTERACTIVE']
   mas 'DaisyDisk', id: 411643860
   mas 'Leaf', id: 576338668
   mas 'Todoist', id: 585829637
+  mas 'WhatsApp Desktop', id: 1147396723
 
   cask 'ngrok'
-  cask 'caskroom/drivers/logitech-options'
   cask 'virtualbox'
   cask 'teamviewer'
   cask 'private-internet-access'
   cask 'flash-npapi'
+  cask '1password-cli'
   brew 'zzz'
 end

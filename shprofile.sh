@@ -75,12 +75,14 @@ quiet_which() {
 # quiet_which nodenv && eval "$(nodenv init - --no-rehash)"
 
 . $HOME/.asdf/asdf.sh
+export ASDF_DATA_DIR=$ASDF_DIR
 
 export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim
 export NLTK_DATA="$HOME/nltk_data"
 export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
-export R_HOME="$HOMEBREW_PREFIX/opt/r/lib/R"
+# export R_HOME="$HOMEBREW_PREFIX/opt/r/lib/R"
+# export R_HOME="$HOMEBREW_PREFIX/opt/r-x11/lib/R"
 export RSTUDIO_WHICH_R="/usr/local/bin/R"
 export GOPATH=$(go env GOPATH)
 add_to_path_start "$GOPATH/bin"

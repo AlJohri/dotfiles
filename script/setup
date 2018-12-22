@@ -106,9 +106,9 @@ if [ "$REALSHELL" != "$shell_path" ]; then
   sudo chsh -s "$shell_path" "$USER"
 fi
 
-# if [ ! -f "$HOME/.zshrc" ]; then
-#   touch "$HOME/.zshrc"
-# fi
+if [ ! -f "$HOME/.zshrc" ]; then
+  touch "$HOME/.zshrc"
+fi
 
 fancy_echo "Done Configuring Zsh!"
 
@@ -159,8 +159,8 @@ fancy_echo "Done Configuring ASDF!"
 
 fancy_echo "Configuring Postgres ..."
 
-createuser --superuser --createdb --createrole --replication postgres || echo "postgres superuser, 'postgres', already exists"
-createuser --superuser --createdb --createrole --replication root || echo "postgres superuser, 'root', already exists"
+createuser --superuser --createdb --createrole --replication postgres || true
+createuser --superuser --createdb --createrole --replication root || true
 
 fancy_echo "Done Configuring Postgres!"
 

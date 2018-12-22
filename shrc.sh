@@ -110,5 +110,10 @@ function sleepin() {
   sudo pmset schedule sleep "$datetime"
 }
 
+function sourceenv() {
+  export $(grep -v '^#' .env | xargs)
+}
+
 # test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 [ -f "$HOME/.workrc" ] && source "$HOME/.workrc"
+

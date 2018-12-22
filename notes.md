@@ -278,6 +278,7 @@ duti -s com.sublimetext.3 java all
 duti -s com.sublimetext.3 py all
 duti -s com.sublimetext.3 rb all
 duti -s com.sublimetext.3 sh all
+duti -s com.microsoft.Excel csv all
 ```
 
 Check Default Editor
