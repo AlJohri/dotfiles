@@ -66,7 +66,7 @@ brew 'ssh-copy-id'
 brew 'ec2-api-tools'
 brew 'cowsay'
 brew 'archey'
-brew 'jsonpp'
+brew 'zsh'
 
 cask 'iterm2' unless File.directory?("/Applications/iTerm.app")
 cask 'docker' unless File.directory?("/Applications/Docker.app")
@@ -85,7 +85,6 @@ cask 'spectacle'
 cask 'tableplus'
 cask 'airserver'
 cask 'charles'
-cask 'google-hangouts'
 cask 'caskroom/drivers/logitech-options'
 
 # https://github.com/sindresorhus/quick-look-plugins
@@ -137,19 +136,21 @@ cask 'keybase'
 # brew 'jack', restart_service: :changed
 
 # requires password or interaction from user
-if ENV['BREWFILE_INTERACTIVE']
-  mas '1Password', id: 1333542190
-  mas 'Pocket', id: 568494494
-  mas 'DaisyDisk', id: 411643860
-  mas 'Leaf', id: 576338668
-  mas 'Todoist', id: 585829637
-  mas 'WhatsApp Desktop', id: 1147396723
 
-  cask 'ngrok'
-  cask 'virtualbox'
-  cask 'teamviewer'
-  cask 'private-internet-access'
-  cask 'flash-npapi'
-  cask '1password-cli'
-  brew 'zzz'
-end
+cask 'ngrok'
+cask 'virtualbox'
+cask 'teamviewer'
+cask 'private-internet-access'
+cask 'flash-npapi'
+cask '1password-cli'
+cask 'google-hangouts'
+brew 'zzz'
+
+cask '1password'
+# mas '1Password', id: 1333542190
+
+mas 'Pocket', id: 568494494
+mas 'DaisyDisk', id: 411643860
+mas 'Leaf', id: 576338668
+mas 'Todoist', id: 585829637
+mas 'WhatsApp Desktop', id: 1147396723
