@@ -108,10 +108,3 @@ antigen apply
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 # export FZF_COMPLETION_TRIGGER=''
-
-# tabtab source for serverless package
-# uninstall by removing these lines or running `tabtab uninstall serverless`
-[[ -f /Users/johria/.asdf/installs/nodejs/11.1.0/.npm/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.zsh ]] && . /Users/johria/.asdf/installs/nodejs/11.1.0/.npm/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.zsh
-# tabtab source for sls package
-# uninstall by removing these lines or running `tabtab uninstall sls`
-[[ -f /Users/johria/.asdf/installs/nodejs/11.1.0/.npm/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh ]] && . /Users/johria/.asdf/installs/nodejs/11.1.0/.npm/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh

@@ -87,7 +87,8 @@ export RSTUDIO_WHICH_R="/usr/local/bin/R"
 export GOPATH=$(go env GOPATH)
 add_to_path_start "$GOPATH/bin"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
-export PIPENV_DEFAULT_PYTHON_VERSION="3.6"
+export PIPENV_DEFAULT_PYTHON_VERSION="3.7"
+export PIPENV_VENV_IN_PROJECT=1
 
 if [ $OSX ]; then
   quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"
@@ -97,6 +98,8 @@ if [ $OSX ]; then
 fi
 
 add_to_path_end /usr/local/texlive/2017/bin/x86_64-darwin
+
+add_to_path_start "$HOME/.local/bin"
 
 # Look in ./bin but do it last to avoid weird `which` results.
 force_add_to_path_start "bin"
