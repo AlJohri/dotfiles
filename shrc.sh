@@ -89,11 +89,13 @@ then
   export CLICOLOR=1
   export LSCOLORS=GxFxCxDxBxegedabagaced
 
+  export LESS="-RFi"
+
   if quiet_which diff-highlight
   then
-    export GIT_PAGER='diff-highlight | less -+$LESS -RX'
+    export GIT_PAGER='diff-highlight | less -+$LESS -FRXi'
   else
-    export GIT_PAGER='less -+$LESS -RX'
+    export GIT_PAGER='less -+$LESS -FRXi'
   fi
 
   alias ls="ls -F"

@@ -273,12 +273,20 @@ prompt cloud ➜ red blue
 https://www.chainsawonatireswing.com/2012/09/19/changing-default-applications-on-a-mac-using-the-command-line-then-a-shell-script//?from=@
 
 Set Default Editor
+
+use `com.microsoft.VSCode` or `com.sublimetext.3` or `com.apple.textedit` or `com.macromates.textmate`
+
 ```
-duti -s com.sublimetext.3 java all
-duti -s com.sublimetext.3 py all
-duti -s com.sublimetext.3 rb all
-duti -s com.sublimetext.3 sh all
+duti -s com.microsoft.VSCode java all
+duti -s com.microsoft.VSCode js all
+duti -s com.microsoft.VSCode py all
+duti -s com.microsoft.VSCode rb all
+duti -s com.microsoft.VSCode sh all
+duti -s com.microsoft.VSCode json all
 duti -s com.microsoft.Excel csv all
+duti -s com.microsoft.VSCode public.plain-text all
+duti -s com.microsoft.VSCode public.unix-executable all
+duti -s com.microsoft.VSCode public.source-code all
 ```
 
 Check Default Editor
