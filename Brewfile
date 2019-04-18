@@ -67,6 +67,8 @@ brew 'ec2-api-tools'
 brew 'cowsay'
 brew 'archey'
 brew 'zsh'
+brew 'zlib'
+brew 'aws/tap/aws-sam-cli'
 
 cask 'iterm2' unless File.directory?("/Applications/iTerm.app")
 cask 'docker' unless File.directory?("/Applications/Docker.app")
@@ -154,3 +156,4 @@ mas 'DaisyDisk', id: 411643860
 mas 'Leaf', id: 576338668
 mas 'Todoist', id: 585829637
 mas 'WhatsApp Desktop', id: 1147396723
+mas 'Trello', id: 1278508951
