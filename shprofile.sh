@@ -89,6 +89,9 @@ add_to_path_start "$GOPATH/bin"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
 export PIPENV_DEFAULT_PYTHON_VERSION="3.7"
 export PIPENV_VENV_IN_PROJECT=1
+export BAT_PAGER=''
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 if [ $OSX ]; then
   quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"

@@ -2,7 +2,9 @@
 
 # utils
 
-quiet_which() { which $1 &>/dev/null }
+quiet_which() {
+	command -v "$1" >/dev/null
+}
 
 # Colourful manpages
 export LESS_TERMCAP_mb=$'\E[01;31m'
@@ -26,6 +28,7 @@ quiet_which dircolors && eval $(dircolors -b)
 
 alias ccat='pygmentize -g'
 alias git=hub
+alias cat=bat
 alias cp='cp -irv'
 alias rm='rm -iv'
 alias mv='mv -iv'
@@ -114,6 +117,9 @@ function sourceenv() {
   export $(grep -v '^#' .env | xargs)
 }
 
-# test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
-[ -f "$HOME/.workrc" ] && source "$HOME/.workrc"
+function anaconda() {
+  asdf shell python anaconda3-2018.12
+}
 
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+[ -f "$HOME/.workrc" ] && source "$HOME/.workrc"

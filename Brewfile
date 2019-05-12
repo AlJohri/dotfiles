@@ -52,6 +52,7 @@ brew 'python@2'
 brew 'redis', restart_service: :changed
 brew 'ripgrep'
 brew 'shellcheck'
+brew 'speedtest-cli'
 brew 'svn'
 brew 'tig'
 brew 'tor', restart_service: :changed
@@ -94,11 +95,13 @@ cask 'qlmarkdown'
 cask 'quicklook-json'
 cask 'webpquicklook'
 cask 'provisionql'
+
 cask 'skitch'
 cask 'skype'
 cask 'tabula'
 cask 'macdown'
 cask 'keybase'
+cask 'carbon-copy-cloner'
 
 # cask 'pgadmin3'
 # cask 'psequel'
