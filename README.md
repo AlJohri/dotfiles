@@ -3,3 +3,8 @@
 # Dotfiles
 
 Use https://macos-strap.herokuapp.com/ to install.
+
+Run this command to generate the latest Brewfile based on currently installed software:
+```
+brew bundle dump --force --global
+```
