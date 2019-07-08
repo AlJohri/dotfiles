@@ -102,6 +102,8 @@ fi
 
 add_to_path_end /usr/local/texlive/2017/bin/x86_64-darwin
 
+add_to_path_start "$HOME/tizen-studio/tools/ide/bin"
+add_to_path_start "$HOME/tizen-studio/tools"
 add_to_path_start "$HOME/.local/bin"
 
 # Look in ./bin but do it last to avoid weird `which` results.

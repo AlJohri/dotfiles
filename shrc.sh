@@ -37,6 +37,7 @@ alias ag='rg'
 alias curl='noglob curl'
 alias nchrome='open -n /Applications/Google\ Chrome.app/'
 alias pyclean='find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf'
+alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/A/Resources/airport'
 
 # Functions
 
@@ -119,9 +120,15 @@ function sourceenv() {
   export $(grep -v '^#' .env | xargs)
 }
 
-function anaconda() {
+function anaconda-shell() {
   asdf shell python anaconda3-2018.12
 }
+
+function anaconda() {
+  ~/.asdf/installs/python/anaconda3-2018.12/bin/ipython
+}
+
+test -e "${HOME}/.asdf/installs/python/anaconda3-2018.12/etc/profile.d/conda.sh" && source "${HOME}/.asdf/installs/python/anaconda3-2018.12/etc/profile.d/conda.sh"
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 [ -f "$HOME/.workrc" ] && source "$HOME/.workrc"
