@@ -120,15 +120,25 @@ function sourceenv() {
   export $(grep -v '^#' .env | xargs)
 }
 
+background() {
+    nohup bash --login -c "$*" &
+}
+
+background-log() {
+    filename="$1"
+    shift
+    nohup bash --login -c "$*" &> "$filename" &
+}
+
 function anaconda-shell() {
-  asdf shell python anaconda3-2018.12
+  asdf shell python anaconda3-2019.03
 }
 
 function anaconda() {
   ~/.asdf/installs/python/anaconda3-2018.12/bin/ipython
 }
 
-test -e "${HOME}/.asdf/installs/python/anaconda3-2018.12/etc/profile.d/conda.sh" && source "${HOME}/.asdf/installs/python/anaconda3-2018.12/etc/profile.d/conda.sh"
+test -e "${HOME}/.asdf/installs/python/anaconda3-2019.03/etc/profile.d/conda.sh" && source "${HOME}/.asdf/installs/python/anaconda3-2019.03/etc/profile.d/conda.sh"
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 [ -f "$HOME/.workrc" ] && source "$HOME/.workrc"
