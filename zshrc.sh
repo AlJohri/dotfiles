@@ -86,16 +86,16 @@ svn_branch() {
   echo "(${SVN_BRANCH#branches/}) "
 }
 
-if [ $USER = "root" ]
-then
-  PROMPT='%{$fg_bold[magenta]%}%m %{$fg_bold[blue]%}# %b%f'
-elif [ -n "${SSH_CONNECTION}" ]
-then
-  PROMPT='%{$fg_bold[cyan]%}%m %{$fg_bold[blue]%}# %b%f'
-else
-  PROMPT='%{$fg_bold[green]%}%m %{$fg_bold[blue]%}# %b%f'
-fi
-RPROMPT='%{$fg_bold[red]%}$(git_branch)%{$fg_bold[yellow]%}$(svn_branch)%b[%{$fg_bold[blue]%}%~%b%f]'
+# if [ $USER = "root" ]
+# then
+#   PROMPT='%{$fg_bold[magenta]%}%m %{$fg_bold[blue]%}# %b%f'
+# elif [ -n "${SSH_CONNECTION}" ]
+# then
+#   PROMPT='%{$fg_bold[cyan]%}%m %{$fg_bold[blue]%}# %b%f'
+# else
+#   PROMPT='%{$fg_bold[green]%}%m %{$fg_bold[blue]%}# %b%f'
+# fi
+# RPROMPT='%{$fg_bold[red]%}$(git_branch)%{$fg_bold[yellow]%}$(svn_branch)%b[%{$fg_bold[blue]%}%~%b%f]'
 
 # more OS X/Bash-like word jumps
 export WORDCHARS=''
@@ -104,7 +104,11 @@ export WORDCHARS=''
 source /usr/local/share/zsh/site-functions/_aws
 source /usr/local/share/antigen/antigen.zsh
 antigen bundle zdharma/fast-syntax-highlighting
+antigen theme romkatv/powerlevel10k
 antigen apply
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 # export FZF_COMPLETION_TRIGGER=''
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
