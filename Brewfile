@@ -10,13 +10,11 @@ tap "homebrew/services"
 tap "iterative/dvc"
 tap "wpmedia/perso-tools"
 brew "antigen"
-brew "readline"
-brew "postgresql", restart_service: true
-brew "libtool"
 brew "archey"
 brew "arp-scan"
 brew "gettext"
 brew "libffi"
+brew "readline"
 brew "python"
 brew "glib"
 brew "autoconf"
@@ -55,8 +53,9 @@ brew "flyway"
 brew "fortune"
 brew "fzf"
 brew "libxml2"
-brew "python@2"
+brew "libtool"
 brew "qt"
+brew "python@2"
 brew "gist"
 brew "git"
 brew "gnu-sed"
@@ -104,6 +103,7 @@ brew "parquet-tools"
 brew "pidof"
 brew "pipenv"
 brew "pipx"
+brew "postgresql", restart_service: true
 brew "postgis"
 brew "pre-commit"
 brew "pssh"
@@ -114,6 +114,7 @@ brew "reattach-to-user-namespace"
 brew "redis", restart_service: true
 brew "renameutils"
 brew "ripgrep"
+brew "ripgrep-all"
 brew "ruby"
 brew "sdl"
 brew "shellcheck"
@@ -134,7 +135,6 @@ brew "userpath"
 brew "watch"
 brew "webvpn"
 brew "wget"
-brew "yarn"
 brew "ydiff"
 brew "youtube-dl"
 brew "zsh"
@@ -219,18 +219,15 @@ cask "webpquicklook"
 cask "webtorrent"
 cask "wireshark"
 cask "yt-music"
-cask "iterative/dvc/dvc"
 mas "1Password 7", id: 1333542190
 mas "DaisyDisk", id: 411643860
 mas "Gapplin", id: 768053424
 mas "GarageBand", id: 682658836
 mas "iMovie", id: 408981434
-mas "Keynote", id: 409183694
 mas "Leaf", id: 576338668
 mas "Notability", id: 736189492
-mas "Numbers", id: 409203825
-mas "Pages", id: 409201541
 mas "Pocket", id: 568494494
+mas "PomoDone App", id: 1096128050
 mas "Table Tool", id: 1122008420
 mas "Todoist", id: 585829637
 mas "WhatsApp", id: 1147396723
