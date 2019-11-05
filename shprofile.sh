@@ -79,6 +79,7 @@ export ASDF_DATA_DIR=$ASDF_DIR
 
 export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim
+export BROWSER="google chrome canary"
 export NLTK_DATA="$HOME/nltk_data"
 export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
 # export R_HOME="$HOMEBREW_PREFIX/opt/r/lib/R"
