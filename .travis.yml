@@ -13,6 +13,7 @@ notifications:
   email: false
 
 before_script:
+  - brew update
   - brew services restart postgresql
 
 script:
