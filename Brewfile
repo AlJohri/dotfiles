@@ -8,6 +8,10 @@ tap "homebrew/cask-versions"
 tap "homebrew/core"
 tap "homebrew/services"
 tap "wpmedia/perso-tools" unless ENV['CI']
+
+# installs java8, must be first
+cask "adoptopenjdk8"
+
 brew "antigen"
 brew "archey"
 brew "arp-scan"
