@@ -124,7 +124,6 @@ brew "sdl"
 brew "shellcheck"
 brew "speedtest-cli"
 brew "ssh-copy-id"
-brew "sshfs"
 brew "subversion", link: false
 brew "tcl-tk"
 brew "tcpflow"
