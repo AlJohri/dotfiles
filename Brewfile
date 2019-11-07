@@ -12,6 +12,9 @@ tap "wpmedia/perso-tools" unless ENV['CI']
 # installs java8, must be first
 cask "adoptopenjdk8"
 
+# requirement for sshfs
+cask "osxfuse"
+
 brew "antigen"
 brew "archey"
 brew "arp-scan"
@@ -162,7 +165,7 @@ cask "discord"
 cask "djay-pro"
 cask "djview"
 cask "docker"
-cask "dropbox"
+cask "dropbox" unless File.directory("/Applications/Dropbox.app")
 cask "flash-npapi"
 cask "flash-player"
 cask "flash-ppapi"
