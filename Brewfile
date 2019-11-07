@@ -200,7 +200,6 @@ cask "r"
 cask "robo-3t"
 cask "rstudio"
 cask "screens-connect"
-cask "skitch"
 cask "skype"
 cask "slack" unless File.directory?("/Applications/Slack.app")
 cask "spectacle"

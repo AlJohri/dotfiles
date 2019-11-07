@@ -88,7 +88,7 @@ export RSTUDIO_WHICH_R="/usr/local/bin/R"
 export GOPATH=$(go env GOPATH)
 add_to_path_start "$GOPATH/bin"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
-export PIPENV_DEFAULT_PYTHON_VERSION="3.7"
+export PIPENV_DEFAULT_PYTHON_VERSION="3.8"
 export PIPENV_VENV_IN_PROJECT=1
 export BAT_PAGER=''
 export HOMEBREW_NO_AUTO_UPDATE=1
@@ -107,7 +107,10 @@ add_to_path_end /usr/local/texlive/2017/bin/x86_64-darwin
 add_to_path_start "/usr/local/opt/qt/bin"
 add_to_path_start "$HOME/tizen-studio/tools/ide/bin"
 add_to_path_start "$HOME/tizen-studio/tools"
-add_to_path_start "$HOME/.local/bin"
+
+# Add to PATH even if the folder doesn't exist yet to optimize
+# pipx first time experience
+force_add_to_path_start "$HOME/.local/bin"
 
 # Look in ./bin but do it last to avoid weird `which` results.
 force_add_to_path_start "bin"
