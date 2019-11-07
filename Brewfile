@@ -165,7 +165,7 @@ cask "discord"
 cask "djay-pro"
 cask "djview"
 cask "docker"
-cask "dropbox" unless File.directory("/Applications/Dropbox.app")
+cask "dropbox" unless File.directory?("/Applications/Dropbox.app")
 cask "flash-npapi"
 cask "flash-player"
 cask "flash-ppapi"
