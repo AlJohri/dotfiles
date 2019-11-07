@@ -166,56 +166,60 @@ fancy_echo "Done Configuring Postgres!"
 
 GITHUB_USER="$(git config --get github.user)"
 
-if [ -n "$GITHUB_USER" ]; then
+if [ -z "$CI" ]; then
 
-  LICENSES_URL="https://github.com/$GITHUB_USER/licenses"
-  if git ls-remote "$LICENSES_URL" &>/dev/null; then
-    echo "Fetching $GITHUB_USER/licenses from GitHub:"
-    if [ ! -d "$HOME/.licenses" ]; then
-      echo "Cloning to ~/.licenses:"
-      git clone $Q "$LICENSES_URL" ~/.licenses
-    else
+  if [ -n "$GITHUB_USER" ]; then
+
+    LICENSES_URL="https://github.com/$GITHUB_USER/licenses"
+    if git ls-remote "$LICENSES_URL" &>/dev/null; then
+      echo "Fetching $GITHUB_USER/licenses from GitHub:"
+      if [ ! -d "$HOME/.licenses" ]; then
+        echo "Cloning to ~/.licenses:"
+        git clone $Q "$LICENSES_URL" ~/.licenses
+      else
+        (
+          cd ~/.licenses
+          git pull $Q --rebase --autostash
+        )
+      fi
       (
         cd ~/.licenses
-        git pull $Q --rebase --autostash
+        for i in script/setup script/bootstrap; do
+          if [ -f "$i" ] && [ -x "$i" ]; then
+            echo "Running licenses $i:"
+            "$i" 2>/dev/null
+            break
+          fi
+        done
       )
+      echo ""
     fi
-    (
-      cd ~/.licenses
-      for i in script/setup script/bootstrap; do
-        if [ -f "$i" ] && [ -x "$i" ]; then
-          echo "Running licenses $i:"
-          "$i" 2>/dev/null
-          break
-        fi
-      done
-    )
-    echo ""
-  fi
 
-  SECRETS_URL="https://github.com/$GITHUB_USER/secrets"
-  if git ls-remote "$SECRETS_URL" &>/dev/null; then
-    echo "Fetching $GITHUB_USER/secrets from GitHub:"
-    if [ ! -d "$HOME/.secrets" ]; then
-      echo "Cloning to ~/.secrets:"
-      git clone $Q "$SECRETS_URL" ~/.secrets
-    else
+    SECRETS_URL="https://github.com/$GITHUB_USER/secrets"
+    if git ls-remote "$SECRETS_URL" &>/dev/null; then
+      echo "Fetching $GITHUB_USER/secrets from GitHub:"
+      if [ ! -d "$HOME/.secrets" ]; then
+        echo "Cloning to ~/.secrets:"
+        git clone $Q "$SECRETS_URL" ~/.secrets
+      else
+        (
+          cd ~/.secrets
+          git pull $Q --rebase --autostash
+        )
+      fi
       (
         cd ~/.secrets
-        git pull $Q --rebase --autostash
+        for i in script/setup script/bootstrap; do
+          if [ -f "$i" ] && [ -x "$i" ]; then
+            echo "Running secrets $i:"
+            "$i" 2>/dev/null
+            break
+          fi
+        done
       )
+      echo ""
     fi
-    (
-      cd ~/.secrets
-      for i in script/setup script/bootstrap; do
-        if [ -f "$i" ] && [ -x "$i" ]; then
-          echo "Running secrets $i:"
-          "$i" 2>/dev/null
-          break
-        fi
-      done
-    )
-    echo ""
+
   fi
 
 fi
