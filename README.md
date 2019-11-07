@@ -4,7 +4,8 @@
 
 Use https://macos-strap.herokuapp.com/ to install.
 
-Run this command to generate the latest Brewfile based on currently installed software:
-```
-brew bundle dump --force --global
-```
+## Brewfile
+
+Use this command to update the Brewfile: `brew bundle dump --file=/dev/stdout`
+
+Note that the Brewfile needs to have some dependencies at the top such as `adoptopenjdk8` and `osxfuse`. Also we need to add `unless` clauses for CI and pre-installed GUI apps in the Applicaitons folder.
