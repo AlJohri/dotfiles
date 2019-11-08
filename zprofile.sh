@@ -78,7 +78,7 @@ export RSTUDIO_WHICH_R="/usr/local/bin/R"
 export GOPATH=$(go env GOPATH)
 add_to_path_start "$GOPATH/bin"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
-export PIPENV_DEFAULT_PYTHON_VERSION="3.8"
+export PIPENV_DEFAULT_PYTHON_VERSION="3.7"
 export PIPENV_VENV_IN_PROJECT=1
 export BAT_PAGER=''
 export HOMEBREW_NO_AUTO_UPDATE=1
