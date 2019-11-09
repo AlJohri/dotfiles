@@ -161,7 +161,6 @@ cask "dropbox" unless File.directory?("/Applications/Dropbox.app")
 cask "flash-npapi"
 cask "flash-player"
 cask "flash-ppapi"
-cask "fsnotes"
 cask "google-chrome-canary"
 cask "google-hangouts"
 cask "handbrake"
