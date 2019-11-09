@@ -64,7 +64,7 @@ quiet_which() {
   which $1 &>/dev/null
 }
 
-. $HOME/.asdf/asdf.sh
+. "$(brew --prefix asdf)/asdf.sh"
 export ASDF_DATA_DIR=$ASDF_DIR
 
 export HOMEBREW_PREFIX="$(brew --prefix)"

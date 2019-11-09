@@ -7,7 +7,6 @@ tap "homebrew/cask-drivers"
 tap "homebrew/cask-versions"
 tap "homebrew/core"
 tap "homebrew/services"
-tap "wpmedia/perso-tools" unless ENV['CI']
 
 # installs java8, must be first
 cask "adoptopenjdk8"
@@ -143,16 +142,8 @@ brew "ydiff"
 brew "youtube-dl"
 brew "zsh"
 brew "aljohri/personal/sshpass"
-brew "aljohri/personal/openconnect-okta-helper"
 brew "aws/tap/aws-sam-cli"
 brew "heroku/brew/heroku"
-brew "wpmedia/perso-tools/clokta-utils" unless ENV['CI']
-brew "wpmedia/perso-tools/ec2" unless ENV['CI']
-brew "wpmedia/perso-tools/emr" unless ENV['CI']
-brew "wpmedia/perso-tools/kms" unless ENV['CI']
-brew "wpmedia/perso-tools/nile" unless ENV['CI']
-brew "wpmedia/perso-tools/perso-apache-spark" unless ENV['CI']
-brew "wpmedia/perso-tools/ssm" unless ENV['CI']
 cask "1password-cli"
 cask "airserver"
 cask "android-file-transfer"
