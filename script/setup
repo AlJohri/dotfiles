@@ -152,13 +152,16 @@ fancy_echo "Done Configuring Postgres!"
 
 if [ -z "$CI" ]; then
 
-  GITHUB_USER="$(git config --get github.user)"
+  if [ -n "$STRAP_GITHUB_USER" ]; then
 
-  if [ -n "$GITHUB_USER" ]; then
+    GITHUB_USER=$(curl -u "$STRAP_GITHUB_USER:$STRAP_GITHUB_TOKEN" https://api.github.com/user)
 
-    LICENSES_URL="https://github.com/$GITHUB_USER/licenses"
+    git config --global user.name "$(echo $GITHUB_USER | jq -r '.name')"
+    git config --global user.email "$(echo $GITHUB_USER | jq -r '.name')"
+
+    LICENSES_URL="https://github.com/$STRAP_GITHUB_USER/licenses"
     if git ls-remote "$LICENSES_URL" &>/dev/null; then
-      echo "Fetching $GITHUB_USER/licenses from GitHub:"
+      echo "Fetching $STRAP_GITHUB_USER/licenses from GitHub:"
       if [ ! -d "$HOME/.licenses" ]; then
         echo "Cloning to ~/.licenses:"
         git clone $Q "$LICENSES_URL" ~/.licenses
@@ -181,9 +184,9 @@ if [ -z "$CI" ]; then
       echo ""
     fi
 
-    SECRETS_URL="https://github.com/$GITHUB_USER/secrets"
+    SECRETS_URL="https://github.com/$STRAP_GITHUB_USER/secrets"
     if git ls-remote "$SECRETS_URL" &>/dev/null; then
-      echo "Fetching $GITHUB_USER/secrets from GitHub:"
+      echo "Fetching $STRAP_GITHUB_USER/secrets from GitHub:"
       if [ ! -d "$HOME/.secrets" ]; then
         echo "Cloning to ~/.secrets:"
         git clone $Q "$SECRETS_URL" ~/.secrets
