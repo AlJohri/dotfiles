@@ -15,6 +15,7 @@ cask "adoptopenjdk8"
 # requirement for sshfs
 cask "osxfuse"
 
+brew "asdf"
 brew "antigen"
 brew "archey"
 brew "arp-scan"

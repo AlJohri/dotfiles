@@ -79,16 +79,7 @@ then
     wget http://sublime.wbond.net/Package%20Control.sublime-package -P "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
   fi
 
-  duti -s com.sublimetext.3 java all
-  duti -s com.sublimetext.3 js all
-  duti -s com.sublimetext.3 py all
-  duti -s com.sublimetext.3 rb all
-  duti -s com.sublimetext.3 sh all
-  duti -s com.sublimetext.3 json all
-  duti -s com.sublimetext.3 xml all
-  duti -s com.sublimetext.3 public.unix-executable all
-  duti -s com.sublimetext.3 public.plain-text all
-  duti -s com.sublimetext.3 public.source-code all
+  duti -v ~/.duti
 fi
 
 fancy_echo "Configuring Zsh ..."
@@ -114,21 +105,14 @@ fancy_echo "Done Configuring Zsh!"
 
 fancy_echo "Configuring ASDF ..."
 
-if [ ! -d "$HOME/.asdf" ]; then
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.6.0
-fi
-
-# shellcheck disable=SC2016
-# append_to_file $HOME/.zshrc '. $HOME/.asdf/asdf.sh'
-
 # shellcheck disable=SC1090
-. "$HOME/.asdf/asdf.sh"
+. "$(brew --prefix asdf)/asdf.sh"
 
 asdf plugin-add ruby || true
 asdf plugin-add python || true
 asdf plugin-add nodejs || true
 
-export NODEJS_CHECK_SIGNATURES=no
+bash "$(brew --prefix asdf)/plugins/nodejs/bin/import-release-team-keyring"
 
 latest_python2() {
 	asdf list-all python | grep -v - | grep -e "^2." | tail -1

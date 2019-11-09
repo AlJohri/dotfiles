@@ -3,9 +3,22 @@
 # Format:
 # [Bundle ID] [UTI or `.extension`] [role]
 
+# Common Bundle IDs
+# com.sublimetext.3
+# com.apple.textedit
+# com.macromates.textmate
+
 org.videolan.vlc .avi all
 org.videolan.vlc .mkv all
 
-com.sublimetext.3 public.plain-text all
-com.sublimetext.3 public.source-code all
-com.sublimetext.3 public.unix-executable all
+com.microsoft.VSCode R all
+com.microsoft.VSCode java all
+com.microsoft.VSCode js all
+com.microsoft.VSCode py all
+com.microsoft.VSCode rb all
+com.microsoft.VSCode sh all
+com.microsoft.VSCode json all
+com.microsoft.Excel csv all
+com.microsoft.VSCode public.plain-text all
+com.microsoft.VSCode public.unix-executable all
+com.microsoft.VSCode public.source-code all
