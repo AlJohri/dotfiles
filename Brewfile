@@ -200,7 +200,6 @@ cask "teamviewer"
 cask "textual"
 cask "transmission"
 cask "transmit"
-cask "virtualbox"
 cask "visual-studio-code"
 cask "vlc" unless File.directory?("/Applications/VLC.app")
 cask "webpquicklook"
