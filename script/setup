@@ -108,9 +108,11 @@ fancy_echo "Configuring ASDF ..."
 # shellcheck disable=SC1090
 . "$(brew --prefix asdf)/asdf.sh"
 
+set +e
 asdf plugin-add ruby || true
 asdf plugin-add python || true
 asdf plugin-add nodejs || true
+set -e
 
 bash "$(brew --prefix asdf)/plugins/nodejs/bin/import-release-team-keyring"
 
