@@ -263,6 +263,9 @@ if [ -z "$CI" ]; then
   defaults write NSGlobalDomain InitialKeyRepeat -int 10 # normal minimum is 15 (225 ms)
 
   # Save screenshots to the ~/Pictures/Screenshots folder
+  # TODO: automatically add this folder to the dock
+  # TODO: automatically disable thumbnail previews from Screenshot.app
+  mkdir -p "${HOME}/Pictures/Screenshots"
   defaults write com.apple.screencapture location -string "${HOME}/Pictures/Screenshots"
 
   # Save screenshots in PNG format (other options: BMP, GIF, JPG, PDF, TIFF)
