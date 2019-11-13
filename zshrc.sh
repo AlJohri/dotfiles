@@ -163,7 +163,12 @@ bindkey -e
 setopt histignorespace
 
 # Enable completions
-autoload -U compinit && compinit
+# Using compinit -u (aka unsecure to allow for group writable zsh directories)
+# There are insecure directories:
+# /usr/local/Cellar/zsh/5.7.1/share/zsh/functions
+# /usr/local/Cellar/zsh/5.7.1/share/zsh
+# This is for multi-user homebrew installations: https://raeesbhatti.com/blog/configure-brew-for-multi-user-setup
+autoload -U compinit && compinit -u
 
 if which brew &>/dev/null
 then

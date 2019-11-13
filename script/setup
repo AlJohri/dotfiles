@@ -79,16 +79,7 @@ then
     wget http://sublime.wbond.net/Package%20Control.sublime-package -P "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
   fi
 
-  duti -s com.sublimetext.3 java all
-  duti -s com.sublimetext.3 js all
-  duti -s com.sublimetext.3 py all
-  duti -s com.sublimetext.3 rb all
-  duti -s com.sublimetext.3 sh all
-  duti -s com.sublimetext.3 json all
-  duti -s com.sublimetext.3 xml all
-  duti -s com.sublimetext.3 public.unix-executable all
-  duti -s com.sublimetext.3 public.plain-text all
-  duti -s com.sublimetext.3 public.source-code all
+  duti -v ~/.duti
 fi
 
 fancy_echo "Configuring Zsh ..."
@@ -114,21 +105,16 @@ fancy_echo "Done Configuring Zsh!"
 
 fancy_echo "Configuring ASDF ..."
 
-if [ ! -d "$HOME/.asdf" ]; then
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.6.0
-fi
-
-# shellcheck disable=SC2016
-# append_to_file $HOME/.zshrc '. $HOME/.asdf/asdf.sh'
-
 # shellcheck disable=SC1090
-. "$HOME/.asdf/asdf.sh"
+. "$(brew --prefix asdf)/asdf.sh"
 
+set +e
 asdf plugin-add ruby || true
 asdf plugin-add python || true
 asdf plugin-add nodejs || true
+set -e
 
-export NODEJS_CHECK_SIGNATURES=no
+bash "$(brew --prefix asdf)/plugins/nodejs/bin/import-release-team-keyring"
 
 latest_python2() {
 	asdf list-all python | grep -v - | grep -e "^2." | tail -1
@@ -164,15 +150,20 @@ createuser --superuser --createdb --createrole --replication root || true
 
 fancy_echo "Done Configuring Postgres!"
 
-GITHUB_USER="$(git config --get github.user)"
+# Untested Section Below:
 
 if [ -z "$CI" ]; then
 
-  if [ -n "$GITHUB_USER" ]; then
+  if [ -n "$STRAP_GITHUB_USER" ]; then
 
-    LICENSES_URL="https://github.com/$GITHUB_USER/licenses"
+    GITHUB_USER=$(curl -u "$STRAP_GITHUB_USER:$STRAP_GITHUB_TOKEN" https://api.github.com/user)
+
+    git config --global user.name "$(echo $GITHUB_USER | jq -r '.name')"
+    git config --global user.email "$(echo $GITHUB_USER | jq -r '.name')"
+
+    LICENSES_URL="https://github.com/$STRAP_GITHUB_USER/licenses"
     if git ls-remote "$LICENSES_URL" &>/dev/null; then
-      echo "Fetching $GITHUB_USER/licenses from GitHub:"
+      echo "Fetching $STRAP_GITHUB_USER/licenses from GitHub:"
       if [ ! -d "$HOME/.licenses" ]; then
         echo "Cloning to ~/.licenses:"
         git clone $Q "$LICENSES_URL" ~/.licenses
@@ -195,9 +186,9 @@ if [ -z "$CI" ]; then
       echo ""
     fi
 
-    SECRETS_URL="https://github.com/$GITHUB_USER/secrets"
+    SECRETS_URL="https://github.com/$STRAP_GITHUB_USER/secrets"
     if git ls-remote "$SECRETS_URL" &>/dev/null; then
-      echo "Fetching $GITHUB_USER/secrets from GitHub:"
+      echo "Fetching $STRAP_GITHUB_USER/secrets from GitHub:"
       if [ ! -d "$HOME/.secrets" ]; then
         echo "Cloning to ~/.secrets:"
         git clone $Q "$SECRETS_URL" ~/.secrets
@@ -222,114 +213,117 @@ if [ -z "$CI" ]; then
 
   fi
 
+  fancy_echo "Configuring macOS settings..."
+
+  # macOS defaults
+
+  # Close any open System Preferences panes, to prevent them from overriding
+  # settings we’re about to change
+  osascript -e 'tell application "System Preferences" to quit'
+
+  # Expand save panel by default
+  defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+  defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
+
+  # Expand print panel by default
+  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+  defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
+
+  # Save to disk (not to iCloud) by default
+  defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
+
+  # Reveal IP address, hostname, OS version, etc. when clicking the clock
+  # in the login window
+  sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
+
+  # Trackpad: enable tap to click for this user and for the login screen
+  defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+  defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+  defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+
+  # Trackpad: map bottom right corner to right-click
+  defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick -int 2
+  defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick -bool true
+  defaults -currentHost write NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior -int 1
+  defaults -currentHost write NSGlobalDomain com.apple.trackpad.enableSecondaryClick -bool true
+
+  # Enable full keyboard access for all controls
+  # (e.g. enable Tab in modal dialogs)
+  defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
+
+  # Use scroll gesture with the Ctrl (^) modifier key to zoom
+  defaults write com.apple.universalaccess closeViewScrollWheelToggle -bool true
+  defaults write com.apple.universalaccess HIDScrollZoomModifierMask -int 262144
+  # Follow the keyboard focus while zoomed in
+  defaults write com.apple.universalaccess closeViewZoomFollowsFocus -bool true
+
+  # Disable press-and-hold for keys in favor of key repeat
+  defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
+
+  # Set a blazingly fast keyboard repeat rate
+  defaults write NSGlobalDomain KeyRepeat -int 1 # normal minimum is 2 (30 ms)
+  defaults write NSGlobalDomain InitialKeyRepeat -int 10 # normal minimum is 15 (225 ms)
+
+  # Save screenshots to the ~/Pictures/Screenshots folder
+  # TODO: automatically add this folder to the dock
+  # TODO: automatically disable thumbnail previews from Screenshot.app
+  mkdir -p "${HOME}/Pictures/Screenshots"
+  defaults write com.apple.screencapture location -string "${HOME}/Pictures/Screenshots"
+
+  # Save screenshots in PNG format (other options: BMP, GIF, JPG, PDF, TIFF)
+  defaults write com.apple.screencapture type -string "png"
+
+  # Set Desktop as the default location for new Finder windows
+  # For other paths, use `PfLo` and `file:///full/path/here/`
+  defaults write com.apple.finder NewWindowTarget -string "PfLo"
+  defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}/"
+
+  # Show icons for hard drives, servers, and removable media on the desktop
+  defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true
+  defaults write com.apple.finder ShowHardDrivesOnDesktop -bool true
+  defaults write com.apple.finder ShowMountedServersOnDesktop -bool true
+  defaults write com.apple.finder ShowRemovableMediaOnDesktop -bool true
+
+  # Finder: show all filename extensions
+  defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+
+  # Finder: show status bar
+  defaults write com.apple.finder ShowStatusBar -bool true
+
+  # Finder: show path bar
+  defaults write com.apple.finder ShowPathbar -bool true
+
+  # Keep folders on top when sorting by name
+  defaults write com.apple.finder _FXSortFoldersFirst -bool true
+
+  # When performing a search, search the current folder by default
+  defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+
+  # Avoid creating .DS_Store files on network or USB volumes
+  defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+  defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+
+  # Use list view in all Finder windows by default
+  # Four-letter codes for the other view modes: `icnv`, `clmv`, `Flwv`
+  defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+
+  # Don’t automatically rearrange Spaces based on most recent use
+  defaults write com.apple.dock mru-spaces -bool false
+
+  # Minimize windows into their application’s icon
+  defaults write com.apple.dock minimize-to-application -bool true
+
+  # Enable highlight hover effect for the grid view of a stack (Dock)
+  defaults write com.apple.dock mouse-over-hilite-stack -bool true
+
+  # https://apple.stackexchange.com/questions/27544/how-to-completely-disable-auto-save-and-versions-in-mac-os-x-lion
+  defaults write -g ApplePersistence -bool no
+
+  # iTerm2 Preferences Folder Location
+  defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.dotfiles/iterm2"
+
+  fancy_echo "Done configuring macOS!"
+
 fi
-
-fancy_echo "Configuring macOS settings..."
-
-# macOS defaults
-
-# Close any open System Preferences panes, to prevent them from overriding
-# settings we’re about to change
-osascript -e 'tell application "System Preferences" to quit'
-
-# Expand save panel by default
-defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
-defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
-
-# Expand print panel by default
-defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
-defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
-
-# Save to disk (not to iCloud) by default
-defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
-
-# Reveal IP address, hostname, OS version, etc. when clicking the clock
-# in the login window
-sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
-
-# Trackpad: enable tap to click for this user and for the login screen
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
-defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
-defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
-
-# Trackpad: map bottom right corner to right-click
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick -int 2
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick -bool true
-defaults -currentHost write NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior -int 1
-defaults -currentHost write NSGlobalDomain com.apple.trackpad.enableSecondaryClick -bool true
-
-# Enable full keyboard access for all controls
-# (e.g. enable Tab in modal dialogs)
-defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
-
-# Use scroll gesture with the Ctrl (^) modifier key to zoom
-defaults write com.apple.universalaccess closeViewScrollWheelToggle -bool true
-defaults write com.apple.universalaccess HIDScrollZoomModifierMask -int 262144
-# Follow the keyboard focus while zoomed in
-defaults write com.apple.universalaccess closeViewZoomFollowsFocus -bool true
-
-# Disable press-and-hold for keys in favor of key repeat
-defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
-
-# Set a blazingly fast keyboard repeat rate
-defaults write NSGlobalDomain KeyRepeat -int 1 # normal minimum is 2 (30 ms)
-defaults write NSGlobalDomain InitialKeyRepeat -int 10 # normal minimum is 15 (225 ms)
-
-# Save screenshots to the ~/Pictures/Screenshots folder
-defaults write com.apple.screencapture location -string "${HOME}/Pictures/Screenshots"
-
-# Save screenshots in PNG format (other options: BMP, GIF, JPG, PDF, TIFF)
-defaults write com.apple.screencapture type -string "png"
-
-# Set Desktop as the default location for new Finder windows
-# For other paths, use `PfLo` and `file:///full/path/here/`
-defaults write com.apple.finder NewWindowTarget -string "PfLo"
-defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}/"
-
-# Show icons for hard drives, servers, and removable media on the desktop
-defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true
-defaults write com.apple.finder ShowHardDrivesOnDesktop -bool true
-defaults write com.apple.finder ShowMountedServersOnDesktop -bool true
-defaults write com.apple.finder ShowRemovableMediaOnDesktop -bool true
-
-# Finder: show all filename extensions
-defaults write NSGlobalDomain AppleShowAllExtensions -bool true
-
-# Finder: show status bar
-defaults write com.apple.finder ShowStatusBar -bool true
-
-# Finder: show path bar
-defaults write com.apple.finder ShowPathbar -bool true
-
-# Keep folders on top when sorting by name
-defaults write com.apple.finder _FXSortFoldersFirst -bool true
-
-# When performing a search, search the current folder by default
-defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
-
-# Avoid creating .DS_Store files on network or USB volumes
-defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
-defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-
-# Use list view in all Finder windows by default
-# Four-letter codes for the other view modes: `icnv`, `clmv`, `Flwv`
-defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
-
-# Don’t automatically rearrange Spaces based on most recent use
-defaults write com.apple.dock mru-spaces -bool false
-
-# Minimize windows into their application’s icon
-defaults write com.apple.dock minimize-to-application -bool true
-
-# Enable highlight hover effect for the grid view of a stack (Dock)
-defaults write com.apple.dock mouse-over-hilite-stack -bool true
-
-# https://apple.stackexchange.com/questions/27544/how-to-completely-disable-auto-save-and-versions-in-mac-os-x-lion
-defaults write -g ApplePersistence -bool no
-
-# iTerm2 Preferences Folder Location
-defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.dotfiles/iterm2"
-
-fancy_echo "Done configuring macOS!"
 
 echo "Done. Note that some of these changes require a logout/restart to take effect."

@@ -7,7 +7,6 @@ tap "homebrew/cask-drivers"
 tap "homebrew/cask-versions"
 tap "homebrew/core"
 tap "homebrew/services"
-tap "wpmedia/perso-tools" unless ENV['CI']
 
 # installs java8, must be first
 cask "adoptopenjdk8"
@@ -15,6 +14,7 @@ cask "adoptopenjdk8"
 # requirement for sshfs
 cask "osxfuse"
 
+brew "asdf"
 brew "antigen"
 brew "archey"
 brew "arp-scan"
@@ -142,34 +142,23 @@ brew "ydiff"
 brew "youtube-dl"
 brew "zsh"
 brew "aljohri/personal/sshpass"
-brew "aljohri/personal/openconnect-okta-helper"
 brew "aws/tap/aws-sam-cli"
 brew "heroku/brew/heroku"
-brew "wpmedia/perso-tools/clokta-utils" unless ENV['CI']
-brew "wpmedia/perso-tools/ec2" unless ENV['CI']
-brew "wpmedia/perso-tools/emr" unless ENV['CI']
-brew "wpmedia/perso-tools/kms" unless ENV['CI']
-brew "wpmedia/perso-tools/nile" unless ENV['CI']
-brew "wpmedia/perso-tools/perso-apache-spark" unless ENV['CI']
-brew "wpmedia/perso-tools/ssm" unless ENV['CI']
 cask "1password-cli"
 cask "airserver"
 cask "android-file-transfer"
 cask "android-platform-tools"
 cask "balenaetcher"
-cask "boostnote"
 cask "carbon-copy-cloner"
 cask "charles"
 cask "cyberduck"
 cask "discord"
-cask "djay-pro"
-cask "djview"
 cask "docker"
 cask "dropbox" unless File.directory?("/Applications/Dropbox.app")
 cask "flash-npapi"
 cask "flash-player"
 cask "flash-ppapi"
-cask "fsnotes"
+cask "google-chrome-beta" unless File.directory?("/Applications/Google Chrome.app")
 cask "google-chrome-canary"
 cask "google-hangouts"
 cask "handbrake"
@@ -187,7 +176,6 @@ cask "macdown"
 cask "mactex"
 cask "micro-snitch"
 cask "mpv"
-cask "notion"
 cask "paragon-ntfs"
 cask "pdf-expert"
 cask "private-internet-access"
@@ -213,7 +201,6 @@ cask "teamviewer"
 cask "textual"
 cask "transmission"
 cask "transmit"
-cask "virtualbox"
 cask "visual-studio-code"
 cask "vlc" unless File.directory?("/Applications/VLC.app")
 cask "webpquicklook"
