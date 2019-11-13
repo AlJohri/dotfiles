@@ -138,7 +138,7 @@ function anaconda() {
 
 test -e "${HOME}/.asdf/installs/python/anaconda3-2019.03/etc/profile.d/conda.sh" && source "${HOME}/.asdf/installs/python/anaconda3-2019.03/etc/profile.d/conda.sh"
 
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+test -e "${HOME}/iterm2/iterm2_shell_integration.zsh" && source "${HOME}/iterm2/.iterm2_shell_integration.zsh"
 [ -f "$HOME/.workrc" ] && source "$HOME/.workrc"
 
 # History file
