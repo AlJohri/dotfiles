@@ -64,9 +64,6 @@ quiet_which() {
   which $1 &>/dev/null
 }
 
-. "$(brew --prefix asdf)/asdf.sh"
-export ASDF_DATA_DIR=$ASDF_DIR
-
 export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim
 export BROWSER="google chrome canary"
@@ -83,7 +80,11 @@ export PIPENV_VENV_IN_PROJECT=1
 export BAT_PAGER=''
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
-export ASDF_SKIP_RESHIM=1 # manually run: asdf reshim nodejs
+
+# https://github.com/asdf-vm/asdf/issues/405
+export ASDF_DATA_DIR=$HOME/.asdf
+. "$HOMEBREW_PREFIX/opt/asdf/asdf.sh"
+export ASDF_SKIP_RESHIM=1 # ma/nually run: asdf reshim nodejs
 
 if [ $OSX ]; then
   quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"

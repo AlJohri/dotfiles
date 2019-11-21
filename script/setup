@@ -105,6 +105,7 @@ fancy_echo "Done Configuring Zsh!"
 
 fancy_echo "Configuring ASDF ..."
 
+export ASDF_DATA_DIR=$HOME/.asdf
 # shellcheck disable=SC1090
 . "$(brew --prefix asdf)/asdf.sh"
 
@@ -114,7 +115,7 @@ asdf plugin-add python || true
 asdf plugin-add nodejs || true
 set -e
 
-bash "$(brew --prefix asdf)/plugins/nodejs/bin/import-release-team-keyring"
+bash "$HOME/.asdf/plugins/nodejs/bin/import-release-team-keyring"
 
 latest_python2() {
 	asdf list-all python | grep -v - | grep -e "^2." | tail -1
