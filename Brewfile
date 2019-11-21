@@ -144,6 +144,7 @@ brew "zsh"
 brew "aljohri/personal/sshpass"
 brew "aws/tap/aws-sam-cli"
 brew "heroku/brew/heroku"
+cask "1password-beta"
 cask "1password-cli"
 cask "airserver"
 cask "android-file-transfer"
@@ -190,15 +191,17 @@ cask "rstudio"
 cask "screens-connect"
 cask "skype"
 cask "slack" unless File.directory?("/Applications/Slack.app")
-cask "spectacle"
+cask "rectangle"
 cask "spotify"
 cask "steam"
 cask "studio-3t"
 cask "sublime-text"
+cask "tableplus"
 cask "tabula"
-cask "tad"
+# cask "tad"
 cask "teamviewer"
 cask "textual"
+cask "ticktick"
 cask "transmission"
 cask "transmit"
 cask "visual-studio-code"
@@ -207,16 +210,11 @@ cask "webpquicklook"
 cask "webtorrent"
 cask "wireshark"
 cask "yt-music"
-mas "1Password 7", id: 1333542190
 mas "DaisyDisk", id: 411643860
 mas "Gapplin", id: 768053424
-mas "GarageBand", id: 682658836
-mas "iMovie", id: 408981434
 mas "Leaf", id: 576338668
 mas "Notability", id: 736189492
 mas "Pocket", id: 568494494
-mas "PomoDone App", id: 1096128050
-mas "Table Tool", id: 1122008420
-mas "Todoist", id: 585829637
+# mas "Table Tool", id: 1122008420
 mas "WhatsApp", id: 1147396723
 mas "Xcode", id: 497799835
