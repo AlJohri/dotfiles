@@ -11,19 +11,8 @@ export HOMEBREW_PREFIX="/usr/local"
 [ $(uname -s) = "Linux" ] && export LINUX=1 && export UNIX=1
 uname -s | grep -q "_NT-" && export WINDOWS=1
 
-# Fix systems missing $USER
-[ -z "$USER" ] && export USER=$(whoami)
-
 # Count CPUs for Make jobs
-if [ $OSX ]
-then
-  export CPUCOUNT=$(sysctl -n hw.ncpu)
-elif [ $LINUX ]
-then
-  export CPUCOUNT=$(getconf _NPROCESSORS_ONLN)
-else
-  export CPUCOUNT="1"
-fi
+export CPUCOUNT=$(sysctl -n hw.ncpu)
 
 if [ "$CPUCOUNT" -gt 1 ]
 then
@@ -87,15 +76,10 @@ export ASDF_DATA_DIR=$HOME/.asdf
 . "$HOMEBREW_PREFIX/opt/asdf/asdf.sh"
 export ASDF_SKIP_RESHIM=1 # ma/nually run: asdf reshim nodejs
 
-if [ $OSX ]; then
-  quiet_which brew && export HOMEBREW_CASK_OPTS="--appdir=/Applications"
-  add_to_path_end /Applications/Xcode.app/Contents/Developer/usr/bin
-  add_to_path_end /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
-  add_to_path_end "$HOMEBREW_PREFIX/opt/git/share/git-core/contrib/diff-highlight"
-fi
-
+add_to_path_end /Applications/Xcode.app/Contents/Developer/usr/bin
+add_to_path_end /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+add_to_path_end "$HOMEBREW_PREFIX/opt/git/share/git-core/contrib/diff-highlight"
 add_to_path_end /usr/local/texlive/2017/bin/x86_64-darwin
-
 add_to_path_start "/usr/local/opt/qt/bin"
 add_to_path_start "$HOME/tizen-studio/tools/ide/bin"
 add_to_path_start "$HOME/tizen-studio/tools"

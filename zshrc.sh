@@ -1,9 +1,5 @@
 # utils
 
-quiet_which() {
-  command -v "$1" >/dev/null
-}
-
 # Colourful manpages
 export LESS_TERMCAP_mb=$'\E[01;31m'
 export LESS_TERMCAP_md=$'\E[01;31m'
@@ -36,24 +32,37 @@ alias curl='noglob curl'
 alias nchrome='open -n /Applications/Google\ Chrome.app/'
 alias pyclean='find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf'
 alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/A/Resources/airport'
+alias ls="ls -F"
+alias ql="qlmanage -p 1>/dev/null"
+alias locate="mdfind -name"
+alias cpwd="pwd | tr -d '\n' | pbcopy"
+alias finder-hide="setfile -a V"
+
+export GREP_OPTIONS="--color=auto"
+export CLICOLOR=1
+export LSCOLORS=GxFxCxDxBxegedabagaced
+export LESS="-RFi"
+
+if quiet_which diff-highlight
+then
+  export GIT_PAGER='diff-highlight | less -+$LESS -FRXi'
+else
+  export GIT_PAGER='less -+$LESS -FRXi'
+fi
 
 # Functions
 
-function dockercleanup() {
-  docker kill $(docker ps -q)
-  docker rm $(docker ps -a -q)
-  docker rmi $(docker images -q)
-}
-
 make_ssh_key() {
   if [ ! -f "$HOME/.ssh/id_rsa" ]; then
-    ssh-keygen -q -t rsa -b 2048 -N "" -f "$HOME/.ssh/id_rsa" -C "al.johri@gmail.com"
-    eval "$(ssh-agent -s)"
-    if [ $OSX ]; then
-      ssh-add -K "$HOME/.ssh/id_rsa"
-    else
-      ssh-add "$HOME/.ssh/id_rsa"
+    EMAIL=$(git config user.email)
+    if [ -z $EMAIL ]; then
+      echo "Email is not yet set in git config. Run: git config --global user.email <EMAIL>."
+      return 1
     fi
+    ssh-keygen -q -t rsa -b 2048 -N "" -f "$HOME/.ssh/id_rsa" -C "$EMAIL"
+    eval "$(ssh-agent -s)"
+    ssh-add -K "$HOME/.ssh/id_rsa"
+    # linux uses: ssh-add "$HOME/.ssh/id_rsa"
     pbcopy < "$HOME/.ssh/id_rsa.pub"
     open https://github.com/settings/ssh
   else
@@ -83,30 +92,6 @@ function startgpg() {
   fi
 }
 
-# Platform-specific stuff
-
-if [ $OSX ]
-then
-  export GREP_OPTIONS="--color=auto"
-  export CLICOLOR=1
-  export LSCOLORS=GxFxCxDxBxegedabagaced
-
-  export LESS="-RFi"
-
-  if quiet_which diff-highlight
-  then
-    export GIT_PAGER='diff-highlight | less -+$LESS -FRXi'
-  else
-    export GIT_PAGER='less -+$LESS -FRXi'
-  fi
-
-  alias ls="ls -F"
-  alias ql="qlmanage -p 1>/dev/null"
-  alias locate="mdfind -name"
-  alias cpwd="pwd | tr -d '\n' | pbcopy"
-  alias finder-hide="setfile -a V"
-fi
-
 # Schedule sleep in X minutes, use like: sleep-in 60
 function sleepin() {
   local minutes=$1
@@ -127,9 +112,6 @@ background-log() {
     shift
     nohup bash --login -c "$*" &> "$filename" &
 }
-
-test -e "${HOME}/iterm2/iterm2_shell_integration.zsh" && source "${HOME}/iterm2/.iterm2_shell_integration.zsh"
-[ -f "$HOME/.workrc" ] && source "$HOME/.workrc"
 
 # History file
 export HISTFILE=~/.zsh_history
@@ -202,3 +184,6 @@ eval "$(starship init zsh)"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 # export FZF_COMPLETION_TRIGGER=''
+
+test -e "${HOME}/iterm2/iterm2_shell_integration.zsh" && source "${HOME}/iterm2/.iterm2_shell_integration.zsh"
+[ -f "$HOME/.workrc" ] && source "$HOME/.workrc"
