@@ -6,6 +6,11 @@ Use https://macos-strap.herokuapp.com/ to install.
 
 ## Brewfile
 
-Use this command to update the Brewfile: `brew bundle dump --file=/dev/stdout`
+Use this command to update the Brewfile: `brew bundle dump --global --force`. Remember to add these lines:
 
-Note that the Brewfile needs to have some dependencies at the top such as `adoptopenjdk8` and `osxfuse`. Also we need to add `unless` clauses for CI and pre-installed GUI apps in the Applicaitons folder.
+```
+cask "dropbox" unless File.directory?("/Applications/Dropbox.app")
+cask "google-chrome-beta" unless File.directory?("/Applications/Google Chrome.app")
+cask "slack" unless File.directory?("/Applications/Slack.app")
+cask "vlc" unless File.directory?("/Applications/VLC.app")
+```
