@@ -66,7 +66,7 @@ quiet_which() {
 
 export HOMEBREW_PREFIX="$(brew --prefix)"
 export EDITOR=vim
-export BROWSER="google chrome canary"
+# export BROWSER="google chrome canary"
 export NLTK_DATA="$HOME/nltk_data"
 export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
 # export R_HOME="$HOMEBREW_PREFIX/opt/r/lib/R"
@@ -80,6 +80,7 @@ export PIPENV_VENV_IN_PROJECT=1
 export BAT_PAGER=''
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
+export STARSHIP_CONFIG="$HOME/.starship.toml"
 
 # https://github.com/asdf-vm/asdf/issues/405
 export ASDF_DATA_DIR=$HOME/.asdf

@@ -189,43 +189,16 @@ setopt prompt_subst
 # Colorful prompt with Git and Subversion branch
 autoload -U colors && colors
 
-git_branch() {
-  GIT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null) || return
-  [ -n "$GIT_BRANCH" ] && echo "($GIT_BRANCH) "
-}
-
-svn_branch() {
-  [ -d .svn ] || return
-  SVN_INFO=$(svn info 2>/dev/null) || return
-  SVN_BRANCH=$(echo $SVN_INFO | grep URL: | grep -oe '\(trunk\|branches/[^/]\+\|tags/[^/]\+\)')
-  [ -n "$SVN_BRANCH" ] || return
-  # Display tags intentionally so we don't write to them by mistake
-  echo "(${SVN_BRANCH#branches/}) "
-}
-
-# if [ $USER = "root" ]
-# then
-#   PROMPT='%{$fg_bold[magenta]%}%m %{$fg_bold[blue]%}# %b%f'
-# elif [ -n "${SSH_CONNECTION}" ]
-# then
-#   PROMPT='%{$fg_bold[cyan]%}%m %{$fg_bold[blue]%}# %b%f'
-# else
-#   PROMPT='%{$fg_bold[green]%}%m %{$fg_bold[blue]%}# %b%f'
-# fi
-# RPROMPT='%{$fg_bold[red]%}$(git_branch)%{$fg_bold[yellow]%}$(svn_branch)%b[%{$fg_bold[blue]%}%~%b%f]'
-
 # more OS X/Bash-like word jumps
 export WORDCHARS=''
 
-# source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source /usr/local/share/zsh/site-functions/_aws
 source /usr/local/share/antigen/antigen.zsh
+
 antigen bundle zdharma/fast-syntax-highlighting
-antigen theme romkatv/powerlevel10k
 antigen apply
+
+eval "$(starship init zsh)"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 # export FZF_COMPLETION_TRIGGER=''
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh

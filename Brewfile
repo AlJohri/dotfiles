@@ -2,6 +2,7 @@ tap "aljohri/personal"
 tap "aws/tap"
 tap "heroku/brew"
 tap "homebrew/bundle"
+tap "homebrew/cask-fonts"
 tap "homebrew/cask"
 tap "homebrew/cask-drivers"
 tap "homebrew/cask-versions"
@@ -106,6 +107,7 @@ brew "node"
 brew "oath-toolkit"
 brew "openconnect"
 brew "p7zip"
+brew "pandoc"
 brew "parquet-tools"
 brew "pidof"
 brew "pipenv"
@@ -159,6 +161,7 @@ cask "dropbox" unless File.directory?("/Applications/Dropbox.app")
 cask "flash-npapi"
 cask "flash-player"
 cask "flash-ppapi"
+cask "font-fira-code"
 cask "google-chrome-beta" unless File.directory?("/Applications/Google Chrome.app")
 cask "google-chrome-canary"
 cask "google-hangouts"
@@ -176,6 +179,7 @@ cask "logitech-options"
 cask "macdown"
 cask "mactex"
 cask "micro-snitch"
+cask "microsoft-teams"
 cask "mpv"
 cask "paragon-ntfs"
 cask "pdf-expert"
@@ -199,6 +203,7 @@ cask "sublime-text"
 cask "tableplus"
 cask "tabula"
 # cask "tad"
+# cask "table-tool"
 cask "teamviewer"
 cask "textual"
 cask "ticktick"
@@ -215,6 +220,5 @@ mas "Gapplin", id: 768053424
 mas "Leaf", id: 576338668
 mas "Notability", id: 736189492
 mas "Pocket", id: 568494494
-# mas "Table Tool", id: 1122008420
 mas "WhatsApp", id: 1147396723
 mas "Xcode", id: 497799835
