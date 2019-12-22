@@ -11,15 +11,6 @@ DOTFILESDIRREL=$(dirname $0)
 cd $DOTFILESDIRREL/..
 DOTFILESDIR=$(pwd -P)
 
-[ $(uname -s) = "Darwin" ] && export OSX=1 && export UNIX=1
-[ $(uname -s) = "Linux" ] && export LINUX=1 && export UNIX=1
-uname -s | grep -q "_NT-" && export WINDOWS=1
-
-echo "UNIX: $UNIX"
-echo "OSX: $OSX"
-echo "LINUX: $LINUX"
-echo "WINDOWS: $WINDOWS"
-
 for DOTFILE in *; do
   HOMEFILE="$HOME/.$DOTFILE"
   [ -d $DOTFILE ] && DOTFILE="$DOTFILE/"
@@ -32,19 +23,22 @@ for DOTFILE in *; do
   echo $DOTFILE | grep -q '\.sh' \
     && HOMEFILE="$HOME/.$(echo $DOTFILE | sed -e 's/\.sh//')"
 
-  if [ $UNIX ]
-  then
-    if [ -L "$HOMEFILE" ] && ! [ -d $DOTFILE ]
-    then
-      ln -sfv "$DIRFILE" "$HOMEFILE"
-    else
-      rm -rfv "$HOMEFILE"
-      ln -sv "$DIRFILE" "$HOMEFILE"
-    fi
-  else
-    cp -rv "$DIRFILE" "$HOMEFILE"
+  if [ "$DOTFILE" = "jupyter_notebook_config.py" ]; then
+    mkdir -p ~/.jupyter
+    HOMEFILE="$HOME/.jupyter/jupyter_notebook_config.py"
   fi
+
+  if [ -L "$HOMEFILE" ] && ! [ -d $DOTFILE ]
+  then
+    ln -sfv "$DIRFILE" "$HOMEFILE"
+  else
+    rm -rfv "$HOMEFILE"
+    ln -sv "$DIRFILE" "$HOMEFILE"
+  fi
+
 done
+
+exit 0
 
 fancy_echo() {
   local fmt="$1"; shift
@@ -68,19 +62,16 @@ append_to_file() {
   fi
 }
 
-if [ $OSX ]
-then
-  brew bundle --global || true
+brew bundle --global || true
 
-  mkdir -p "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
-  if [ ! -f "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/Package Control.sublime-package" ]; then
-    # http://stackoverflow.com/questions/19529999/add-package-control-in-sublime-text-3-through-the-command-line
-    echo "Installing Sublime Text 3 Package Manager"
-    wget http://sublime.wbond.net/Package%20Control.sublime-package -P "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
-  fi
-
-  duti -v ~/.duti
+mkdir -p "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
+if [ ! -f "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/Package Control.sublime-package" ]; then
+  # http://stackoverflow.com/questions/19529999/add-package-control-in-sublime-text-3-through-the-command-line
+  echo "Installing Sublime Text 3 Package Manager"
+  wget http://sublime.wbond.net/Package%20Control.sublime-package -P "$HOME/Library/Application Support/Sublime Text 3/Installed Packages/"
 fi
+
+duti -v ~/.duti
 
 fancy_echo "Configuring Zsh ..."
 
