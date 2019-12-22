@@ -44,8 +44,6 @@ else
   export GIT_PAGER='less -+$LESS -FRXi'
 fi
 
-source ~/.functions.sh
-
 # History file
 export HISTFILE=~/.zsh_history
 
@@ -119,4 +117,5 @@ eval "$(starship init zsh)"
 # export FZF_COMPLETION_TRIGGER=''
 
 test -e "${HOME}/iterm2/iterm2_shell_integration.zsh" && source "${HOME}/iterm2/.iterm2_shell_integration.zsh"
+[ -f "$HOME/.functions" ] && source "$HOME/.functions"
 [ -f "$HOME/.workrc" ] && source "$HOME/.workrc"
