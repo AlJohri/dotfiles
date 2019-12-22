@@ -37,6 +37,10 @@ export CLICOLOR=1
 export LSCOLORS=GxFxCxDxBxegedabagaced
 export LESS="-RFi"
 
+quiet_which() {
+  which $1 &>/dev/null
+}
+
 if quiet_which diff-highlight
 then
   export GIT_PAGER='diff-highlight | less -+$LESS -FRXi'
