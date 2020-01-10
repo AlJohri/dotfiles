@@ -113,9 +113,10 @@ source "$HOMEBREW_PREFIX/share/zsh/site-functions/_aws"
 source "$HOMEBREW_PREFIX/share/antigen/antigen.zsh"
 
 antigen bundle zdharma/fast-syntax-highlighting
+antigen theme romkatv/powerlevel10k
 antigen apply
 
-eval "$(starship init zsh)"
+# eval "$(starship init zsh)"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 # export FZF_COMPLETION_TRIGGER=''
