@@ -23,6 +23,7 @@ brew "asciinema"
 brew "autoconf"
 brew "automake"
 brew "coreutils"
+brew "findutils"
 brew "libtool"
 brew "asdf"
 brew "gettext"
@@ -213,7 +214,6 @@ cask "tabula"
 cask "tad"
 cask "teamviewer"
 cask "textual"
-cask "ticktick"
 cask "transmission"
 cask "transmit"
 cask "unetbootin"
@@ -233,6 +233,7 @@ mas "Leaf", id: 576338668
 mas "Notability", id: 736189492
 mas "Pocket", id: 568494494
 mas "PomoDone App", id: 1096128050
+mas "TickTick", id: 966085870
 mas "Trello", id: 1278508951
 mas "WhatsApp", id: 1147396723
 mas "Xcode", id: 497799835

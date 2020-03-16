@@ -11,8 +11,8 @@
 # com.apple.textedit
 # com.macromates.textmate
 
-org.videolan.vlc .avi all
-org.videolan.vlc .mkv all
+org.videolan.vlc avi all
+org.videolan.vlc mkv all
 com.microsoft.VSCode R all
 com.microsoft.VSCode java all
 com.microsoft.VSCode js all
@@ -20,7 +20,10 @@ com.microsoft.VSCode py all
 com.microsoft.VSCode rb all
 com.microsoft.VSCode sh all
 com.microsoft.VSCode json all
+com.microsoft.VSCode sql all
+com.microsoft.VSCode hql all
 com.microsoft.Excel csv all
+com.microsoft.VSCode md all
 com.microsoft.VSCode public.plain-text all
 com.microsoft.VSCode public.unix-executable all
 com.microsoft.VSCode public.source-code all

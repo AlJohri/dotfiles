@@ -63,6 +63,7 @@ export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
 export RSTUDIO_WHICH_R="/usr/local/bin/R"
 export GOPATH=$(go env GOPATH)
 add_to_path_start "$GOPATH/bin"
+add_to_path_start "$HOME/.cargo/bin"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
 export PIPENV_DEFAULT_PYTHON_VERSION="3.7"
 export PIPENV_VENV_IN_PROJECT=1
