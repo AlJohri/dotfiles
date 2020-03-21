@@ -38,8 +38,6 @@ for DOTFILE in *; do
 
 done
 
-exit 0
-
 fancy_echo() {
   local fmt="$1"; shift
 
