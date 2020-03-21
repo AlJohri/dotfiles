@@ -313,6 +313,7 @@ if [ -z "$CI" ]; then
 
   # iTerm2 Preferences Folder Location
   defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.dotfiles/iterm2"
+  defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
 
   fancy_echo "Done configuring macOS!"
 

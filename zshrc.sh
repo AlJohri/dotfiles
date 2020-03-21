@@ -121,7 +121,7 @@ antigen apply
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 # export FZF_COMPLETION_TRIGGER=''
 
-# test -e "${HOME}/iterm2/iterm2_shell_integration.zsh" && source "${HOME}/iterm2/.iterm2_shell_integration.zsh"
+test -e "${HOME}/iterm2/iterm2_shell_integration.zsh" && source "${HOME}/iterm2/.iterm2_shell_integration.zsh"
 [ -f "$HOME/.functions" ] && source "$HOME/.functions"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
