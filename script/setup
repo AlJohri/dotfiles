@@ -127,16 +127,16 @@ CPPFLAGS="-I$(brew --prefix zlib)/include -I$(brew --prefix sqlite3)/include" as
 asdf install ruby "$(latest_ruby)" || true
 asdf install nodejs "$(latest_nodejs)" || true
 
-asdf global python "$(latest_python3) $(latest_python2)"
+asdf global python "$(latest_python3)"
 asdf global ruby "$(latest_ruby)"
 asdf global nodejs "$(latest_nodejs)"
 
 fancy_echo "Done Configuring ASDF!"
 
-fancy_echo "Configuring Postgres ..."
+# fancy_echo "Configuring Postgres ..."
 
-createuser --superuser --createdb --createrole --replication postgres || true
-createuser --superuser --createdb --createrole --replication root || true
+# createuser --superuser --createdb --createrole --replication postgres || true
+# createuser --superuser --createdb --createrole --replication root || true
 
 fancy_echo "Done Configuring Postgres!"
 
