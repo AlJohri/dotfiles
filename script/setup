@@ -92,46 +92,51 @@ fi
 
 fancy_echo "Done Configuring Zsh!"
 
-fancy_echo "Configuring ASDF ..."
+# Remove ASDF
+# -------------------------- #
 
-export ASDF_DATA_DIR=$HOME/.asdf
-# shellcheck disable=SC1090
-. "$(brew --prefix asdf)/asdf.sh"
+# fancy_echo "Configuring ASDF ..."
 
-set +e
-asdf plugin-add ruby || true
-asdf plugin-add python || true
-asdf plugin-add nodejs || true
-set -e
+# export ASDF_DATA_DIR=$HOME/.asdf
+# # shellcheck disable=SC1090
+# . "$(brew --prefix asdf)/asdf.sh"
 
-bash "$HOME/.asdf/plugins/nodejs/bin/import-release-team-keyring"
+# set +e
+# asdf plugin-add ruby || true
+# asdf plugin-add python || true
+# asdf plugin-add nodejs || true
+# set -e
 
-latest_python2() {
-	asdf list-all python | grep -v - | grep -v a | grep -v rc | grep -e "^2." | tail -1
-}
+# bash "$HOME/.asdf/plugins/nodejs/bin/import-release-team-keyring"
 
-latest_python3() {
-	asdf list-all python | grep -v - | grep -v a | grep -v rc | grep -e "^3." | tail -1
-}
+# latest_python2() {
+# 	asdf list-all python | grep -v - | grep -v a | grep -v rc | grep -e "^2." | tail -1
+# }
 
-latest_ruby() {
-	asdf list-all ruby | grep -v - | tail -1
-}
+# latest_python3() {
+# 	asdf list-all python | grep -v - | grep -v a | grep -v rc | grep -e "^3." | tail -1
+# }
 
-latest_nodejs() {
-	asdf list-all nodejs | grep -v - | tail -1
-}
+# latest_ruby() {
+# 	asdf list-all ruby | grep -v - | tail -1
+# }
 
-CPPFLAGS="-I$(brew --prefix zlib)/include -I$(brew --prefix sqlite3)/include" asdf install python "$(latest_python2)" || true
-CPPFLAGS="-I$(brew --prefix zlib)/include -I$(brew --prefix sqlite3)/include" asdf install python "$(latest_python3)" || true
-asdf install ruby "$(latest_ruby)" || true
-asdf install nodejs "$(latest_nodejs)" || true
+# latest_nodejs() {
+# 	asdf list-all nodejs | grep -v - | tail -1
+# }
 
-asdf global python "$(latest_python3)"
-asdf global ruby "$(latest_ruby)"
-asdf global nodejs "$(latest_nodejs)"
+# CPPFLAGS="-I$(brew --prefix zlib)/include -I$(brew --prefix sqlite3)/include" asdf install python "$(latest_python2)" || true
+# CPPFLAGS="-I$(brew --prefix zlib)/include -I$(brew --prefix sqlite3)/include" asdf install python "$(latest_python3)" || true
+# asdf install ruby "$(latest_ruby)" || true
+# asdf install nodejs "$(latest_nodejs)" || true
 
-fancy_echo "Done Configuring ASDF!"
+# asdf global python "$(latest_python3)"
+# asdf global ruby "$(latest_ruby)"
+# asdf global nodejs "$(latest_nodejs)"
+
+# fancy_echo "Done Configuring ASDF!"
+
+# -------------------------- #
 
 # fancy_echo "Configuring Postgres ..."
 
@@ -314,6 +319,9 @@ if [ -z "$CI" ]; then
   # iTerm2 Preferences Folder Location
   defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.dotfiles/iterm2"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+
+  # Rectangle Alternate Default Shortcuts
+  defaults write com.knollsoft.Rectangle alternateDefaultShortcuts -bool true
 
   fancy_echo "Done configuring macOS!"
 

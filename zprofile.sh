@@ -73,9 +73,9 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 export STARSHIP_CONFIG="$HOME/.starship.toml"
 
 # https://github.com/asdf-vm/asdf/issues/405
-export ASDF_DATA_DIR=$HOME/.asdf
-. "$HOMEBREW_PREFIX/opt/asdf/asdf.sh"
-export ASDF_SKIP_RESHIM=1 # ma/nually run: asdf reshim nodejs
+# export ASDF_DATA_DIR=$HOME/.asdf
+# . "$HOMEBREW_PREFIX/opt/asdf/asdf.sh"
+# export ASDF_SKIP_RESHIM=1 # ma/nually run: asdf reshim nodejs
 
 add_to_path_end /Applications/Xcode.app/Contents/Developer/usr/bin
 add_to_path_end /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
