@@ -2,7 +2,6 @@
 # iwr -useb https://raw.githubusercontent.com/AlJohri/dotfiles/master/windows.ps1 | iex
 
 Set-ExecutionPolicy RemoteSigned -scope CurrentUser
-Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
 Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
 
 scoop bucket add extra
@@ -20,3 +19,5 @@ scoop install whatsapp
 scoop install skype
 scoop install spotify
 scoop install vlc
+
+sudo Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
