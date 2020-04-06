@@ -13,11 +13,13 @@ scoop install curl
 scoop install windows-terminal
 scoop install sublime-text
 scoop install vscode
-scoop install 1password
 scoop install teamviewer
 scoop install whatsapp
 scoop install skype
-scoop install spotify
 scoop install vlc
+
+scoop install personal/spotify
+scoop install personal/1password
+scoop install personal/docker
 
 sudo Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
