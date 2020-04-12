@@ -23,3 +23,6 @@ scoop install personal/1password
 scoop install personal/docker
 
 sudo Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
+
+# Within WSL, run:
+# git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/libexec/git-core/git-credential-wincred.exe"
