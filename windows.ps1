@@ -6,7 +6,7 @@ Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.
 
 scoop install git
 
-scoop bucket add extra
+scoop bucket add extras
 scoop bucket add personal https://github.com/AlJohri/scoop-personal.git
 
 scoop install curl
