@@ -7,17 +7,27 @@ Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.
 scoop bucket add extra
 scoop bucket add personal https://github.com/AlJohri/scoop-personal.git
 
-scoop install sudo
-scoop install wget
 scoop install curl
-scoop install windows-terminal
-scoop install sublime-text
-scoop install vscode
-scoop install teamviewer
-scoop install whatsapp
-scoop install skype
-scoop install vlc
+scoop install wget
+scoop install which
 
+scoop install caffeine
+scoop install everything
+scoop install geekbench
+scoop install googlechrome-beta
+scoop install innounp
+scoop install skype
+scoop install standardnotes
+scoop install steam
+scoop install sublime-text
+scoop install teamviewer
+scoop install vlc
+scoop install vscode
+scoop install whatsapp
+scoop install windows-terminal
+
+scoop install personal/cyberduck
+scoop install personal/keybase
 scoop install personal/spotify
 scoop install personal/1password
 scoop install personal/docker
