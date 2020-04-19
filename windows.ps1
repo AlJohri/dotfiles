@@ -9,6 +9,7 @@ scoop install git
 scoop bucket add extras
 scoop bucket add personal https://github.com/AlJohri/scoop-personal.git
 
+scoop install sudo
 scoop install curl
 scoop install wget
 scoop install which
@@ -32,9 +33,10 @@ scoop install personal/cyberduck
 scoop install personal/keybase
 scoop install personal/spotify
 scoop install personal/1password
-scoop install personal/docker
 
 sudo Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
+
+scoop install personal/docker
 
 # Within WSL, run:
 # git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/libexec/git-core/git-credential-wincred.exe"
