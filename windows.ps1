@@ -7,6 +7,7 @@ Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.
 scoop install git
 
 scoop bucket add extras
+scoop bucket add nerd-fonts
 scoop bucket add personal https://github.com/AlJohri/scoop-personal.git
 
 scoop install sudo
@@ -33,6 +34,7 @@ scoop install personal/cyberduck
 scoop install personal/keybase
 scoop install personal/spotify
 scoop install personal/1password
+sudo scoop install nerd-fonts/Delugia-Nerd-Font
 
 sudo Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
 
