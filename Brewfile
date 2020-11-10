@@ -151,6 +151,11 @@ cask "visual-studio-code"
 cask "vlc"
 cask "webpquicklook"
 cask "webtorrent"
+
+repo = 'popcorn-official/popcorn-desktop'
+tap repo, "https://github.com/#{repo}.git"
+cask 'popcorn-time'
+
 mas "Jira", id: 1475897096
 mas "Notability", id: 736189492
 mas "Pocket", id: 568494494
