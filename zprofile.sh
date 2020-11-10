@@ -67,10 +67,11 @@ export RSTUDIO_WHICH_R="/usr/local/bin/R"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
 export PIPENV_DEFAULT_PYTHON_VERSION="3.7"
 export PIPENV_VENV_IN_PROJECT=1
-export BAT_PAGER=''
+# export BAT_PAGER=''
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 export STARSHIP_CONFIG="$HOME/.starship.toml"
+export AWS_DEFAULT_REGION=us-east-1
 
 # https://github.com/asdf-vm/asdf/issues/405
 # export ASDF_DATA_DIR=$HOME/.asdf
