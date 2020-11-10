@@ -35,7 +35,7 @@ alias finder-hide="setfile -a V"
 export GREP_OPTIONS="--color=auto"
 export CLICOLOR=1
 export LSCOLORS=GxFxCxDxBxegedabagaced
-export LESS="-RFi"
+# export LESS="-RFi"
 
 quiet_which() {
   which $1 &>/dev/null
@@ -126,3 +126,5 @@ test -e "${HOME}/iterm2/iterm2_shell_integration.zsh" && source "${HOME}/iterm2/
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
+
+eval "$(direnv hook zsh)"
