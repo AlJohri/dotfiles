@@ -41,8 +41,7 @@ quiet_which() {
   which $1 &>/dev/null
 }
 
-if quiet_which diff-highlight
-then
+if quiet_which diff-highlight; then
   export GIT_PAGER='diff-highlight | less -+$LESS -FRXi'
 else
   export GIT_PAGER='less -+$LESS -FRXi'
@@ -77,13 +76,12 @@ setopt histignorespace
 # This is for multi-user homebrew installations: https://raeesbhatti.com/blog/configure-brew-for-multi-user-setup
 autoload -U compinit && compinit -u
 
-if which brew &>/dev/null
-then
-  [ -w $HOMEBREW_PREFIX/bin/brew ] && \
-    [ ! -f $HOMEBREW_PREFIX/share/zsh/site-functions/_brew ] && \
-    mkdir -p $HOMEBREW_PREFIX/share/zsh/site-functions &>/dev/null && \
+if which brew &>/dev/null; then
+  [ -w $HOMEBREW_PREFIX/bin/brew ] &&
+    [ ! -f $HOMEBREW_PREFIX/share/zsh/site-functions/_brew ] &&
+    mkdir -p $HOMEBREW_PREFIX/share/zsh/site-functions &>/dev/null &&
     ln -s $HOMEBREW_PREFIX/Library/Contributions/brew_zsh_completion.zsh \
-          $HOMEBREW_PREFIX/share/zsh/site-functions/_brew
+      $HOMEBREW_PREFIX/share/zsh/site-functions/_brew
   export FPATH="$HOMEBREW_PREFIX/share/zsh/site-functions:$FPATH"
 fi
 
@@ -108,6 +106,21 @@ autoload -U colors && colors
 
 # more OS X/Bash-like word jumps
 export WORDCHARS=''
+
+function sleep-in() {
+  local minutes=$1
+  local datetime="$(date -v+${minutes}M +"%m/%d/%y %H:%M:%S")"
+  sudo pmset schedule sleep "$datetime"
+}
+
+function sleep-cancel-all() {
+  NUM_OF_SLEEPS=$(pmset -g sched | wc -l | tr -d ' ')
+  if [[ $NUM_OF_SLEEPS -gt 0 ]]; then
+    # The first line of output is a header, ignore it.
+    NUM_OF_SLEEPS=$(expr $NUM_OF_SLEEPS - 1)
+    seq $NUM_OF_SLEEPS | xargs -Iz sudo pmset schedule cancel 0
+  fi
+}
 
 source "$HOMEBREW_PREFIX/share/zsh/site-functions/_aws"
 source "$HOMEBREW_PREFIX/share/antigen/antigen.zsh"

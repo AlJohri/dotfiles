@@ -65,6 +65,7 @@ export RSTUDIO_WHICH_R="/usr/local/bin/R"
 # add_to_path_start "$GOPATH/bin"
 # add_to_path_start "$HOME/.cargo/bin"
 export ANDROID_HOME="$HOMEBREW_PREFIX/opt/android-sdk"
+export DIRENV_WARN_TIMEOUT=10s
 export PIPENV_DEFAULT_PYTHON_VERSION="3.7"
 export PIPENV_VENV_IN_PROJECT=1
 # export BAT_PAGER=''
