@@ -27,4 +27,4 @@ winget install -e --id CPUID.CPU-Z
 winget install -e --id TechPowerUp.GPU-Z
 winget install -e --id JRSoftware.InnoSetup
 winget install -e --id PrivateInternetAccess.PrivateInternetAccess
-
+winget install -e --id Signal.Signal
