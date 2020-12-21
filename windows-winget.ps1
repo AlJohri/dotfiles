@@ -16,3 +16,15 @@ winget install -e --id Keybase.Keybase
 winget install -e --id Spotify.Spotify
 winget install -e --id AgileBits.1Password
 winget install -e --id Docker.DockerDesktop
+winget install -e --id Discord.Discord
+winget install -e --id GiorgioTani.PeaZip
+winget install -e --id Notion.Notion
+winget install -e --id Canonical.Ubuntu
+winget install -e --id OpenJS.NodeJS
+winget install -e --id Python.Python
+winget install -e --id RiotGames.Valorant
+winget install -e --id CPUID.CPU-Z
+winget install -e --id TechPowerUp.GPU-Z
+winget install -e --id JRSoftware.InnoSetup
+winget install -e --id PrivateInternetAccess.PrivateInternetAccess
+
