@@ -28,3 +28,4 @@ winget install -e --id TechPowerUp.GPU-Z
 winget install -e --id JRSoftware.InnoSetup
 winget install -e --id PrivateInternetAccess.PrivateInternetAccess
 winget install -e --id Signal.Signal
+winget install -e --id SlackTechnologies.Slack
