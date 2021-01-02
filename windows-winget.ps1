@@ -32,3 +32,4 @@ winget install -e --id Signal.Signal
 winget install -e --id SlackTechnologies.Slack
 winget install -e --id TickTick.TickTick
 winget install -e --id PDFLabs.PDFtkServer
+winget install -e --id flux.flux
