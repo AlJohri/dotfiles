@@ -25,7 +25,8 @@ alias ag='rg'
 alias curl='noglob curl'
 alias nchrome='open -n /Applications/Google\ Chrome.app/'
 alias pyclean='find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf'
-alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/A/Resources/airport'
+# sudo ln -s /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport /usr/local/bin/airport
+# alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/A/Resources/airport'
 alias ls="ls -F"
 alias ql="qlmanage -p 1>/dev/null"
 alias locate="mdfind -name"
