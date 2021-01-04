@@ -28,6 +28,7 @@ brew "freetype"
 brew "gettext"
 brew "libffi"
 brew "glib"
+brew "cairo"
 brew "cheat"
 brew "colordiff"
 brew "cookiecutter"
@@ -52,6 +53,7 @@ brew "gnu-time"
 brew "libgpg-error"
 brew "gnupg"
 brew "go"
+brew "python@3.8"
 brew "gts"
 brew "graphviz"
 brew "htop"
@@ -68,7 +70,6 @@ brew "most"
 brew "nbdime"
 brew "nmap"
 brew "node"
-brew "node@12"
 brew "p7zip"
 brew "pandoc"
 brew "parquet-tools"
@@ -195,4 +196,5 @@ mas "Room Planner", id: 1451474641
 mas "TickTick", id: 966085870
 mas "Trello", id: 1278508951
 mas "WhatsApp", id: 1147396723
+mas "WiFi Explorer", id: 494803304
 mas "Xcode", id: 497799835
