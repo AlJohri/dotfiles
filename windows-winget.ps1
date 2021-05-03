@@ -35,3 +35,4 @@ winget install -e --id PDFLabs.PDFtkServer
 winget install -e --id flux.flux
 winget install -e --id Logitech.Options
 winget install -e --id Logitech.LGH
+winget install -e --id Philips.HueSync
