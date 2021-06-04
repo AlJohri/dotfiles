@@ -3,7 +3,6 @@ winget install -e --id PrimateLabs.Geekbench
 winget install -e --id Google.ChromeBeta
 winget install -e --id Microsoft.Skype
 winget install -e --id Zoom.Zoom
-winget install -e --id StandardNotes.StandardNotes
 winget install -e --id Valve.Steam
 winget install -e --id SublimeHQ.SublimeText.4
 winget install -e --id TeamViewer.TeamViewer
@@ -36,3 +35,4 @@ winget install -e --id Logitech.Options
 winget install -e --id Logitech.LGH
 winget install -e --id Philips.HueSync
 # winget install -e --id RiotGames.Valorant
+# winget install -e --id StandardNotes.StandardNotes
