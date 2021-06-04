@@ -5,7 +5,7 @@ winget install -e --id Microsoft.Skype
 winget install -e --id Zoom.Zoom
 winget install -e --id StandardNotes.StandardNotes
 winget install -e --id Valve.Steam
-winget install -e --id SublimeHQ.SublimeText
+winget install -e --id SublimeHQ.SublimeText.4
 winget install -e --id TeamViewer.TeamViewer
 winget install -e --id VideoLAN.VLC
 winget install -e --id Microsoft.VisualStudioCode
@@ -22,7 +22,6 @@ winget install -e --id Notion.Notion
 winget install -e --id Canonical.Ubuntu
 winget install -e --id OpenJS.NodeJS
 winget install -e --id Python.Python
-winget install -e --id RiotGames.Valorant
 winget install -e --id TechPowerUp.GPU-Z
 winget install -e --id CPUID.CPU-Z
 winget install -e --id CPUID.HWMonitor
@@ -36,3 +35,4 @@ winget install -e --id flux.flux
 winget install -e --id Logitech.Options
 winget install -e --id Logitech.LGH
 winget install -e --id Philips.HueSync
+# winget install -e --id RiotGames.Valorant
