@@ -1,5 +1,5 @@
 winget install -e --id voidtools.Everything
-winget install -e --id PrimateLabs.Geekbench
+winget install -e --id PrimateLabs.Geekbench.5
 winget install -e --id Google.ChromeBeta
 winget install -e --id Microsoft.Skype
 winget install -e --id Zoom.Zoom
