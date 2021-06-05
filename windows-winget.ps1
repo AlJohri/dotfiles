@@ -4,6 +4,7 @@ winget install -e --id Google.ChromeBeta
 winget install -e --id Microsoft.Skype
 winget install -e --id Zoom.Zoom
 winget install -e --id Valve.Steam
+winget install LogMeIn.Hamachi
 winget install -e --id SublimeHQ.SublimeText.4
 winget install -e --id TeamViewer.TeamViewer
 winget install -e --id VideoLAN.VLC
