@@ -37,5 +37,6 @@ winget install -e --id Logitech.Options
 winget install -e --id Logitech.LGH
 winget install -e --id Philips.HueSync
 winget install -e --id Rufus.Rufus
+winget install -e --id Balena.Etcher
 # winget install -e --id RiotGames.Valorant
 # winget install -e --id StandardNotes.StandardNotes
