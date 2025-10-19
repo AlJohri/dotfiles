@@ -1,44 +1,42 @@
-# Usage:
-# iwr -useb https://raw.githubusercontent.com/AlJohri/dotfiles/master/windows.ps1 | iex
-
-Set-ExecutionPolicy RemoteSigned -scope CurrentUser
-Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
-
-scoop install git
-
-scoop bucket add extras
-scoop bucket add nerd-fonts
-scoop bucket add personal https://github.com/AlJohri/scoop-personal.git
-
-scoop install sudo
-scoop install curl
-scoop install wget
-scoop install which
-
-scoop install caffeine
-scoop install everything
-scoop install geekbench
-scoop install googlechrome-beta
-scoop install innounp
-scoop install skype
-scoop install standardnotes
-scoop install steam
-scoop install sublime-text
-scoop install teamviewer
-scoop install vlc
-scoop install vscode
-scoop install whatsapp
-scoop install windows-terminal
-
-scoop install personal/cyberduck
-scoop install personal/keybase
-scoop install personal/spotify
-scoop install personal/1password
-sudo scoop install nerd-fonts/Delugia-Nerd-Font
-
-sudo Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux
-
-scoop install personal/docker
-
-# Within WSL, run:
-# git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/libexec/git-core/git-credential-wincred.exe"
+winget install -e --id voidtools.Everything
+winget install -e --id PrimateLabs.Geekbench.5
+winget install -e --id Google.ChromeBeta
+winget install -e --id Microsoft.Skype
+winget install -e --id Zoom.Zoom
+winget install -e --id Valve.Steam
+winget install -e --id LogMeIn.Hamachi
+winget install -e --id Revora.CNCOnline
+winget install -e --id SublimeHQ.SublimeText.4
+winget install -e --id TeamViewer.TeamViewer
+winget install -e --id VideoLAN.VLC
+winget install -e --id Microsoft.VisualStudioCode
+winget install -e --id WhatsApp.WhatsApp
+winget install -e --id Microsoft.WindowsTerminal
+winget install -e --id Iterate.Cyberduck
+winget install -e --id Keybase.Keybase
+winget install -e --id Spotify.Spotify
+winget install -e --id AgileBits.1Password
+winget install -e --id Docker.DockerDesktop
+winget install -e --id Discord.Discord
+winget install -e --id GiorgioTani.PeaZip
+winget install -e --id Notion.Notion
+winget install -e --id Canonical.Ubuntu
+winget install -e --id OpenJS.NodeJS
+winget install -e --id Python.Python
+winget install -e --id TechPowerUp.GPU-Z
+winget install -e --id CPUID.CPU-Z
+winget install -e --id CPUID.HWMonitor
+winget install -e --id JRSoftware.InnoSetup
+winget install -e --id PrivateInternetAccess.PrivateInternetAccess
+winget install -e --id Signal.Signal
+winget install -e --id SlackTechnologies.Slack
+winget install -e --id TickTick.TickTick
+winget install -e --id PDFLabs.PDFtkServer
+winget install -e --id flux.flux
+winget install -e --id Logitech.Options
+winget install -e --id Logitech.LGH
+winget install -e --id Philips.HueSync
+winget install -e --id Rufus.Rufus
+winget install -e --id Balena.Etcher
+# winget install -e --id RiotGames.Valorant
+# winget install -e --id StandardNotes.StandardNotes
