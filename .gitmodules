@@ -1,0 +1,6 @@
+[submodule "tmux/.config/tmux/plugins/tpm"]
+	path = tmux/.config/tmux/plugins/tpm
+	url = https://github.com/tmux-plugins/tpm
+[submodule "tmux/.config/tmux/plugins/omarchy-tmux"]
+	path = tmux/.config/tmux/plugins/omarchy-tmux
+	url = https://github.com/joaofelipegalvao/omarchy-tmux.git
