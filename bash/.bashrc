@@ -9,6 +9,7 @@ alias claude="claude --dangerously-skip-permissions"
 #
 # Make an alias for invoking commands you use constantly
 # alias p='python'
+alias gst='git status'
 
 # Add ~/bin to PATH
 export PATH="$HOME/bin:$PATH"
