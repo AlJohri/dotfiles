@@ -133,8 +133,8 @@
     "return-type": "json"
   },
   "custom/dock-status": {
-    "exec": "$HOME/dotfiles/bin/dock-status-indicator",
-    "on-click": "$HOME/dotfiles/bin/toggle-dock && pkill -RTMIN+10 waybar",
+    "exec": "dock-status-indicator",
+    "on-click": "toggle-dock && pkill -RTMIN+10 waybar",
     "return-type": "json",
     "interval": 5,
     "signal": 10
