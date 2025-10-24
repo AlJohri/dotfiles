@@ -1,4 +1,4 @@
 .PHONY: all
 
 all:
-	stow bash hypr waybar tmux
+	stow --adopt --restow bash hypr waybar tmux hyprmon starship
