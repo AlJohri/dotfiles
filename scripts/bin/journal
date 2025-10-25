@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# Get current date in YYYYMMDD format
+date=$(date +%Y%m%d)
+
+# Define journal file path
+journal_file="$HOME/Obsidian/journals/${date}.md"
+
+# Create file with header if it doesn't exist
+if [[ ! -f "$journal_file" ]]; then
+    mkdir -p "$(dirname "$journal_file")"
+    echo "# ${date}" > "$journal_file"
+    echo "" >> "$journal_file"
+fi
+
+# Open in nvim
+nvim "$journal_file"
