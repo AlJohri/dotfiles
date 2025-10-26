@@ -22,8 +22,7 @@ fi
 # Get absolute path
 TARGET_PATH=$(readlink -f "$TARGET_PATH")
 
-# Get the dotfiles repo root early to validate path is not inside it
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$HOME/dotfiles"
 
 # Validate that the target path is not inside the dotfiles repo
 if [[ "$TARGET_PATH" == "$REPO_ROOT"* ]]; then
