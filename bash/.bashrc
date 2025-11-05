@@ -5,16 +5,23 @@
 # (don't mess with these directly, just overwrite them here!)
 source ~/.local/share/omarchy/default/bash/rc
 
+# Add your own exports, aliases, and functions here.
+
 alias vim=nvim
 alias claude="claude --dangerously-skip-permissions"
-
-# Add your own exports, aliases, and functions here.
-#
-# Make an alias for invoking commands you use constantly
-# alias p='python'
+alias cat='bat --paging=never --style=plain'
+alias zed='zeditor'
 alias gst='git status'
 
 # Add ~/bin to PATH
 export PATH="$HOME/bin:$PATH"
 
+# Setup uv
+. "$HOME/.local/bin/env"
+
+# Setup rust (cargo)
 . "$HOME/.cargo/env"
+
+# Setup direnv
+eval "$(direnv hook bash)"
+

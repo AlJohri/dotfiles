@@ -1,4 +1,4 @@
 .PHONY: all
 
 all:
-	stow --adopt --restow scripts bash hypr waybar tmux hyprmon starship git nvim
+	stow --adopt --restow scripts bash zsh fish hypr waybar tmux hyprmon starship git nvim
