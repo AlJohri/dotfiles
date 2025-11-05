@@ -1,0 +1,3 @@
+# search hidden files by default in dotfiles since
+# most files start with .
+--hidden
