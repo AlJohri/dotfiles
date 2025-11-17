@@ -21,3 +21,11 @@
 [status]
   showUntrackedFiles = all
 
+[core]
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
+[include]
+	path = ~/.config/omarchy/current/theme/delta.gitconfig
+[merge]
+	conflictStyle = zdiff3

@@ -1,0 +1,18 @@
+[delta]
+    navigate = true
+    line-numbers = true
+    side-by-side = false
+    syntax-theme = Monokai Extended
+    minus-style = syntax "#3a2a30"
+    minus-emph-style = syntax "#563842"
+    minus-empty-line-marker-style = normal "#3a2a30"
+    plus-style = syntax "#2f3a2e"
+    plus-emph-style = syntax "#3f5140"
+    plus-empty-line-marker-style = normal "#2f3a2e"
+    line-numbers-minus-style = "#fd6883"
+    line-numbers-plus-style = "#adda78"
+    line-numbers-zero-style = "#948a8b"
+    file-style = bold "#f9cc6c"
+    file-decoration-style = "#f9cc6c" ul
+    hunk-header-style = file line-number syntax
+    hunk-header-decoration-style = "#a8a9eb" box

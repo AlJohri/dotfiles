@@ -1,0 +1,18 @@
+[delta]
+    navigate = true
+    line-numbers = true
+    side-by-side = false
+    syntax-theme = Visual Studio Dark+
+    minus-style = syntax "#2e1818"
+    minus-emph-style = syntax "#4a2121"
+    minus-empty-line-marker-style = normal "#2e1818"
+    plus-style = syntax "#292714"
+    plus-emph-style = syntax "#3d3a1f"
+    plus-empty-line-marker-style = normal "#292714"
+    line-numbers-minus-style = "#b91c1c"
+    line-numbers-plus-style = "#efbf04"
+    line-numbers-zero-style = "#8a8a8d"
+    file-style = bold "#fbbf24"
+    file-decoration-style = "#fbbf24" ul
+    hunk-header-style = file line-number syntax
+    hunk-header-decoration-style = "#5c6370" box

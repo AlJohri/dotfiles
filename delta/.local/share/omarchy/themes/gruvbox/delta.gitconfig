@@ -1,0 +1,18 @@
+[delta]
+    navigate = true
+    line-numbers = true
+    side-by-side = false
+    syntax-theme = gruvbox-dark
+    minus-style = syntax "#3c2525"
+    minus-emph-style = syntax "#5a2626"
+    minus-empty-line-marker-style = normal "#3c2525"
+    plus-style = syntax "#2d3b1c"
+    plus-emph-style = syntax "#3e4f27"
+    plus-empty-line-marker-style = normal "#2d3b1c"
+    line-numbers-minus-style = "#fb4934"
+    line-numbers-plus-style = "#b8bb26"
+    line-numbers-zero-style = "#928374"
+    file-style = bold "#fabd2f"
+    file-decoration-style = "#fabd2f" ul
+    hunk-header-style = file line-number syntax
+    hunk-header-decoration-style = "#83a598" box

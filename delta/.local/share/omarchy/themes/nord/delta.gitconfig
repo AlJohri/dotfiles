@@ -1,0 +1,18 @@
+[delta]
+    navigate = true
+    line-numbers = true
+    side-by-side = false
+    syntax-theme = Nord
+    minus-style = syntax "#3b2e33"
+    minus-emph-style = syntax "#5a3d47"
+    minus-empty-line-marker-style = normal "#3b2e33"
+    plus-style = syntax "#2e3b34"
+    plus-emph-style = syntax "#3e5042"
+    plus-empty-line-marker-style = normal "#2e3b34"
+    line-numbers-minus-style = "#bf616a"
+    line-numbers-plus-style = "#a3be8c"
+    line-numbers-zero-style = "#4c566a"
+    file-style = bold "#ebcb8b"
+    file-decoration-style = "#ebcb8b" ul
+    hunk-header-style = file line-number syntax
+    hunk-header-decoration-style = "#81a1c1" box

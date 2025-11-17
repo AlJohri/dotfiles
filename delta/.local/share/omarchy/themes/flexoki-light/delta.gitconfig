@@ -1,0 +1,18 @@
+[delta]
+    navigate = true
+    line-numbers = true
+    side-by-side = false
+    syntax-theme = GitHub
+    minus-style = syntax "#f5dcd8"
+    minus-emph-style = syntax "#eabfb7"
+    minus-empty-line-marker-style = normal "#f5dcd8"
+    plus-style = syntax "#dcebd3"
+    plus-emph-style = syntax "#c8e0b8"
+    plus-empty-line-marker-style = normal "#dcebd3"
+    line-numbers-minus-style = "#D14D41"
+    line-numbers-plus-style = "#879A39"
+    line-numbers-zero-style = "#6F6E69"
+    file-style = bold "#D0A215"
+    file-decoration-style = "#D0A215" ul
+    hunk-header-style = file line-number syntax
+    hunk-header-decoration-style = "#4385BE" box
