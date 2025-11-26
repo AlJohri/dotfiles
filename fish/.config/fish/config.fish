@@ -8,6 +8,10 @@ alias claude="claude --dangerously-skip-permissions"
 alias cat='bat --paging=never --style=plain'
 alias zed='zeditor'
 alias gst='git status'
+alias k='kubectl'
 
 # Add ~/bin to PATH
 fish_add_path -g $HOME/bin
+
+# Add ~/.pulumi/bin to PATH
+fish_add_path -g $HOME/.pulumi/bin

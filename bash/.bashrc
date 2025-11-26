@@ -25,3 +25,6 @@ export PATH="$HOME/bin:$PATH"
 # Setup direnv
 eval "$(direnv hook bash)"
 
+
+# add Pulumi to the PATH
+export PATH=$PATH:/home/aljohri/.pulumi/bin
