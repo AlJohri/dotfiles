@@ -84,8 +84,8 @@ if [ -f "$MAKEFILE" ]; then
     # Check if package is already in the Makefile
     if ! grep -q "stow.*$PACKAGE_NAME" "$MAKEFILE"; then
         echo "Adding $PACKAGE_NAME to Makefile"
-        # Use sed to add the package to the stow command line
-        sed -i "s/\(stow.*\)/\1 $PACKAGE_NAME/" "$MAKEFILE"
+        # Use sed to add the package to the first stow line (the one without -t flag)
+        sed -i "/stow.*--restow [^-]/s/$/ $PACKAGE_NAME/" "$MAKEFILE"
     else
         echo "$PACKAGE_NAME already in Makefile"
     fi
