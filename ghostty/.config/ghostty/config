@@ -1,6 +1,9 @@
 # Dynamic theme colors
 config-file = ?"~/.config/omarchy/current/theme/ghostty.conf"
 
+# Shell
+command = /usr/bin/fish
+
 # Font
 font-family = "CaskaydiaMono Nerd Font"
 font-style = Regular
