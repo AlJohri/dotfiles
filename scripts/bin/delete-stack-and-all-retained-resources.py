@@ -11,9 +11,9 @@ This script:
 
 Usage:
     python delete-stack-and-all-retained-resources.py \
-        --profile seltz-management \
+        --profile my-profile \
         --region us-west-2 \
-        --stack-name StackSetsManagerStack
+        --stack-name MyStack
 """
 
 import argparse
