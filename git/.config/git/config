@@ -19,7 +19,7 @@
 [rebase]
 	autoStash = true
 [status]
-  showUntrackedFiles = all
+	showUntrackedFiles = all
 
 [core]
 	pager = delta
@@ -29,3 +29,5 @@
 	path = ~/.config/omarchy/current/theme/delta.gitconfig
 [merge]
 	conflictStyle = zdiff3
+[advice]
+	skippedCherryPicks = false
