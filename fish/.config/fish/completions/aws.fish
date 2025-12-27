@@ -3,11 +3,8 @@
 if type -q aws_completer
   function __aws_complete
     set -lx COMP_SHELL fish
-    set -lx COMP_LINE (commandline -opc)
-
-    if string match -q -- "-*" (commandline -opt)
-      set COMP_LINE $COMP_LINE -
-    end
+    # Use -cp to preserve trailing space (tells completer we want next argument)
+    set -lx COMP_LINE (commandline -cp)
 
     aws_completer | command sed 's/ $//'
   end
