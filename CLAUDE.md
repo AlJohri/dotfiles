@@ -40,10 +40,16 @@ Key packages:
 - **fish**: Primary shell with custom functions in `functions/`, environment setup in `conf.d/`
 - **nvim**: LazyVim-based Neovim config with custom plugins in `lua/plugins/`
 - **tmux**: Uses TPM (Tmux Plugin Manager) with omarchy-tmux theme (git submodules)
-- **hypr**: Hyprland window manager config (Linux/Wayland), modular configs in separate files
+- **hypr**: Hyprland window manager config (Linux/Wayland), modular configs split into `bindings.conf`, `monitors.conf`, `looknfeel.conf`, etc.
+- **ghostty**: Terminal emulator config
+- **waybar**: Status bar for Wayland compositors
+
+Other packages: alacritty, bash, zsh, starship, git, wayvnc, hyprmon, delta
 
 ## Notes
 
-- The `.envrc` enables `--hidden` for ripgrep since most dotfiles are hidden
-- Tmux plugins are git submodules under `tmux/.config/tmux/plugins/`
+- The `.envrc` sets `RIPGREP_CONFIG_PATH` to use `.ripgreprc`, which enables `--hidden` since most dotfiles are hidden
+- Tmux plugins are git submodules under `tmux/.config/tmux/plugins/` (TPM and omarchy-tmux)
 - Uses Omarchy theme system (`~/.config/omarchy/current/theme/`) across tmux, git, and nvim
+- The delta package uses `--no-folding` with target `~/.local` (not home directory)
+- `windows.ps1` contains a PowerShell script for Windows environment setup
