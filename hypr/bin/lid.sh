@@ -18,17 +18,26 @@ if [[ "$action" == "check" ]]; then
   fi
 fi
 
+# Find the internal display (eDP-*)
+internal=$(hyprctl monitors all -j | jq -r '.[].name | select(startswith("eDP"))')
+logger -t lid.sh "Internal display: $internal"
+
+if [[ -z "$internal" ]]; then
+  logger -t lid.sh "No internal display found"
+  exit 1
+fi
+
 if [[ "$action" == "close" ]]; then
   # Only disable laptop screen if there's an external monitor connected
   monitor_count=$(hyprctl monitors all -j | jq length)
   logger -t lid.sh "Monitor count: $monitor_count"
   if [[ $monitor_count -gt 1 ]]; then
-    logger -t lid.sh "Disabling eDP-1"
-    hyprctl keyword monitor "eDP-1, disable"
+    logger -t lid.sh "Disabling $internal"
+    hyprctl keyword monitor "$internal, disable"
   fi
 elif [[ "$action" == "open" ]]; then
   # Always re-enable laptop screen when lid opens
-  logger -t lid.sh "Enabling eDP-1"
-  hyprctl keyword monitor "eDP-1, preferred, auto, 1.6"
+  logger -t lid.sh "Enabling $internal"
+  hyprctl keyword monitor "$internal, preferred, auto, 1.6"
 fi
 
