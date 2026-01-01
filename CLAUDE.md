@@ -27,6 +27,11 @@ After cloning, initialize submodules:
 git submodule update --init
 ```
 
+Restart waybar:
+```bash
+killall waybar; setsid uwsm-app -- waybar
+```
+
 ## Structure
 
 Each package follows the stow convention where the directory structure mirrors the home directory:
