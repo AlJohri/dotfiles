@@ -36,8 +36,9 @@ if [[ "$action" == "close" ]]; then
     hyprctl keyword monitor "$internal, disable"
   fi
 elif [[ "$action" == "open" ]]; then
-  # Always re-enable laptop screen when lid opens
-  logger -t lid.sh "Enabling $internal"
-  hyprctl keyword monitor "$internal, preferred, auto, 1.6"
+  # Re-enable laptop screen by re-sourcing monitors.conf
+  # The desc: rule will enable it at the correct position
+  logger -t lid.sh "Enabling $internal via monitors.conf"
+  hyprctl keyword source ~/.config/hypr/monitors.conf
 fi
 
