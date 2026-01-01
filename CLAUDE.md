@@ -49,7 +49,9 @@ Key packages:
 - **ghostty**: Terminal emulator config
 - **waybar**: Status bar for Wayland compositors
 
-Other packages: alacritty, bash, zsh, starship, git, wayvnc, hyprmon, delta
+Other packages: alacritty, bash, zsh, starship, git, wayvnc, hyprmon, delta, xdg
+
+- **xdg**: XDG config files: `mimeapps.list` (default apps, query with `xdg-settings get default-web-browser`), `user-dirs.*` (XDG directories), `autostart/` (desktop entries)
 
 ## Notes
 
