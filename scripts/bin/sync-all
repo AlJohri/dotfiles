@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+for dir in */; do
+    if [[ -d "${dir}.git" ]]; then
+        echo "Pulling ${dir%/}..."
+        git -C "$dir" pull
+    fi
+done
