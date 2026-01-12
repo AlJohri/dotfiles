@@ -4,7 +4,7 @@ set -euo pipefail
 # Setup script for Omarchy Linux (Arch-based)
 
 echo "==> Installing system packages..."
-sudo pacman -Syu --noconfirm \
+sudo pacman -S --noconfirm --needed \
     stow \
     make \
     git \
@@ -21,7 +21,7 @@ sudo pacman -Syu --noconfirm \
     unzip
 
 echo "==> Installing Wayland/Hyprland packages..."
-sudo pacman -S --noconfirm \
+sudo pacman -S --noconfirm --needed \
     hyprland \
     waybar \
     hyprlock \
