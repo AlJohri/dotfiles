@@ -1,7 +1,9 @@
 [tools]
 amazon-ecr-credential-helper = "latest"
+docker-cli = "latest"
 duckdb = "latest"
 go = "latest"
+grpcurl = "1.9.3"
 node = "24"
 opentofu = "v1.11.0-rc2"
 terraform = "latest"
