@@ -10,8 +10,9 @@ alias zed='zeditor'
 alias gst='git status'
 alias k='kubectl'
 
-# Add ~/bin to PATH
+# Add ~/bin and ~/.local/bin to PATH
 fish_add_path -g $HOME/bin
+fish_add_path -g $HOME/.local/bin
 
 # Add ~/.pulumi/bin to PATH
 fish_add_path -g $HOME/.pulumi/bin

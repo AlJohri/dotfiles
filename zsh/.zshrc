@@ -22,27 +22,39 @@ alias cat='bat --paging=never --style=plain'
 alias zed='zeditor'
 alias gst='git status'
 
-# Add ~/bin to PATH
-export PATH="$HOME/bin:$PATH"
+# Add ~/bin and ~/.local/bin to PATH
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
 
-# Add $HOME/.local/share/../bin to PATH (default for uv)
-export PATH="$HOME/.local/share/../bin:$PATH"
+# Setup cargo/rust
+if [[ -f "$HOME/.cargo/env" ]]; then
+  . "$HOME/.cargo/env"
+fi
 
-# Setup rust (cargo)
-. "$HOME/.cargo/env"
-
-. "$HOME/.local/share/../bin/env"
-
-# https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-completion.html#cli-command-completion-enable
-autoload bashcompinit && bashcompinit
-autoload -Uz compinit && compinit
-
-complete -C '/usr/local/bin/aws_completer' aws
+# Setup mise
+if command -v mise &> /dev/null; then
+  eval "$(mise activate zsh)"
+fi
 
 # Setup direnv
-eval "$(direnv hook zsh)"
+if command -v direnv &> /dev/null; then
+  eval "$(direnv hook zsh)"
+fi
+
+# Setup starship
+if command -v starship &> /dev/null; then
+  eval "$(starship init zsh)"
+fi
+
+# AWS CLI completion
+# https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-completion.html#cli-command-completion-enable
+if command -v aws_completer &> /dev/null; then
+  autoload bashcompinit && bashcompinit
+  autoload -Uz compinit && compinit
+  complete -C 'aws_completer' aws
+fi
 
 # zsh-syntax-highlighting must be last line
 # https://github.com/zsh-users/zsh-syntax-highlighting?tab=readme-ov-file#why-must-zsh-syntax-highlightingzsh-be-sourced-at-the-end-of-the-zshrc-file
-. /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-
+if [[ -f /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
+  . /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
