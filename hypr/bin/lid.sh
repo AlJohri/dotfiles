@@ -37,7 +37,6 @@ if [[ "$action" == "close" ]]; then
   fi
 elif [[ "$action" == "open" ]]; then
   # Re-enable laptop screen by re-sourcing monitors.conf
-  # The desc: rule will enable it at the correct position
   logger -t lid.sh "Enabling $internal via monitors.conf"
   hyprctl keyword source ~/.config/hypr/monitors.conf
 fi
