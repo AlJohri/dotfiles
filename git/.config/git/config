@@ -31,3 +31,5 @@
 	conflictStyle = zdiff3
 [advice]
 	skippedCherryPicks = false
+[push]
+	autoSetupRemote = true
