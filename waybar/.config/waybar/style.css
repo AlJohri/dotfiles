@@ -1,3 +1,8 @@
+/*
+ * Omarchy Default: https://github.com/basecamp/omarchy/blob/master/config/waybar/style.css
+ *
+ */
+
 @import "../omarchy/current/theme/waybar.css";
 
 * {
@@ -7,7 +12,7 @@
   border: none;
   border-radius: 0;
   min-height: 0;
-  font-family: 'CaskaydiaMono Nerd Font';
+  font-family: 'JetBrainsMono Nerd Font';
   font-size: 12px;
 }
 
@@ -65,7 +70,7 @@ tooltip {
 }
 
 #clock {
-  margin-left: 5px;
+  margin-left: 8.75px;
 }
 
 .hidden {
@@ -91,3 +96,4 @@ tooltip {
 #custom-voxtype.recording {
   color: #a55555;
 }
+
