@@ -20,13 +20,13 @@ portable:
 
 # Stow only (no deps)
 stow-omarchy:
-	stow --adopt $(CORE) $(DESKTOP) $(WAYLAND)
-	stow --adopt --no-folding -t ~/.local delta applications
+	stow --adopt -t ~ $(CORE) $(DESKTOP) $(WAYLAND)
+	stow --adopt -t ~ --no-folding delta applications
 
 stow-ubuntu:
-	stow --adopt $(CORE) $(DESKTOP)
-	stow --adopt --no-folding -t ~/.local delta applications
+	stow --adopt -t ~ $(CORE) $(DESKTOP)
+	stow --adopt -t ~ --no-folding delta applications
 
 stow-portable:
-	stow --adopt $(CORE)
-	stow --adopt --no-folding -t ~/.local delta
+	stow --adopt -t ~ $(CORE)
+	stow --adopt -t ~ --no-folding delta
