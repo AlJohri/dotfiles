@@ -8,7 +8,6 @@
   "modules-center": ["custom/clock", "custom/update", "custom/voxtype", "custom/screenrecording-indicator"],
   "modules-right": [
     "group/tray-expander",
-    "custom/dock-status",
     "bluetooth",
     "network",
     "pulseaudio",
@@ -136,13 +135,6 @@
     "exec": "$OMARCHY_PATH/default/waybar/indicators/screen-recording.sh",
     "signal": 8,
     "return-type": "json"
-  },
-  "custom/dock-status": {
-    "exec": "dock-status-indicator",
-    "on-click": "toggle-dock && pkill -RTMIN+10 waybar",
-    "return-type": "json",
-    "interval": 5,
-    "signal": 10
   },
   "custom/voxtype": {
     "exec": "omarchy-voxtype-status",
