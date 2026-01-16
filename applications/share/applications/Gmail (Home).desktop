@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Gmail (Home)
+Comment=Gmail - Home Account
+Exec=omarchy-launch-webapp https://mail.google.com/mail/u/0/
+Terminal=false
+Type=Application
+Icon=/home/aljohri/.local/share/applications/icons/Gmail.png
+StartupNotify=true

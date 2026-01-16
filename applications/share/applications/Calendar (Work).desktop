@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Calendar (Work)
+Comment=Google Calendar - Work Account
+Exec=omarchy-launch-webapp https://calendar.google.com/calendar/u/1/r
+Terminal=false
+Type=Application
+Icon=/home/aljohri/.local/share/applications/icons/Calendar.png
+StartupNotify=true

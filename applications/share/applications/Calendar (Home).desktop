@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Calendar (Home)
+Comment=Google Calendar - Home Account
+Exec=omarchy-launch-webapp https://calendar.google.com/calendar/u/0/r
+Terminal=false
+Type=Application
+Icon=/home/aljohri/.local/share/applications/icons/Calendar.png
+StartupNotify=true
