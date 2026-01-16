@@ -1,8 +1,8 @@
 .PHONY: omarchy ubuntu macos portable stow-omarchy stow-ubuntu stow-portable
 
 # Package groups
-CORE = nvim tmux git fish starship mise
-DESKTOP = bash zsh scripts alacritty ghostty xdg zed
+CORE = nvim tmux git fish starship mise delta
+DESKTOP = bash zsh scripts alacritty ghostty xdg zed applications
 WAYLAND = hypr waybar hyprmon uwsm wayvnc
 
 # Full setup (deps + stow)
@@ -21,12 +21,9 @@ portable:
 # Stow only (no deps)
 stow-omarchy:
 	stow --adopt -t ~ $(CORE) $(DESKTOP) $(WAYLAND)
-	stow --adopt -t ~ --no-folding delta applications
 
 stow-ubuntu:
 	stow --adopt -t ~ $(CORE) $(DESKTOP)
-	stow --adopt -t ~ --no-folding delta applications
 
 stow-portable:
 	stow --adopt -t ~ $(CORE)
-	stow --adopt -t ~ --no-folding delta
