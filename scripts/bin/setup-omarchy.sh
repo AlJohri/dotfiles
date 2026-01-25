@@ -60,4 +60,12 @@ git submodule update --init
 echo "==> Stowing dotfiles..."
 make stow-omarchy
 
+echo "==> Setting up Chrome policy directory..."
+"$DOTFILES_DIR/scripts/bin/setup-chrome.sh"
+
+if command -v google-chrome-stable &> /dev/null; then
+    echo "==> Setting Chrome as default browser..."
+    xdg-settings set default-web-browser google-chrome.desktop
+fi
+
 echo "==> Done! Restart your shell or run: exec fish"

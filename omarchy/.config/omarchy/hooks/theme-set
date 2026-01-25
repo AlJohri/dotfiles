@@ -1,0 +1,14 @@
+#!/bin/bash
+# Apply theme to Google Chrome via managed policy
+# Called by omarchy-theme-set with theme name as $1
+
+CHROMIUM_THEME=~/.config/omarchy/current/theme/chromium.theme
+
+if command -v google-chrome-stable &>/dev/null && [[ -f $CHROMIUM_THEME ]]; then
+  THEME_RGB_COLOR=$(<$CHROMIUM_THEME)
+  THEME_HEX_COLOR=$(printf '#%02x%02x%02x' ${THEME_RGB_COLOR//,/ })
+
+  # Policy dir is world-writable (like /etc/chromium/policies/managed/)
+  echo "{\"BrowserThemeColor\": \"$THEME_HEX_COLOR\"}" > /etc/opt/chrome/policies/managed/color.json
+  google-chrome-stable --refresh-platform-policy --no-startup-window >/dev/null 2>&1 &
+fi
