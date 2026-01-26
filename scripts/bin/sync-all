@@ -5,6 +5,10 @@ set -euo pipefail
 for dir in */; do
     if [[ -d "${dir}.git" ]]; then
         echo "Pulling ${dir%/}..."
-        git -C "$dir" pull
+        if git -C "$dir" pull; then
+            echo "✓ ${dir%/} succeeded"
+        else
+            echo "✗ ${dir%/} failed"
+        fi
     fi
 done
