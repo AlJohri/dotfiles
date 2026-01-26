@@ -1,0 +1,9 @@
+# Google Chrome installs two desktop entries:
+#   /usr/share/applications/google-chrome.desktop      (traditional naming)
+#   /usr/share/applications/com.google.Chrome.desktop  (reverse-domain/Flatpak style)
+#
+# On Arch Linux, the traditional naming is idiomatic. Hide this one to
+# prevent duplicate entries in Walker and other application launchers.
+
+[Desktop Entry]
+Hidden=true
