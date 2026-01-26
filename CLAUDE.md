@@ -55,6 +55,7 @@ Other packages: alacritty, bash, zsh, starship, git, wayvnc, hyprmon, delta, xdg
 
 ## Notes
 
+- App-specific scripts go in the relevant stow package's `bin/` folder (e.g., `hypr/bin/` for Hyprland scripts). Generic scripts go in the top-level `scripts/bin/` package.
 - The `.envrc` sets `RIPGREP_CONFIG_PATH` to use `.ripgreprc`, which enables `--hidden` since most dotfiles are hidden
 - Tmux plugins are git submodules under `tmux/.config/tmux/plugins/` (TPM and omarchy-tmux)
 - Uses Omarchy theme system (`~/.config/omarchy/current/theme/`) across tmux, git, and nvim

@@ -1,0 +1,17 @@
+#!/bin/bash
+# Close window, but hide Slack/Obsidian to special workspace instead
+
+ACTIVE=$(hyprctl activewindow -j)
+CLASS=$(echo "$ACTIVE" | jq -r '.class // empty')
+
+case "${CLASS,,}" in
+    *slack*)
+        hyprctl dispatch movetoworkspacesilent special:slack
+        ;;
+    *obsidian*)
+        hyprctl dispatch movetoworkspacesilent special:obsidian
+        ;;
+    *)
+        hyprctl dispatch killactive
+        ;;
+esac
