@@ -1,0 +1,146 @@
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["psutil", "getmac"]
+# ///
+"""Cross-platform LAN scanner using psutil and getmac."""
+
+import platform
+import socket
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from ipaddress import IPv4Network
+
+import psutil
+from getmac import get_mac_address
+
+# Common MAC vendor prefixes (OUI)
+VENDORS = {
+    "00:1a:79": "MAG/Infomir",
+    "b8:f8:53": "Verizon",
+    "48:a6:b8": "Sonos",
+    "ec:b5:fa": "Philips Hue",
+    "dc:a6:32": "Raspberry Pi",
+    "1c:57:dc": "Apple",
+    "1c:b3:c9": "Apple",
+    "58:d3:49": "Apple",
+    "20:7d:74": "Apple",
+    "bc:7e:8b": "Apple",
+    "48:b4:23": "Amazon",
+    "90:2b:34": "Galtronics",
+}
+
+# Skip virtual/internal interfaces
+SKIP_INTERFACES = {"lo", "docker", "br-", "veth", "cali", "tailscale", "virbr", "vmnet"}
+
+
+def get_network_info() -> tuple[str, str, list[str]] | None:
+    """Get primary LAN interface, CIDR, and list of IPs to scan."""
+    for iface, addrs in psutil.net_if_addrs().items():
+        # Skip virtual interfaces
+        if any(skip in iface.lower() for skip in SKIP_INTERFACES):
+            continue
+
+        for addr in addrs:
+            if addr.family == socket.AF_INET and addr.netmask:
+                ip = addr.address
+                netmask = addr.netmask
+
+                # Skip loopback and link-local
+                if ip.startswith("127.") or ip.startswith("169.254."):
+                    continue
+
+                # Calculate network
+                network = IPv4Network(f"{ip}/{netmask}", strict=False)
+
+                # Only interested in typical LAN sizes (/16 to /24)
+                if network.prefixlen < 16 or network.prefixlen > 24:
+                    continue
+
+                # Generate list of host IPs (exclude network and broadcast)
+                hosts = [str(host) for host in network.hosts()]
+                return iface, str(network), hosts
+
+    return None
+
+
+def ping(ip: str) -> bool:
+    """Ping an IP address. Returns True if host responds."""
+    system = platform.system().lower()
+
+    if system == "windows":
+        cmd = ["ping", "-n", "1", "-w", "500", ip]
+    elif system == "darwin":  # macOS
+        cmd = ["ping", "-c", "1", "-t", "1", ip]
+    else:  # Linux
+        cmd = ["ping", "-c", "1", "-W", "1", ip]
+
+    result = subprocess.run(cmd, capture_output=True)
+    return result.returncode == 0
+
+
+def get_hostname(ip: str) -> str:
+    """Resolve hostname via DNS."""
+    try:
+        hostname, _, _ = socket.gethostbyaddr(ip)
+        return hostname
+    except socket.herror:
+        return "-"
+
+
+def get_vendor(mac: str) -> str:
+    """Lookup vendor from MAC prefix."""
+    if not mac:
+        return "-"
+    prefix = mac[:8].lower()
+    return VENDORS.get(prefix, "-")
+
+
+def scan_host(ip: str) -> tuple[str, str, str, str] | None:
+    """Scan a single host. Returns (ip, mac, hostname, vendor) or None."""
+    if not ping(ip):
+        return None
+
+    mac = get_mac_address(ip=ip)
+    if not mac:
+        return None
+
+    hostname = get_hostname(ip)
+    vendor = get_vendor(mac)
+
+    return ip, mac, hostname, vendor
+
+
+def main():
+    network = get_network_info()
+    if not network:
+        print("Error: Could not detect LAN network")
+        return 1
+
+    iface, cidr, hosts = network
+    print(f"Scanning {cidr} on {iface}...")
+    print(f"({len(hosts)} addresses)\n")
+
+    # Scan in parallel
+    results = []
+    with ThreadPoolExecutor(max_workers=32) as executor:
+        for result in executor.map(scan_host, hosts):
+            if result:
+                results.append(result)
+
+    # Sort by IP
+    results.sort(key=lambda x: [int(p) for p in x[0].split(".")])
+
+    # Print table
+    print(f"{'IP Address':<16} {'MAC Address':<19} {'Hostname':<25} {'Vendor'}")
+    print(f"{'-'*10:<16} {'-'*11:<19} {'-'*8:<25} {'-'*6}")
+
+    for ip, mac, hostname, vendor in results:
+        print(f"{ip:<16} {mac:<19} {hostname:<25} {vendor}")
+
+    print(f"\nFound {len(results)} devices")
+    return 0
+
+
+if __name__ == "__main__":
+    exit(main())
