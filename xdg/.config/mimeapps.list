@@ -45,3 +45,4 @@ text/x-c++=nvim.desktop
 application/xml=nvim.desktop
 text/xml=nvim.desktop
 x-scheme-handler/webcal=google-chrome.desktop
+x-scheme-handler/slack=Slack.desktop
