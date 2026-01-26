@@ -26,11 +26,18 @@ fi
 ADDRESS=$(echo "$WINDOW_INFO" | jq -r '.address' | head -1)
 WORKSPACE=$(echo "$WINDOW_INFO" | jq -r '.workspace.name' | head -1)
 
+# Get current workspace
+CURRENT_WS=$(hyprctl activeworkspace -j | jq -r '.name')
+
 if [ "$WORKSPACE" = "special:$SPECIAL_WS" ]; then
     # Window is in special workspace, bring to current workspace and focus
     hyprctl dispatch movetoworkspace +0,address:$ADDRESS
     hyprctl dispatch focuswindow address:$ADDRESS
-else
-    # Window is visible elsewhere, move to special workspace
+elif [ "$WORKSPACE" = "$CURRENT_WS" ]; then
+    # Window is on current workspace, move to special workspace (hide)
     hyprctl dispatch movetoworkspacesilent special:$SPECIAL_WS,address:$ADDRESS
+else
+    # Window is on a different workspace, bring to current workspace and focus
+    hyprctl dispatch movetoworkspace +0,address:$ADDRESS
+    hyprctl dispatch focuswindow address:$ADDRESS
 fi
