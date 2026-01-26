@@ -1,0 +1,23 @@
+# Override: /usr/share/applications/slack.desktop
+#
+# This file overrides the system Slack desktop entry so that launching Slack
+# from Walker (or any application launcher) uses toggle-special-app instead
+# of launching a new instance. This enables:
+#   - Starting Slack if not already running
+#   - Bringing Slack to the current workspace if hidden in a special workspace
+#   - Consistent behavior with the SUPER+SHIFT+S keybinding
+#
+# The XDG spec gives ~/.local/share/applications/ priority over /usr/share/applications/
+# when filenames match, so this file takes precedence.
+
+[Desktop Entry]
+Name=Slack
+StartupWMClass=Slack
+Comment=Slack Desktop
+GenericName=Slack Client for Linux
+Exec=toggle-special-app slack slack "uwsm app -- slack"
+Icon=slack
+Type=Application
+StartupNotify=true
+Categories=GNOME;GTK;Network;InstantMessaging;
+MimeType=x-scheme-handler/slack;

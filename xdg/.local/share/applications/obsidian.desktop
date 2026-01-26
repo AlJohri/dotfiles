@@ -1,0 +1,22 @@
+# Override: /usr/share/applications/obsidian.desktop
+#
+# This file overrides the system Obsidian desktop entry so that launching Obsidian
+# from Walker (or any application launcher) uses toggle-special-app instead
+# of launching a new instance. This enables:
+#   - Starting Obsidian if not already running
+#   - Bringing Obsidian to the current workspace if hidden in a special workspace
+#   - Consistent behavior with the SUPER+SHIFT+O keybinding
+#
+# The XDG spec gives ~/.local/share/applications/ priority over /usr/share/applications/
+# when filenames match, so this file takes precedence.
+
+[Desktop Entry]
+Name=Obsidian
+Exec=toggle-special-app obsidian obsidian "uwsm app -- obsidian"
+Terminal=false
+Type=Application
+Icon=obsidian
+StartupWMClass=obsidian
+Comment=Obsidian
+MimeType=x-scheme-handler/obsidian;
+Categories=Office;
