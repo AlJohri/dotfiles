@@ -1,0 +1,18 @@
+#!/bin/bash
+# Intercept Ctrl+W: hide Slack/Obsidian, forward to other apps
+
+ACTIVE=$(hyprctl activewindow -j)
+CLASS=$(echo "$ACTIVE" | jq -r '.class // empty')
+
+case "${CLASS,,}" in
+    *slack*)
+        hyprctl dispatch movetoworkspacesilent special:slack
+        ;;
+    *obsidian*)
+        hyprctl dispatch movetoworkspacesilent special:obsidian
+        ;;
+    *)
+        # Forward Ctrl+W to the active application
+        hyprctl dispatch sendshortcut CTRL, W, activewindow
+        ;;
+esac
