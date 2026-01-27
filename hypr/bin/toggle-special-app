@@ -1,19 +1,37 @@
 #!/bin/bash
 # Toggle a window between a special workspace and the current workspace
-# Usage: toggle-special-app <class_regex> <special_workspace_name> [launch_command]
+# Usage: toggle-special-app <class_regex> <special_workspace_name> [launch_command] [url...]
+#
+# If URL arguments are passed (e.g., from a URL handler), the app is brought
+# to foreground and the URL is passed to it (no toggle behavior).
 
 CLASS="$1"
 SPECIAL_WS="$2"
 LAUNCH_CMD="$3"
+shift 3 2>/dev/null
+URL_ARGS=("$@")
 
 if [ -z "$CLASS" ] || [ -z "$SPECIAL_WS" ]; then
-    echo "Usage: toggle-special-app <class_regex> <special_workspace_name> [launch_command]"
+    echo "Usage: toggle-special-app <class_regex> <special_workspace_name> [launch_command] [url...]"
     exit 1
 fi
 
 # Find window by class (case-insensitive regex match)
 WINDOW_INFO=$(hyprctl clients -j | jq -r --arg class "$CLASS" '.[] | select(.class | test($class; "i"))')
 
+# URL pass-through mode: bring to foreground and pass URL to app
+if [ ${#URL_ARGS[@]} -gt 0 ]; then
+    if [ -n "$WINDOW_INFO" ]; then
+        # App is running - bring to foreground first
+        ADDRESS=$(echo "$WINDOW_INFO" | jq -r '.address' | head -1)
+        hyprctl dispatch movetoworkspace +0,address:$ADDRESS
+        hyprctl dispatch focuswindow address:$ADDRESS
+    fi
+    # Pass URL to app (launches if not running, or signals existing instance)
+    exec "$CLASS" "${URL_ARGS[@]}"
+fi
+
+# Normal toggle mode (no URL args)
 if [ -z "$WINDOW_INFO" ]; then
     if [ -n "$LAUNCH_CMD" ]; then
         exec $LAUNCH_CMD
