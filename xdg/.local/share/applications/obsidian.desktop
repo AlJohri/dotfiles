@@ -12,7 +12,7 @@
 
 [Desktop Entry]
 Name=Obsidian
-Exec=toggle-special-app obsidian obsidian "uwsm app -- obsidian"
+Exec=toggle-special-app obsidian obsidian "uwsm app -- obsidian" %U
 Terminal=false
 Type=Application
 Icon=obsidian
