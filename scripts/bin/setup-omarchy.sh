@@ -9,14 +9,6 @@ sudo pacman -S --noconfirm --needed \
     make \
     git \
     fish \
-    tmux \
-    neovim \
-    bat \
-    git-delta \
-    jq \
-    direnv \
-    github-cli \
-    fzf \
     curl \
     unzip
 
@@ -30,26 +22,13 @@ sudo pacman -S --noconfirm --needed \
     brightnessctl \
     pamixer
 
-echo "==> Installing Rust..."
-if ! command -v cargo &> /dev/null; then
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    source "$HOME/.cargo/env"
-fi
-
 echo "==> Installing mise..."
 if ! command -v mise &> /dev/null; then
     curl https://mise.jdx.dev/install.sh | sh
 fi
 
-echo "==> Installing Starship..."
-if ! command -v starship &> /dev/null; then
-    curl -sS https://starship.rs/install.sh | sh -s -- -y
-fi
-
-echo "==> Installing uv..."
-if ! command -v uv &> /dev/null; then
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-fi
+echo "==> Installing mise tools..."
+mise install
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
