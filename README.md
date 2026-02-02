@@ -7,32 +7,32 @@ GNU Stow-managed dotfiles with machine-specific targets.
 ### Omarchy Linux (Framework 16)
 
 ```bash
-git clone https://github.com/AlJohri/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
+git clone https://github.com/AlJohri/dotfiles.git ~/dotfiles
+cd ~/dotfiles
 make omarchy
 ```
 
 ### Ubuntu Desktop
 
 ```bash
-git clone https://github.com/AlJohri/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
+git clone https://github.com/AlJohri/dotfiles.git ~/dotfiles
+cd ~/dotfiles
 make ubuntu
 ```
 
 ### macOS
 
 ```bash
-git clone https://github.com/AlJohri/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
+git clone https://github.com/AlJohri/dotfiles.git ~/dotfiles
+cd ~/dotfiles
 make macos
 ```
 
 ### Remote/SSH Machines
 
 ```bash
-git clone https://github.com/AlJohri/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
+git clone https://github.com/AlJohri/dotfiles.git ~/dotfiles
+cd ~/dotfiles
 make portable
 ```
 
@@ -54,7 +54,7 @@ make portable
 |--------|----------|
 | `portable` | nvim, tmux, git, fish, starship, mise, delta |
 | `ubuntu` | portable + bash, zsh, scripts, alacritty, ghostty, xdg, zed |
-| `omarchy` | ubuntu + hypr, waybar, hyprmon, uwsm, wayvnc |
+| `omarchy` | ubuntu + hypr, waybar, uwsm, omarchy |
 
 ## What Gets Installed
 

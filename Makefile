@@ -3,7 +3,7 @@
 # Package groups
 CORE = nvim tmux git fish starship mise delta claude
 DESKTOP = bash zsh scripts alacritty ghostty xdg zed applications
-WAYLAND = hypr waybar hyprmon uwsm wayvnc omarchy
+WAYLAND = hypr waybar uwsm omarchy
 
 # Full setup (deps + stow)
 omarchy:
