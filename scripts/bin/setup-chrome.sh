@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Setup Google Chrome policy directory for omarchy theme integration
+# Install Google Chrome and set up policy directory for omarchy theme integration
 # This mirrors what omarchy does for Chromium/Brave in install/config/theme.sh
+
+echo "==> Installing Google Chrome (AUR)..."
+yay -S --noconfirm --needed google-chrome
 
 CHROME_POLICY_DIR="/etc/opt/chrome/policies/managed"
 
