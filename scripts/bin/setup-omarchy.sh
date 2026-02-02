@@ -59,6 +59,11 @@ else
     omarchy-setup-fingerprint
 fi
 
+if ! command -v claude &> /dev/null; then
+    echo "==> Installing Claude Code..."
+    curl -fsSL https://claude.ai/install.sh | bash
+fi
+
 echo "==> Installing and setting up Google Chrome..."
 "$DOTFILES_DIR/scripts/bin/setup-chrome.sh"
 
