@@ -35,6 +35,7 @@ cd "$DOTFILES_DIR"
 git submodule update --init
 
 echo "==> Installing mise tools..."
+mise trust "$DOTFILES_DIR/mise/.config/mise"
 GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
 
 # aws-session-manager-plugin cannot be installed through mise:
