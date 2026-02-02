@@ -34,6 +34,11 @@ DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
 cd "$DOTFILES_DIR"
 git submodule update --init
 
+if ! gh auth token &>/dev/null; then
+    echo "==> Logging into GitHub (mise installs binaries from GitHub in bulk and will get 403 rate-limited without a token)..."
+    gh auth login
+fi
+
 echo "==> Installing mise tools..."
 mise trust "$DOTFILES_DIR/mise/.config/mise"
 GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
