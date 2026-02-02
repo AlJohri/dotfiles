@@ -13,6 +13,7 @@ echo "==> Installing extra packages (not in omarchy-base)..."
 sudo pacman -S --noconfirm --needed \
     stow \
     make \
+    moreutils \
     fish \
     omarchy-fish \
     omarchy-zsh \
@@ -72,6 +73,15 @@ fi
 
 echo "==> Installing and setting up Google Chrome..."
 "$DOTFILES_DIR/scripts/bin/setup-chrome.sh"
+
+echo "==> Configuring Slack to auto-hide menu bar..."
+slack_config="$HOME/.config/Slack/storage/root-state.json"
+if [ -f "$slack_config" ] && jq -e '.settings.autoHideMenuBar == false' "$slack_config" &>/dev/null; then
+    jq '.settings.autoHideMenuBar = true | .settings.userChoices.autoHideMenuBar = true' "$slack_config" | sponge "$slack_config"
+    echo "    Set autoHideMenuBar to true."
+else
+    echo "    Skipped (file missing or already set)."
+fi
 
 echo "==> Stowing dotfiles..."
 make stow-omarchy
