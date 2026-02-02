@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Install Omarchy in a QEMU VM from the latest ISO.
+#
+# Usage:
+#   omarchy-vm-install              # Download ISO + install
+#   omarchy-vm-install path/to.iso  # Use a specific ISO
+#
+# After install completes, boot the VM with: omarchy-vm-boot
+
+source "$(dirname "$0")/omarchy-vm-common"
+
+# --- Get ISO ---
+
+if [[ $# -gt 0 ]]; then
+    ISO="$1"
+else
+    existing_iso=$(find "$HOME/Downloads" -maxdepth 1 -name 'omarchy-*.iso' -print -quit 2>/dev/null || true)
+    if [[ -n "$existing_iso" ]]; then
+        ISO="$existing_iso"
+        echo "==> Reusing existing ISO: $ISO"
+    else
+        echo "==> Downloading ISO..."
+        ISO=$(download-omarchy-iso.sh)
+    fi
+fi
+
+# --- Create disk + OVMF vars ---
+
+echo "==> Creating ${DISK_SIZE} disk image: $DISK"
+qemu-img create -f qcow2 "$DISK" "$DISK_SIZE"
+
+echo "==> Copying OVMF_VARS: $OVMF_VARS"
+cp "$OVMF_VARS_ORIG" "$OVMF_VARS"
+
+# --- Boot QEMU with ISO ---
+
+echo "==> Booting QEMU for installation..."
+echo "    Disk: $DISK"
+echo "    ISO:  $ISO"
+echo "    SSH:  ssh -p 2222 localhost"
+echo ""
+
+exec qemu-system-x86_64 \
+    "${QEMU_BASE_ARGS[@]}" \
+    -drive file="$DISK",format=qcow2,if=none,id=drive0 \
+    -device virtio-blk-pci,drive=drive0,bootindex=1 \
+    -drive file="$ISO",media=cdrom,if=none,format=raw,id=cdrom0 \
+    -device ide-cd,drive=cdrom0,bootindex=2 \
+    -boot menu=on

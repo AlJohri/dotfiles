@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Shared config for omarchy-vm-* scripts. Source this, don't execute it.
+
+# Install required packages if missing
+missing=()
+command -v qemu-system-x86_64 &>/dev/null || missing+=(qemu-full)
+[[ -f /usr/share/edk2/x64/OVMF_CODE.4m.fd ]] || missing+=(edk2-ovmf)
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "==> Installing missing packages: ${missing[*]}"
+    sudo pacman -S --needed --noconfirm "${missing[@]}"
+fi
+
+WORK_DIR="$HOME/.cache/test-setup-omarchy"
+DISK="$WORK_DIR/omarchy.qcow2"
+OVMF_VARS="$WORK_DIR/OVMF_VARS.4m.fd"
+OVMF_CODE="/usr/share/edk2/x64/OVMF_CODE.4m.fd"
+OVMF_VARS_ORIG="/usr/share/edk2/x64/OVMF_VARS.4m.fd"
+DISK_SIZE="20G"
+DOTFILES_PATH="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
+
+mkdir -p "$WORK_DIR"
+
+QEMU_BASE_ARGS=(
+    -cpu host -enable-kvm -machine q35,accel=kvm
+    -smp "$(nproc)"
+    -m 8192
+    -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE"
+    -drive if=pflash,format=raw,file="$OVMF_VARS"
+    -device virtio-vga-gl
+    -display gtk,gl=on
+    -usb -device usb-tablet
+    -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::5901-:5900
+    -device virtio-net-pci,netdev=net0
+    -virtfs "local,path=$DOTFILES_PATH,mount_tag=dotfiles,security_model=mapped-xattr,id=dotfiles"
+)

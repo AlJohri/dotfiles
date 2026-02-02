@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Save and restore QEMU VM snapshots.
+#
+# Usage:
+#   omarchy-vm-snapshot save <name>
+#   omarchy-vm-snapshot restore <name>
+#   omarchy-vm-snapshot list
+
+source "$(dirname "$0")/omarchy-vm-common"
+
+SNAP_DIR="$WORK_DIR/snapshots"
+mkdir -p "$SNAP_DIR"
+
+case "${1:-}" in
+    save)
+        name="${2:?Usage: omarchy-vm-snapshot save <name>}"
+        cp "$DISK" "$SNAP_DIR/$name.qcow2"
+        cp "$OVMF_VARS" "$SNAP_DIR/$name-OVMF_VARS.4m.fd"
+        echo "Saved snapshot: $name"
+        ;;
+    restore)
+        name="${2:?Usage: omarchy-vm-snapshot restore <name>}"
+        [[ -f "$SNAP_DIR/$name.qcow2" ]] || { echo "Snapshot '$name' not found" >&2; exit 1; }
+        cp "$SNAP_DIR/$name.qcow2" "$DISK"
+        cp "$SNAP_DIR/$name-OVMF_VARS.4m.fd" "$OVMF_VARS"
+        echo "Restored snapshot: $name"
+        ;;
+    list)
+        ls "$SNAP_DIR"/*.qcow2 2>/dev/null | sed 's|.*/||; s|\.qcow2$||' || echo "No snapshots found"
+        ;;
+    *)
+        echo "Usage: omarchy-vm-snapshot {save|restore|list} [name]" >&2
+        exit 1
+        ;;
+esac
