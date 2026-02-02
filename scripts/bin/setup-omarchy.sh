@@ -83,6 +83,9 @@ else
     echo "    Skipped (file missing or already set)."
 fi
 
+echo "==> Allowing direnv..."
+direnv allow "$DOTFILES_DIR"
+
 echo "==> Stowing dotfiles..."
 make stow-omarchy
 
