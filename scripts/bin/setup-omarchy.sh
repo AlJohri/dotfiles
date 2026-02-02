@@ -47,11 +47,15 @@ yay -S --noconfirm --needed \
     volumeboost \
     aws-session-manager-plugin
 
-if ! command -v fprintd-list &>/dev/null || ! fprintd-list "$USER" 2>&1 | grep -q "#[0-9]"; then
+if ! command -v fprintd-list &>/dev/null; then
+    echo "==> fprintd not found, skipping fingerprint setup."
+elif fprintd-list "$USER" 2>&1 | grep -q "No devices available"; then
+    echo "==> No fingerprint reader found, skipping fingerprint setup."
+elif fprintd-list "$USER" 2>&1 | grep -q "#[0-9]"; then
+    echo "==> Fingerprint already enrolled, skipping setup."
+else
     echo "==> Setting up fingerprint authentication..."
     omarchy-setup-fingerprint
-else
-    echo "==> Fingerprint already enrolled, skipping setup."
 fi
 
 echo "==> Installing and setting up Google Chrome..."
