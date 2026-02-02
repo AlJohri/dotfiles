@@ -28,7 +28,7 @@ QEMU_BASE_ARGS=(
     -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE"
     -drive if=pflash,format=raw,file="$OVMF_VARS"
     -device virtio-vga-gl
-    -display gtk,gl=on
+    -display gtk,gl=on,grab-on-hover=on
     -usb -device usb-tablet
     -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::5901-:5900
     -device virtio-net-pci,netdev=net0
