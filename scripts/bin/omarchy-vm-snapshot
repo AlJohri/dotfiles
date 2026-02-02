@@ -16,19 +16,30 @@ mkdir -p "$SNAP_DIR"
 case "${1:-}" in
     save)
         name="${2:?Usage: omarchy-vm-snapshot save <name>}"
+        echo "==> Saving snapshot '$name'..."
+        echo "    $DISK -> $SNAP_DIR/$name.qcow2"
         cp "$DISK" "$SNAP_DIR/$name.qcow2"
+        echo "    $OVMF_VARS -> $SNAP_DIR/$name-OVMF_VARS.4m.fd"
         cp "$OVMF_VARS" "$SNAP_DIR/$name-OVMF_VARS.4m.fd"
-        echo "Saved snapshot: $name"
+        echo "==> Saved snapshot: $name"
         ;;
     restore)
         name="${2:?Usage: omarchy-vm-snapshot restore <name>}"
         [[ -f "$SNAP_DIR/$name.qcow2" ]] || { echo "Snapshot '$name' not found" >&2; exit 1; }
+        echo "==> Restoring snapshot '$name'..."
+        echo "    $SNAP_DIR/$name.qcow2 -> $DISK"
         cp "$SNAP_DIR/$name.qcow2" "$DISK"
+        echo "    $SNAP_DIR/$name-OVMF_VARS.4m.fd -> $OVMF_VARS"
         cp "$SNAP_DIR/$name-OVMF_VARS.4m.fd" "$OVMF_VARS"
-        echo "Restored snapshot: $name"
+        echo "==> Restored snapshot: $name"
+        echo "    Boot the VM with: omarchy-vm-boot"
         ;;
     list)
-        ls "$SNAP_DIR"/*.qcow2 2>/dev/null | sed 's|.*/||; s|\.qcow2$||' || echo "No snapshots found"
+        for f in "$SNAP_DIR"/*.qcow2; do
+            [[ -f "$f" ]] || { echo "No snapshots found"; exit 0; }
+            name=$(basename "$f" .qcow2)
+            echo "$name  $f"
+        done
         ;;
     *)
         echo "Usage: omarchy-vm-snapshot {save|restore|list} [name]" >&2
