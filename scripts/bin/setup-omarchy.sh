@@ -6,6 +6,9 @@ set -euo pipefail
 echo "==> Syncing package databases..."
 sudo pacman -Sy
 
+# github-cli is also installed via mise, but we need it here early so
+# `gh auth token` is available to provide GITHUB_TOKEN for mise install,
+# avoiding GitHub API rate limits.
 echo "==> Installing extra packages (not in omarchy-base)..."
 sudo pacman -S --noconfirm --needed \
     stow \
@@ -21,6 +24,7 @@ sudo pacman -S --noconfirm --needed \
     tigervnc \
     tmux \
     wayvnc \
+    github-cli \
     wget \
     xclip
 
@@ -29,6 +33,29 @@ REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
 DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
 cd "$DOTFILES_DIR"
 git submodule update --init
+
+echo "==> Installing mise tools..."
+GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
+
+# aws-session-manager-plugin cannot be installed through mise:
+# - aqua backend only lists macOS: https://github.com/aquaproj/aqua-registry/blob/main/pkgs/aws/session-manager-plugin/registry.yaml
+# - non-standard Go project structure prevents use of the go backend: https://github.com/aws/session-manager-plugin
+echo "==> Installing AUR packages..."
+yay -S --noconfirm --needed \
+    hyprmon-bin \
+    slack-desktop \
+    volumeboost \
+    aws-session-manager-plugin
+
+if ! command -v fprintd-list &>/dev/null || ! fprintd-list "$USER" 2>&1 | grep -q "#[0-9]"; then
+    echo "==> Setting up fingerprint authentication..."
+    omarchy-setup-fingerprint
+else
+    echo "==> Fingerprint already enrolled, skipping setup."
+fi
+
+echo "==> Installing and setting up Google Chrome..."
+"$DOTFILES_DIR/scripts/bin/setup-chrome.sh"
 
 echo "==> Stowing dotfiles..."
 make stow-omarchy
@@ -53,28 +80,5 @@ if ! git diff --quiet; then
         echo "==> Keeping adopted changes."
     fi
 fi
-
-echo "==> Installing mise tools..."
-mise install
-
-# aws-session-manager-plugin cannot be installed through mise:
-# - aqua backend only lists macOS: https://github.com/aquaproj/aqua-registry/blob/main/pkgs/aws/session-manager-plugin/registry.yaml
-# - non-standard Go project structure prevents use of the go backend: https://github.com/aws/session-manager-plugin
-echo "==> Installing AUR packages..."
-yay -S --noconfirm --needed \
-    hyprmon-bin \
-    slack-desktop \
-    volumeboost \
-    aws-session-manager-plugin
-
-if ! command -v fprintd-list &>/dev/null || ! fprintd-list "$USER" 2>&1 | grep -q "#[0-9]"; then
-    echo "==> Setting up fingerprint authentication..."
-    omarchy-setup-fingerprint
-else
-    echo "==> Fingerprint already enrolled, skipping setup."
-fi
-
-echo "==> Installing and setting up Google Chrome..."
-"$DOTFILES_DIR/scripts/bin/setup-chrome.sh"
 
 echo "==> Done! Restart your shell or run: exec fish"
