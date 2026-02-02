@@ -41,6 +41,37 @@ DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
 cd "$DOTFILES_DIR"
 git submodule update --init
 
+echo "==> Creating nvim theme config (catppuccin fallback)..."
+mkdir -p ~/.config/nvim/lua/plugins
+cat > ~/.config/nvim/lua/plugins/theme.lua << 'THEME'
+-- Conditional theme loader: uses omarchy theme if available, falls back to catppuccin
+local omarchy_theme = vim.fn.expand("~/.config/omarchy/current/theme/neovim.lua")
+
+if vim.fn.filereadable(omarchy_theme) == 1 then
+  -- Load omarchy theme
+  return dofile(omarchy_theme)
+else
+  -- Fallback to catppuccin
+  return {
+    {
+      "catppuccin/nvim",
+      name = "catppuccin",
+      lazy = false,
+      priority = 1000,
+      opts = {
+        flavour = "mocha",
+      },
+    },
+    {
+      "LazyVim/LazyVim",
+      opts = {
+        colorscheme = "catppuccin",
+      },
+    },
+  }
+end
+THEME
+
 echo "==> Stowing dotfiles..."
 make stow-ubuntu
 
