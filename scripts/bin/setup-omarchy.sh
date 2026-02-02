@@ -12,7 +12,17 @@ sudo pacman -S --noconfirm --needed \
     make \
     fish \
     omarchy-fish \
-    omarchy-zsh
+    omarchy-zsh \
+    bolt \
+    caligula \
+    nvtop \
+    sshpass \
+    tcpdump \
+    tigervnc \
+    tmux \
+    wayvnc \
+    wget \
+    xclip
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -46,6 +56,16 @@ fi
 
 echo "==> Installing mise tools..."
 mise install
+
+# aws-session-manager-plugin cannot be installed through mise:
+# - aqua backend only lists macOS: https://github.com/aquaproj/aqua-registry/blob/main/pkgs/aws/session-manager-plugin/registry.yaml
+# - non-standard Go project structure prevents use of the go backend: https://github.com/aws/session-manager-plugin
+echo "==> Installing AUR packages..."
+yay -S --noconfirm --needed \
+    hyprmon-bin \
+    slack-desktop \
+    volumeboost \
+    aws-session-manager-plugin
 
 if ! command -v fprintd-list &>/dev/null || ! fprintd-list "$USER" 2>&1 | grep -q "#[0-9]"; then
     echo "==> Setting up fingerprint authentication..."
