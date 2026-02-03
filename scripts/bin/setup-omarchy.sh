@@ -55,7 +55,10 @@ yay -S --noconfirm --needed \
     hyprmon-bin \
     slack-desktop \
     volumeboost \
-    aws-session-manager-plugin
+    aws-session-manager-plugin \
+    dropbox \
+    dropbox-cli \
+    nautilus-dropbox
 
 fprint_output=$(fprintd-list "$USER" 2>&1 || true)
 if ! command -v fprintd-list &>/dev/null; then
