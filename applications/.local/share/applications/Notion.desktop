@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Notion
+Comment=Notion
+Exec=omarchy-launch-webapp https://www.notion.so/
+Terminal=false
+Type=Application
+Icon=/home/aljohri/.local/share/applications/icons/Notion.png
+StartupNotify=true
