@@ -79,6 +79,11 @@ if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" 
     curl -fsSL https://claude.ai/install.sh | bash
 fi
 
+if ! command -v tailscale &>/dev/null; then
+    echo "==> Installing Tailscale (+ tsui, webapp, TUI entry)..."
+    omarchy-install-tailscale
+fi
+
 echo "==> Installing and setting up Google Chrome..."
 "$DOTFILES_DIR/scripts/bin/setup-chrome.sh"
 
