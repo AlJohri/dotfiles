@@ -8,21 +8,22 @@ This is a dotfiles repository using [GNU Stow](https://www.gnu.org/software/stow
 
 ## Commands
 
-Install/update all dotfiles:
+Setup targets (install deps + stow):
 ```bash
-make
+make omarchy    # Full Omarchy Linux (Hyprland/Wayland desktop)
+make ubuntu     # Ubuntu desktop
+make macos      # macOS
+make portable   # Minimal for SSH/remote machines
 ```
 
-This runs `stow --adopt --restow` on all packages, creating symlinks from `~/.config/` to the corresponding files in this repo.
-
-Adopt an existing config into stow management:
+Stow-only targets (no dependency installation):
 ```bash
-adopt-config.sh ~/.config/someapp
+make stow-omarchy
+make stow-ubuntu
+make stow-portable
 ```
 
-This copies the config into the repo, removes the original, stows it, and updates the Makefile.
-
-After cloning, initialize submodules:
+Initialize submodules after cloning:
 ```bash
 git submodule update --init
 ```
@@ -32,12 +33,17 @@ Restart waybar:
 killall waybar; setsid uwsm-app -- waybar
 ```
 
+## Package Groups
+
+- **CORE** (portable): nvim, tmux, git, fish, starship, mise, delta, claude
+- **DESKTOP** (adds to core): bash, zsh, scripts, alacritty, ghostty, xdg, zed, applications
+- **WAYLAND** (adds to desktop): hypr, waybar, uwsm, omarchy
+
 ## Structure
 
 Each package follows the stow convention where the directory structure mirrors the home directory:
 - `fish/.config/fish/` → `~/.config/fish/`
 - `nvim/.config/nvim/` → `~/.config/nvim/`
-- `tmux/.config/tmux/` → `~/.config/tmux/`
 - `scripts/bin/` → `~/bin/`
 - `delta/.local/share/delta/` → `~/.local/share/delta/` (special target)
 
@@ -48,10 +54,7 @@ Key packages:
 - **hypr**: Hyprland window manager config (Linux/Wayland), modular configs split into `bindings.conf`, `monitors.conf`, `looknfeel.conf`, etc.
 - **ghostty**: Terminal emulator config
 - **waybar**: Status bar for Wayland compositors
-
-Other packages: alacritty, bash, zsh, starship, git, wayvnc, hyprmon, delta, xdg
-
-- **xdg**: XDG config files: `mimeapps.list` (default apps, query with `xdg-settings get default-web-browser`), `user-dirs.*` (XDG directories), `autostart/` (desktop entries)
+- **xdg**: XDG config files: `mimeapps.list` (default apps), `user-dirs.*`, `autostart/`
 
 ## Notes
 
@@ -60,4 +63,5 @@ Other packages: alacritty, bash, zsh, starship, git, wayvnc, hyprmon, delta, xdg
 - Tmux plugins are git submodules under `tmux/.config/tmux/plugins/` (TPM and omarchy-tmux)
 - Uses Omarchy theme system (`~/.config/omarchy/current/theme/`) across tmux, git, and nvim
 - The delta package uses `--no-folding` with target `~/.local` (not home directory)
+- Setup scripts are in `scripts/bin/` (e.g., `setup-omarchy.sh`, `setup-ubuntu.sh`, `setup-macos.sh`, `setup-portable.sh`)
 - `windows.ps1` contains a PowerShell script for Windows environment setup
