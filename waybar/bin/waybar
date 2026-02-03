@@ -1,0 +1,11 @@
+#!/bin/bash
+# Singleton waybar - only one instance can run at a time
+
+LOCKFILE="/tmp/waybar-singleton.lock"
+
+# Try to get exclusive lock. If another waybar is running, exit silently.
+exec 200>"$LOCKFILE"
+flock -n 200 || exit 0
+
+# Execute real waybar (this process becomes waybar, holding the lock)
+exec /usr/bin/waybar "$@"

@@ -4,6 +4,9 @@
 export OMARCHY_PATH=$HOME/.local/share/omarchy
 export PATH=$OMARCHY_PATH/bin:$PATH
 
+# Add ~/bin to shadow waybar with singleton wrapper (prevents duplicate instances)
+export PATH=$HOME/bin:$PATH
+
 # Set default terminal and editor
 source ~/.config/uwsm/default
 
