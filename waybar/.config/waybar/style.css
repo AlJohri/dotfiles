@@ -40,7 +40,8 @@
 #pulseaudio,
 #custom-omarchy,
 #custom-screenrecording-indicator,
-#custom-update {
+#custom-update,
+#custom-gtasks {
   min-width: 12px;
   margin: 0 7.5px;
 }
@@ -62,7 +63,19 @@
 }
 
 tooltip {
-  padding: 2px;
+  background: alpha(@background, 0.95);
+  border-radius: 8px;
+  border: 2px solid @foreground;
+  padding: 8px;
+}
+
+tooltip label {
+  color: @foreground;
+  font-family: 'JetBrainsMono Nerd Font';
+}
+
+#custom-gtasks.no-tasks {
+  opacity: 0.5;
 }
 
 #custom-update {

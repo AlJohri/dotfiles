@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Waybar module for Google Tasks - outputs JSON with text and tooltip."""
+
+import json
+import subprocess
+
+
+def get_tasks():
+    """Run gtasks and parse output."""
+    try:
+        result = subprocess.run(
+            ["gtasks", "tasks", "view", "-l", "My Tasks"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.stdout
+    except Exception:
+        return ""
+
+
+def main():
+    output = get_tasks()
+    lines = output.strip().split("\n")
+
+    # Count incomplete tasks (lines with ✖)
+    count = sum(1 for line in lines if "✖" in line)
+
+    # Build tooltip from task lines (skip header)
+    task_lines = [l for l in lines[3:] if l.strip()] if len(lines) > 3 else []
+
+    data = {}
+
+    if count > 0:
+        data["text"] = f"󰄲 {count}"
+        data["tooltip"] = f"<b>Tasks ({count})</b>\n\n"
+        data["tooltip"] += "\n".join(task_lines[:15])  # Limit to 15 tasks
+        data["class"] = "has-tasks"
+    else:
+        data["text"] = "󰄲"
+        data["tooltip"] = "No pending tasks"
+        data["class"] = "no-tasks"
+
+    print(json.dumps(data))
+
+
+if __name__ == "__main__":
+    main()

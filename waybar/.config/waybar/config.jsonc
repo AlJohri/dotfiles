@@ -12,6 +12,7 @@
     "network",
     "pulseaudio",
     "cpu",
+    "custom/gtasks",
     "battery"
   ],
   "hyprland/workspaces": {
@@ -59,6 +60,13 @@
     "format": "󰍛",
     "on-click": "omarchy-launch-or-focus-tui btop",
     "on-click-right": "ghostty"
+  },
+  "custom/gtasks": {
+    "exec": "~/dotfiles/waybar/bin/gtasks-status",
+    "return-type": "json",
+    "interval": 300,
+    "tooltip": true,
+    "on-click": "omarchy-launch-floating-terminal-with-presentation ~/dotfiles/waybar/bin/gtasks-open"
   },
   "custom/clock": {
     "exec": "~/dotfiles/waybar/bin/clock-tz",

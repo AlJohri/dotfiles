@@ -1,0 +1,2 @@
+#!/bin/bash
+exec gtasks tasks view -l "My Tasks"
