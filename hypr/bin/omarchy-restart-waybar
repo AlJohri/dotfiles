@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Shadow omarchy's omarchy-restart-waybar to fix race condition.
+# Uses flock to serialize concurrent restarts and adds sleep to ensure
+# the old waybar is dead before starting the new one.
+
+LOCKFILE="/tmp/waybar-restart.lock"
+
+exec 200>"$LOCKFILE"
+flock -n 200 || exit 0
+
+pkill -x waybar
+sleep 0.1
+setsid uwsm-app -- waybar >/dev/null 2>&1 &
