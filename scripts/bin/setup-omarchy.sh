@@ -20,6 +20,7 @@ sudo pacman -S --noconfirm --needed \
     bolt \
     caligula \
     nvtop \
+    fprintd \
     sshpass \
     tcpdump \
     tigervnc \
@@ -27,7 +28,8 @@ sudo pacman -S --noconfirm --needed \
     wayvnc \
     github-cli \
     wget \
-    xclip
+    xclip \
+    git-delta
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -41,8 +43,9 @@ if ! gh auth token &>/dev/null; then
 fi
 
 echo "==> Installing mise tools..."
-mise trust "$DOTFILES_DIR/mise/.config/mise"
+mise trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
 GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
+eval "$(mise env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 
 # aws-session-manager-plugin cannot be installed through mise:
 # - aqua backend only lists macOS: https://github.com/aquaproj/aqua-registry/blob/main/pkgs/aws/session-manager-plugin/registry.yaml
@@ -66,7 +69,7 @@ else
     omarchy-setup-fingerprint
 fi
 
-if ! command -v claude &> /dev/null; then
+if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" ]]; then
     echo "==> Installing Claude Code..."
     curl -fsSL https://claude.ai/install.sh | bash
 fi
@@ -84,7 +87,7 @@ else
 fi
 
 echo "==> Allowing direnv..."
-direnv allow "$DOTFILES_DIR"
+mise exec direnv -- direnv allow "$DOTFILES_DIR"
 
 echo "==> Stowing dotfiles..."
 make stow-omarchy
