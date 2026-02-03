@@ -29,7 +29,8 @@ sudo pacman -S --noconfirm --needed \
     github-cli \
     wget \
     xclip \
-    git-delta
+    git-delta \
+    tree
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
