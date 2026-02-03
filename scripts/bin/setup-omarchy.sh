@@ -47,6 +47,7 @@ mise trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
 GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
 eval "$(mise env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 
+# libappindicator-gtk3 is required for Dropbox's tray icon
 # aws-session-manager-plugin cannot be installed through mise:
 # - aqua backend only lists macOS: https://github.com/aquaproj/aqua-registry/blob/main/pkgs/aws/session-manager-plugin/registry.yaml
 # - non-standard Go project structure prevents use of the go backend: https://github.com/aws/session-manager-plugin
@@ -58,7 +59,8 @@ yay -S --noconfirm --needed \
     aws-session-manager-plugin \
     dropbox \
     dropbox-cli \
-    nautilus-dropbox
+    nautilus-dropbox \
+    libappindicator-gtk3
 
 fprint_output=$(fprintd-list "$USER" 2>&1 || true)
 if ! command -v fprintd-list &>/dev/null; then
