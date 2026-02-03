@@ -7,5 +7,7 @@ export PATH=$OMARCHY_PATH/bin:$PATH
 # Set default terminal and editor
 source ~/.config/uwsm/default
 
-# Activate mise if present on the system
-omarchy-cmd-present mise && eval "$(mise activate bash)"
+# Add mise shims to PATH for non-interactive processes (waybar, etc.)
+# Interactive shells run `mise activate` which removes shims and uses dynamic PATH
+# See: https://mise.jdx.dev/dev-tools/shims.html
+eval "$(mise activate --shims bash)"
