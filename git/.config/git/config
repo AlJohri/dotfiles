@@ -18,7 +18,7 @@
 [commit]
 	verbose = true           # Include diff comment in commit message template
 [column]
-	ui = auto 			     # Output in columns when possible
+	ui = never               # Never output in columns (default)
 [branch]
 	sort = -committerdate    # Sort branches by most recent commit first
 [tag]
