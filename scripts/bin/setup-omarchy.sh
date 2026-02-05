@@ -30,7 +30,10 @@ sudo pacman -S --noconfirm --needed \
     wget \
     xclip \
     git-delta \
-    tree
+    sublime-text-4 \
+    tree \
+    visual-studio-code-bin \
+    zed
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -41,6 +44,11 @@ git submodule update --init
 if ! gh auth token &>/dev/null; then
     echo "==> Logging into GitHub (mise installs binaries from GitHub in bulk and will get 403 rate-limited without a token)..."
     gh auth login
+fi
+
+if [ ! -f "$HOME/.local/bin/mise" ]; then
+    echo "==> Installing mise via curl (for self-update support)..."
+    curl https://mise.run | sh
 fi
 
 echo "==> Installing mise tools..."
