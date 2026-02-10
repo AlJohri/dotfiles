@@ -23,6 +23,7 @@ image/gif=imv.desktop
 image/webp=imv.desktop
 image/bmp=imv.desktop
 image/tiff=imv.desktop
+image/svg+xml=google-chrome.desktop
 application/pdf=org.gnome.Evince.desktop
 text/html=google-chrome.desktop
 x-scheme-handler/http=google-chrome.desktop
