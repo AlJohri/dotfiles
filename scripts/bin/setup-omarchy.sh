@@ -13,6 +13,7 @@ echo "==> Installing extra packages (not in omarchy-base)..."
 sudo pacman -S --noconfirm --needed \
     stow \
     make \
+    most \
     moreutils \
     fish \
     omarchy-fish \
@@ -33,7 +34,8 @@ sudo pacman -S --noconfirm --needed \
     sublime-text-4 \
     tree \
     visual-studio-code-bin \
-    zed
+    zed \
+    pandoc-cli
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
