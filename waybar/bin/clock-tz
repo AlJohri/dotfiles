@@ -6,6 +6,6 @@ get_offset() {
 
 text="$(TZ=America/New_York date '+%a %b %d | %I:%M %p') $(get_offset America/New_York) NYC"
 
-tooltip="NYC (EST):      $(TZ=America/New_York date '+%I:%M %p') $(get_offset America/New_York)\\nLA (PST):       $(TZ=America/Los_Angeles date '+%I:%M %p') $(get_offset America/Los_Angeles)\\nItaly (CET):    $(TZ=Europe/Rome date '+%I:%M %p') $(get_offset Europe/Rome)\\nGreece (EET):   $(TZ=Europe/Athens date '+%I:%M %p') $(get_offset Europe/Athens)\\nTbilisi (GET):  $(TZ=Asia/Tbilisi date '+%I:%M %p') $(get_offset Asia/Tbilisi)"
+tooltip="NYC (EST):      $(TZ=America/New_York date '+%I:%M %p') $(get_offset America/New_York)\\nLA (PST):       $(TZ=America/Los_Angeles date '+%I:%M %p') $(get_offset America/Los_Angeles)\\nParis (CET):    $(TZ=Europe/Paris date '+%I:%M %p') $(get_offset Europe/Paris)\\nItaly (CET):    $(TZ=Europe/Rome date '+%I:%M %p') $(get_offset Europe/Rome)\\nGreece (EET):   $(TZ=Europe/Athens date '+%I:%M %p') $(get_offset Europe/Athens)\\nTbilisi (GET):  $(TZ=Asia/Tbilisi date '+%I:%M %p') $(get_offset Asia/Tbilisi)"
 
 printf '{"text": "%s", "tooltip": "%s"}\n' "$text" "$tooltip"
