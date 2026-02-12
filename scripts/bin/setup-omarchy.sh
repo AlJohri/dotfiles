@@ -10,6 +10,7 @@ sudo pacman -Sy
 # `gh auth token` is available to provide GITHUB_TOKEN for mise install,
 # avoiding GitHub API rate limits.
 echo "==> Installing extra packages (not in omarchy-base)..."
+# rendering images: kitten icat image.png, chafa image.png
 sudo pacman -S --noconfirm --needed \
     stow \
     make \
@@ -35,7 +36,9 @@ sudo pacman -S --noconfirm --needed \
     tree \
     visual-studio-code-bin \
     zed \
-    pandoc-cli
+    pandoc-cli \
+    kitty \
+    chafa
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
