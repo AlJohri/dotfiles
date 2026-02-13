@@ -10,5 +10,6 @@
     "lua-lsp@claude-plugins-official": false,
     "claude-md-management@claude-plugins-official": false,
     "playground@claude-plugins-official": false
-  }
+  },
+  "skipDangerousModePermissionPrompt": true
 }
