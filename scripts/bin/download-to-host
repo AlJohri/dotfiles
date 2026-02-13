@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: download-to-host [-u user] [-p port] <file-or-folder>" >&2
+  echo "" >&2
+  echo "Downloads a file or folder to ~/Downloads on the SSH host machine." >&2
+  echo "" >&2
+  echo "Options:" >&2
+  echo "  -u USER   Username on the host (default: \$USER)" >&2
+  echo "  -p PORT   SSH port on the host (default: 22)" >&2
+  exit 1
+}
+
+if [[ -z "${SSH_CLIENT:-}" ]]; then
+  echo "Error: Not in an SSH session (SSH_CLIENT not set)" >&2
+  exit 1
+fi
+
+HOST_USER="$USER"
+HOST_PORT=22
+
+while getopts "u:p:h" opt; do
+  case "$opt" in
+    u) HOST_USER="$OPTARG" ;;
+    p) HOST_PORT="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if [[ $# -eq 0 ]]; then
+  usage
+fi
+
+HOST_IP="${SSH_CLIENT%% *}"
+TARGET="$1"
+
+if [[ ! -e "$TARGET" ]]; then
+  echo "Error: '$TARGET' does not exist" >&2
+  exit 1
+fi
+
+SCP_ARGS=(-P "$HOST_PORT")
+
+if [[ -d "$TARGET" ]]; then
+  SCP_ARGS+=(-r)
+fi
+
+echo "Downloading '$(basename "$TARGET")' to ${HOST_USER}@${HOST_IP}:~/Downloads/"
+scp "${SCP_ARGS[@]}" "$TARGET" "${HOST_USER}@${HOST_IP}:~/Downloads/"
+echo "Done."
