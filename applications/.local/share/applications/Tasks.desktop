@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Tasks
+Comment=Google Tasks
+Exec=omarchy-launch-webapp https://tasks.google.com/tasks/
+Terminal=false
+Type=Application
+Icon=/home/aljohri/.local/share/applications/icons/Tasks.png
+StartupNotify=true

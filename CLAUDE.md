@@ -56,6 +56,15 @@ Key packages:
 - **waybar**: Status bar for Wayland compositors
 - **xdg**: XDG config files: `mimeapps.list` (default apps), `user-dirs.*`, `autostart/`
 
+## Hyprland Keybindings
+
+When looking up a keybinding, check all three sources:
+1. `hyprctl binds` — shows all active bindings at runtime (the ground truth)
+2. `hypr/.config/hypr/bindings.conf` — user overrides/additions in this repo
+3. `~/.local/share/omarchy/default/hypr/bindings/tiling-v2.conf` — upstream Omarchy base config
+
+User bindings override the base config. If a binding isn't in the user file, check the base config.
+
 ## Notes
 
 - App-specific scripts go in the relevant stow package's `bin/` folder (e.g., `hypr/bin/` for Hyprland scripts). Generic scripts go in the top-level `scripts/bin/` package.

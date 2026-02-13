@@ -24,8 +24,7 @@ if [ ${#URL_ARGS[@]} -gt 0 ]; then
     if [ -n "$WINDOW_INFO" ]; then
         # App is running - bring to foreground first
         ADDRESS=$(echo "$WINDOW_INFO" | jq -r '.address' | head -1)
-        hyprctl dispatch movetoworkspace +0,address:$ADDRESS
-        hyprctl dispatch focuswindow address:$ADDRESS
+        hyprctl --batch "dispatch movetoworkspace +0,address:$ADDRESS ; dispatch focuswindow address:$ADDRESS"
     fi
     # Pass URL to app (launches if not running, or signals existing instance)
     exec "$CLASS" "${URL_ARGS[@]}"
@@ -49,13 +48,11 @@ CURRENT_WS=$(hyprctl activeworkspace -j | jq -r '.name')
 
 if [ "$WORKSPACE" = "special:$SPECIAL_WS" ]; then
     # Window is in special workspace, bring to current workspace and focus
-    hyprctl dispatch movetoworkspace +0,address:$ADDRESS
-    hyprctl dispatch focuswindow address:$ADDRESS
+    hyprctl --batch "dispatch movetoworkspace +0,address:$ADDRESS ; dispatch focuswindow address:$ADDRESS"
 elif [ "$WORKSPACE" = "$CURRENT_WS" ]; then
     # Window is on current workspace, move to special workspace (hide)
     hyprctl dispatch movetoworkspacesilent special:$SPECIAL_WS,address:$ADDRESS
 else
     # Window is on a different workspace, bring to current workspace and focus
-    hyprctl dispatch movetoworkspace +0,address:$ADDRESS
-    hyprctl dispatch focuswindow address:$ADDRESS
+    hyprctl --batch "dispatch movetoworkspace +0,address:$ADDRESS ; dispatch focuswindow address:$ADDRESS"
 fi

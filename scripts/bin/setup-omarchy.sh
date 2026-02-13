@@ -16,6 +16,7 @@ sudo pacman -S --noconfirm --needed \
     make \
     most \
     moreutils \
+    strace \
     fish \
     omarchy-fish \
     omarchy-zsh \
@@ -37,8 +38,14 @@ sudo pacman -S --noconfirm --needed \
     visual-studio-code-bin \
     zed \
     pandoc-cli \
+<<<<<<< Updated upstream
     kitty \
     chafa
+||||||| Stash base
+    pandoc-cli
+=======
+    pv
+>>>>>>> Stashed changes
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
