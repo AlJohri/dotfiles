@@ -38,14 +38,8 @@ sudo pacman -S --noconfirm --needed \
     visual-studio-code-bin \
     zed \
     pandoc-cli \
-<<<<<<< Updated upstream
     kitty \
     chafa
-||||||| Stash base
-    pandoc-cli
-=======
-    pv
->>>>>>> Stashed changes
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -98,6 +92,12 @@ fi
 if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" ]]; then
     echo "==> Installing Claude Code..."
     curl -fsSL https://claude.ai/install.sh | bash
+fi
+
+if ! command -v code-server &>/dev/null; then
+    echo "==> Installing code-server..."
+    curl -fsSL https://code-server.dev/install.sh | sh
+    sudo systemctl enable --now code-server@$USER
 fi
 
 if ! command -v tailscale &>/dev/null; then
