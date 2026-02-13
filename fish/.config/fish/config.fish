@@ -6,6 +6,7 @@ end
 # Aliases
 alias vim=nvim
 alias claude="claude --dangerously-skip-permissions"
+alias happy="happy --yolo"
 alias cat='bat --paging=never --style=plain'
 alias zed='zeditor'
 alias gst='git status'
