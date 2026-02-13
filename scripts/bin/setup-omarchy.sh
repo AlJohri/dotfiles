@@ -77,16 +77,20 @@ yay -S --noconfirm --needed \
     nautilus-dropbox \
     libappindicator-gtk3
 
-fprint_output=$(fprintd-list "$USER" 2>&1 || true)
-if ! command -v fprintd-list &>/dev/null; then
-    echo "==> fprintd not found, skipping fingerprint setup."
-elif echo "$fprint_output" | grep -q "No devices available"; then
-    echo "==> No fingerprint reader found, skipping fingerprint setup."
-elif echo "$fprint_output" | grep -q "#[0-9]"; then
-    echo "==> Fingerprint already enrolled, skipping setup."
+if [ -n "$SSH_CONNECTION" ]; then
+    echo "==> SSH session detected, skipping fingerprint setup (requires physical access)."
 else
-    echo "==> Setting up fingerprint authentication..."
-    omarchy-setup-fingerprint
+    fprint_output=$(fprintd-list "$USER" 2>&1 || true)
+    if ! command -v fprintd-list &>/dev/null; then
+        echo "==> fprintd not found, skipping fingerprint setup."
+    elif echo "$fprint_output" | grep -q "No devices available"; then
+        echo "==> No fingerprint reader found, skipping fingerprint setup."
+    elif echo "$fprint_output" | grep -q "#[0-9]"; then
+        echo "==> Fingerprint already enrolled, skipping setup."
+    else
+        echo "==> Setting up fingerprint authentication..."
+        omarchy-setup-fingerprint
+    fi
 fi
 
 if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" ]]; then
