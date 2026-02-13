@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+gh search prs --author=@me --state=open --draft=false \
+  --json url,repository,title,number \
+  --template '{{tablerow (color "white+ul" "REPO") (color "white+ul" "PR") (color "white+ul" "TITLE")}}{{range .}}{{tablerow .repository.nameWithOwner (hyperlink .url (color "blue" (printf "#%.0f" .number))) .title}}{{end}}{{tablerender}}' \
+  "$@"
