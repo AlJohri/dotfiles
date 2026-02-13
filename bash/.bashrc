@@ -8,6 +8,20 @@ case $- in
       *) return;;
 esac
 
+# Auto-launch fish shell if in interactive bash
+# https://github.com/omacom-io/omarchy-fish/blob/9488497e3614e285beeda68c27f3a601d1432ef0/templates/bashrc#L4-L11
+# https://github.com/basecamp/omarchy/issues/1168#issuecomment-3736256729
+# https://github.com/basecamp/omarchy/issues/2487
+# https://github.com/basecamp/omarchy/discussions/451
+# https://github.com/basecamp/omarchy/issues/2556
+if command -v fish &> /dev/null; then
+	if [[ $(ps --no-header --pid=$PPID --format=comm) != "fish" && -z ${BASH_EXECUTION_STRING} && ${SHLVL} == 1 ]]
+	then
+		shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=''
+		exec fish $LOGIN_OPTION
+	fi
+fi
+
 # don't put duplicate lines or lines starting with space in the history.
 # See bash(1) for more options
 HISTCONTROL=ignoreboth
