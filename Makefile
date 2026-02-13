@@ -2,7 +2,7 @@
 
 # Package groups
 CORE = nvim tmux git fish starship mise delta claude
-DESKTOP = bash zsh scripts alacritty ghostty xdg zed applications
+DESKTOP = bash zsh scripts alacritty ghostty xdg zed applications code-server
 WAYLAND = hypr waybar uwsm omarchy wireplumber
 
 # Full setup (deps + stow)

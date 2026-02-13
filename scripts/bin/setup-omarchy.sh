@@ -94,10 +94,21 @@ if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" 
     curl -fsSL https://claude.ai/install.sh | bash
 fi
 
-if ! command -v code-server &>/dev/null; then
-    echo "==> Installing code-server..."
-    curl -fsSL https://code-server.dev/install.sh | sh
-    sudo systemctl enable --now code-server@$USER
+# code-server is installed via mise (see mise config).
+if [ ! -f "$HOME/.config/code-server/.env" ]; then
+    echo "==> Generating code-server password..."
+    mkdir -p "$HOME/.config/code-server"
+    password=$(openssl rand -hex 16)
+    echo "PASSWORD=$password" > "$HOME/.config/code-server/.env"
+    chmod 600 "$HOME/.config/code-server/.env"
+    echo "    Password saved to ~/.config/code-server/.env"
+fi
+
+if ! systemctl --user is-enabled code-server &>/dev/null; then
+    echo "==> Enabling code-server service..."
+    loginctl enable-linger "$USER"
+    systemctl --user daemon-reload
+    systemctl --user enable --now code-server
 fi
 
 if ! command -v tailscale &>/dev/null; then

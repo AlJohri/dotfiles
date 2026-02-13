@@ -1,0 +1,12 @@
+[Unit]
+Description=code-server
+After=network.target
+
+[Service]
+Type=exec
+ExecStart=%h/.local/share/mise/shims/code-server
+EnvironmentFile=%h/.config/code-server/.env
+Restart=always
+
+[Install]
+WantedBy=default.target
