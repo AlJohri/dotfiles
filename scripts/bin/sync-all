@@ -6,9 +6,9 @@ for dir in */; do
     if [[ -d "${dir}.git" ]]; then
         echo "Pulling ${dir%/}..."
         if git -C "$dir" pull; then
-            echo "✓ ${dir%/} succeeded"
+            echo -e "\033[32m✓ ${dir%/} succeeded\033[0m"
         else
-            echo "✗ ${dir%/} failed"
+            echo -e "\033[31m✗ ${dir%/} failed\033[0m"
         fi
     fi
 done
