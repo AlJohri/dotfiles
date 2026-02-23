@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ $# -ne 1 ]; then
+  echo "Usage: gh-pr-clone <pr-url>" >&2
+  exit 1
+fi
+
+PR_URL="$1"
+BRANCH=$(gh pr view "$PR_URL" --json headRefName --jq .headRefName)
+gh repo clone "$(gh pr view "$PR_URL" --json headRepository,headRepositoryOwner --jq '"\(.headRepositoryOwner.login)/\(.headRepository.name)"')" -- -b "$BRANCH"
