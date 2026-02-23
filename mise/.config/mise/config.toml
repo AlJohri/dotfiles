@@ -49,8 +49,20 @@ tmux = "latest"
 tree-sitter = "latest"
 usage = "latest"
 uv = "latest"
-yq = "latest"
+yq = "4.50.1"
 zoxide = "latest"
+k9s = "latest"
+kubectx = "latest"
+kubens = "latest"
+pre-commit = "latest"
+tflint = "latest"
+oras = "latest"
+trivy = "latest"
+argo-rollouts = "latest"
+yamllint = "latest"
+kubeconform = "latest"
+stylua = "latest"
+"github:lunarmodules/luacheck" = { version = "latest", platforms = '{ linux-x64 = { asset_pattern = "luacheck" } }' }
 
 [settings]
 experimental = true
