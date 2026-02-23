@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mise uninstall $(mise ls --local --json | jq -r 'to_entries[] | "\(.key)@\(.value[0].version)"')
