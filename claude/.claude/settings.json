@@ -12,5 +12,6 @@
     "playground@claude-plugins-official": false
   },
   "skipDangerousModePermissionPrompt": true,
-  "claudeInChromeDefaultEnabled": true
+  "claudeInChromeDefaultEnabled": true,
+  "skipDangerousModePermissionPrompt": true
 }

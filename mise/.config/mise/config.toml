@@ -65,12 +65,13 @@ stylua = "latest"
 "github:lunarmodules/luacheck" = { version = "latest", platforms = '{ linux-x64 = { asset_pattern = "luacheck" } }' }
 cloudflared = "latest"
 "github:hickford/git-credential-oauth" = "0.17.2"
-"forgejo:forgejo-contrib/forgejo-cli" = "latest"
+"forgejo:forgejo-contrib/forgejo-cli" = "0.4.0"
 "forgejo:gitea/tea" = { version = "0.10.1", api_url = "https://gitea.com/api/v1" }
 "github:schpet/linear-cli" = "latest"
 k6 = "latest"
 oha = "latest"
 
+"conda:clang" = "latest"
 
 [settings]
 experimental = true
