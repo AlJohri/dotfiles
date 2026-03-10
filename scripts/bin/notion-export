@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Export a Notion page as markdown given its URL or page ID.
+# Usage: notion-export <url-or-page-id>
+#
+# Requires: npx (notion-exporter), uvx (get-browser-cookies)
+# Cookies (token_v2, file_token) are extracted from Chrome automatically.
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: notion-export <notion-url-or-page-id>" >&2
+    exit 1
+fi
+
+INPUT="$1"
+
+# Extract page ID from URL if needed
+# URLs look like: https://www.notion.so/workspace/Page-Title-319699a50b42808b9fa6dd384f8bf692
+# or: https://www.notion.so/319699a50b42808b9fa6dd384f8bf692
+if [[ "$INPUT" == http* ]]; then
+    # Grab the last 32 hex chars (with optional dashes) from the URL path
+    PAGE_ID=$(echo "$INPUT" | grep -oP '[0-9a-f]{32}' | tail -1)
+    if [[ -z "$PAGE_ID" ]]; then
+        echo "Error: could not extract page ID from URL" >&2
+        exit 1
+    fi
+else
+    PAGE_ID="$INPUT"
+fi
+
+# Extract cookies from Chrome
+# token_v2 is on .www.notion.so, file_token is on .notion.so
+TOKEN_V2=$(uvx get-browser-cookies --browser chrome --domain .www.notion.so 2>/dev/null \
+    | python3 -c "import sys,json; [print(json.loads(line)['value']) for line in sys.stdin if json.loads(line)['name']=='token_v2']")
+
+FILE_TOKEN=$(uvx --from get-browser-cookies python3 -c "
+import browser_cookie3
+cj = browser_cookie3.chrome(domain_name='.notion.so')
+for c in cj:
+    if c.name == 'file_token':
+        print(c.value)
+        break
+" 2>/dev/null)
+
+if [[ -z "$TOKEN_V2" ]]; then
+    echo "Error: could not extract token_v2 from Chrome cookies" >&2
+    exit 1
+fi
+
+if [[ -z "$FILE_TOKEN" ]]; then
+    echo "Warning: could not extract file_token (image downloads may fail)" >&2
+fi
+
+NOTION_TOKEN="$TOKEN_V2" NOTION_FILE_TOKEN="$FILE_TOKEN" npx notion-exporter "$PAGE_ID" -t md

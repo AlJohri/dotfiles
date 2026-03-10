@@ -4,11 +4,22 @@ set -euo pipefail
 
 for dir in */; do
     if [[ -d "${dir}.git" ]]; then
-        echo "Pulling ${dir%/}..."
+        branch=$(git -C "$dir" branch --show-current)
+
+        # If the current branch tracks a remote branch that no longer exists, switch to default branch
+        remote_branch=$(git -C "$dir" config --get "branch.${branch}.merge" 2>/dev/null || true)
+        if [[ -n "$remote_branch" ]] && ! git -C "$dir" ls-remote --exit-code --heads origin "$remote_branch" &>/dev/null; then
+            default_branch=$(git -C "$dir" remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
+            default_branch=${default_branch:-main}
+            echo -e "\033[33m⟳ ${dir%/} (${branch}) remote branch gone, switching to ${default_branch}\033[0m"
+            git -C "$dir" checkout "$default_branch"
+            branch=$default_branch
+        fi
+
         if git -C "$dir" pull; then
-            echo -e "\033[32m✓ ${dir%/} succeeded\033[0m"
+            echo -e "\033[32m✓ ${dir%/} (${branch}) succeeded\033[0m"
         else
-            echo -e "\033[31m✗ ${dir%/} failed\033[0m"
+            echo -e "\033[31m✗ ${dir%/} (${branch}) failed\033[0m"
         fi
     fi
 done

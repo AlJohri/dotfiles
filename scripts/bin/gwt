@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+  git worktree list
+  exit 0
+fi
+
+if [ $# -ne 1 ]; then
+  echo "Usage: gwt [<branch>]" >&2
+  exit 1
+fi
+
+BRANCH="$1"
+REPO_ROOT="$(git worktree list | head -1 | awk '{print $1}')"
+
+# "gwt main" always returns to the repo root
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
+  DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+  if [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
+    echo "Returning to repo root ($REPO_ROOT)" >&2
+  else
+    echo "Returning to repo root ($REPO_ROOT) (checked out branch may differ from '$BRANCH')" >&2
+  fi
+  echo "$REPO_ROOT"
+  exit 0
+fi
+
+# If the branch is already checked out in an existing worktree, go there
+EXISTING=$(git worktree list | grep -F "[$BRANCH]" | awk '{print $1}' || true)
+
+if [ -n "$EXISTING" ]; then
+  echo "$EXISTING"
+  exit 0
+fi
+
+WORKTREE_DIR="$REPO_ROOT/.claude/worktrees/$BRANCH"
+mkdir -p "$(dirname "$WORKTREE_DIR")"
+
+# Check if the branch exists locally or in a remote
+if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+  git worktree add "$WORKTREE_DIR" "$BRANCH" >&2
+elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+  git worktree add "$WORKTREE_DIR" "$BRANCH" >&2
+else
+  DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+  echo "Branch '$BRANCH' not found locally or in origin." >&2
+  echo "Creating new branch from $DEFAULT_BRANCH." >&2
+  git worktree add -b "$BRANCH" "$WORKTREE_DIR" "$DEFAULT_BRANCH" >&2
+fi
+
+# Trust mise config if present
+if [ -f "$WORKTREE_DIR/mise.toml" ] || [ -f "$WORKTREE_DIR/.mise.toml" ]; then
+  mise trust "$WORKTREE_DIR" >&2 2>/dev/null || true
+fi
+
+echo "$WORKTREE_DIR"

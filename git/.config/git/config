@@ -29,10 +29,6 @@
 [user]
 	name = Al Johri
 	email = al.johri@gmail.com
-[credential "https://github.com"]
-	helper = !gh auth git-credential
-[credential "https://gist.github.com"]
-	helper = !gh auth git-credential
 [rebase]
 	autoStash = true
 [status]
@@ -50,3 +46,13 @@
 	skippedCherryPicks = false
 [push]
 	autoSetupRemote = true
+[credential]
+	helper = cache --timeout 7200
+	helper = /home/aljohri/.local/share/mise/shims/git-credential-oauth
+	helper = cache --timeout 7200
+	helper = /home/aljohri/.local/share/mise/installs/github-hickford-git-credential-oauth/0.17.2/git-credential-oauth
+[credential "https://github.com"]
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+  helper = !gh auth git-credential
+
