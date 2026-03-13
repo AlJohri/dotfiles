@@ -11,7 +11,7 @@
     "claude-md-management@claude-plugins-official": false,
     "playground@claude-plugins-official": false
   },
+  "voiceEnabled": true,
   "skipDangerousModePermissionPrompt": true,
-  "claudeInChromeDefaultEnabled": true,
-  "skipDangerousModePermissionPrompt": true
+  "claudeInChromeDefaultEnabled": true
 }
