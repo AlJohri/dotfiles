@@ -6,7 +6,12 @@ CLASS=$(echo "$ACTIVE" | jq -r '.class // empty')
 
 case "${CLASS,,}" in
     *slack*)
-        hyprctl dispatch movetoworkspacesilent special:slack
+        TITLE=$(echo "$ACTIVE" | jq -r '.title // empty')
+        if [[ "$TITLE" == *"[Main]"* ]]; then
+            hyprctl dispatch movetoworkspacesilent special:slack
+        else
+            hyprctl dispatch killactive
+        fi
         ;;
     *obsidian*)
         hyprctl dispatch movetoworkspacesilent special:obsidian
