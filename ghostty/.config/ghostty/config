@@ -1,9 +1,6 @@
 # Dynamic theme colors
 config-file = ?"~/.config/omarchy/current/theme/ghostty.conf"
 
-# Shell
-command = /usr/bin/fish
-
 # Font
 font-family = "JetBrainsMono Nerd Font"
 font-style = Regular
@@ -26,15 +23,12 @@ cursor-style-blink = false
 shell-integration-features = no-cursor,ssh-env
 
 # Keyboard bindings
-keybind = f11=toggle_fullscreen
 keybind = shift+insert=paste_from_clipboard
 keybind = control+insert=copy_to_clipboard
 keybind = super+control+shift+alt+arrow_down=resize_split:down,100
 keybind = super+control+shift+alt+arrow_up=resize_split:up,100
 keybind = super+control+shift+alt+arrow_left=resize_split:left,100
 keybind = super+control+shift+alt+arrow_right=resize_split:right,100
-keybind = ctrl+w=close_surface
-keybind = ctrl+shift+w=close_window
 
 # Slowdown mouse scrolling
 mouse-scroll-multiplier = 0.95

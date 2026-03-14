@@ -37,7 +37,7 @@ killall waybar; setsid uwsm-app -- waybar
 
 - **CORE** (portable): nvim, tmux, git, fish, starship, mise, delta, claude
 - **DESKTOP** (adds to core): bash, zsh, scripts, alacritty, ghostty, xdg, zed, applications
-- **WAYLAND** (adds to desktop): hypr, waybar, uwsm, omarchy
+- **WAYLAND** (adds to desktop): hypr, waybar, uwsm, omarchy, elephant, imv, makima, wiremix
 
 ## Structure
 

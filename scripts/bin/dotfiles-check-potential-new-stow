@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Find directories in ~/.config/ that could potentially become stow packages.
+# Skips directories already managed by dotfiles, then filters for text-based,
+# short, credential-free configs worth tracking.
+
+DOTFILES_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+TARGET="$HOME"
+CONFIG_DIR="$TARGET/.config"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+# Thresholds
+MAX_FILE_SIZE=5000        # lines per file
+MAX_TOTAL_FILES=50        # max files in a config dir
+MAX_TOTAL_SIZE=50000      # bytes total
+
+# Patterns that suggest credentials or secrets
+CREDENTIAL_PATTERNS='(password|secret|token|api.key|private.key|credential|auth_token|access_key|client_secret)(\s*[:=])'
+
+USE_AI=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ai) USE_AI=true; shift ;;
+        -h|--help)
+            echo "Usage: $(basename "$0") [--ai]"
+            echo "  --ai    Use claude to assess each candidate"
+            exit 0
+            ;;
+        *) shift ;;
+    esac
+done
+
+# Build set of config dirs already managed by dotfiles (symlinked back)
+declare -A managed_dirs=()
+
+for entry in "$CONFIG_DIR"/*/; do
+    [[ ! -d "$entry" ]] && continue
+    name="$(basename "$entry")"
+    entry_no_slash="${entry%/}"
+
+    if [[ -L "$entry_no_slash" ]]; then
+        link_target="$(readlink -f "$entry_no_slash")"
+        if [[ "$link_target" == "$DOTFILES_DIR"/* ]]; then
+            managed_dirs["$name"]=1
+            continue
+        fi
+    fi
+
+    # Check if any files inside are symlinks to dotfiles (unfolded stow)
+    has_stow_links=false
+    while IFS= read -r -d '' f; do
+        if [[ -L "$f" ]]; then
+            lt="$(readlink -f "$f" 2>/dev/null || true)"
+            if [[ -n "$lt" && "$lt" == "$DOTFILES_DIR"/* ]]; then
+                has_stow_links=true
+                break
+            fi
+        fi
+    done < <(find "$entry" -maxdepth 2 -type l -print0 2>/dev/null)
+
+    if $has_stow_links; then
+        managed_dirs["$name"]=1
+    fi
+done
+
+# Evaluate each unmanaged config directory
+candidates=()
+
+for entry in "$CONFIG_DIR"/*/; do
+    [[ ! -d "$entry" ]] && continue
+    name="$(basename "$entry")"
+    entry_no_slash="${entry%/}"
+
+    # Skip already managed
+    [[ -n "${managed_dirs[$name]:-}" ]] && continue
+
+    # Skip symlinks to non-dotfiles locations (managed by other tools)
+    if [[ -L "$entry_no_slash" ]]; then
+        continue
+    fi
+
+    # Count files (skip if empty or too many)
+    file_count=$(find "$entry" -type f 2>/dev/null | wc -l)
+    [[ "$file_count" -eq 0 ]] && continue
+    [[ "$file_count" -gt "$MAX_TOTAL_FILES" ]] && continue
+
+    # Check total size
+    total_size=$(du -sb "$entry" 2>/dev/null | cut -f1)
+    [[ "$total_size" -gt "$MAX_TOTAL_SIZE" ]] && continue
+
+    # Check if files are mostly text
+    binary_count=0
+    text_count=0
+    while IFS= read -r f; do
+        if file -b --mime-type "$f" 2>/dev/null | grep -q '^text/'; then
+            text_count=$((text_count + 1))
+        else
+            binary_count=$((binary_count + 1))
+        fi
+    done < <(find "$entry" -type f 2>/dev/null)
+
+    # Skip if more binary than text
+    [[ "$binary_count" -gt "$text_count" ]] && continue
+
+    # Check for credential patterns
+    has_creds=false
+    if grep -rliP "$CREDENTIAL_PATTERNS" "$entry" &>/dev/null; then
+        has_creds=true
+    fi
+
+    # Check max line count of any single file
+    max_lines=0
+    while IFS= read -r f; do
+        lines=$(wc -l < "$f" 2>/dev/null || echo 0)
+        [[ "$lines" -gt "$max_lines" ]] && max_lines=$lines
+    done < <(find "$entry" -type f 2>/dev/null)
+    [[ "$max_lines" -gt "$MAX_FILE_SIZE" ]] && continue
+
+    # Build summary
+    summary="files=$file_count size=$(numfmt --to=iec "$total_size" 2>/dev/null || echo "${total_size}B") max_lines=$max_lines"
+    if $has_creds; then
+        summary="$summary ${RED}(has credentials)${RESET}"
+    fi
+
+    candidates+=("$name|$summary|$has_creds|$entry")
+done
+
+if [[ ${#candidates[@]} -eq 0 ]]; then
+    echo -e "${GREEN}No new candidate config directories found.${RESET}"
+    exit 0
+fi
+
+echo -e "${BOLD}Potential new stow packages in ~/.config/:${RESET}"
+echo
+
+for candidate in "${candidates[@]}"; do
+    IFS='|' read -r name summary has_creds dir <<< "$candidate"
+
+    if [[ "$has_creds" == "true" ]]; then
+        echo -e "  ${DIM}$name${RESET} — $summary"
+    else
+        echo -e "  ${YELLOW}$name${RESET} — $summary"
+    fi
+
+    # Show file listing
+    while IFS= read -r f; do
+        rel="${f#"$dir"/}"
+        echo -e "    ${DIM}$rel${RESET}"
+    done < <(find "$dir" -type f 2>/dev/null | sort)
+done
+
+# AI assessment
+if $USE_AI && command -v claude &>/dev/null; then
+    echo
+    echo -e "${BOLD}AI Assessment:${RESET}"
+    echo
+
+    for candidate in "${candidates[@]}"; do
+        IFS='|' read -r name summary has_creds dir <<< "$candidate"
+        [[ "$has_creds" == "true" ]] && continue
+
+        # Gather file contents (truncated)
+        contents=""
+        while IFS= read -r f; do
+            rel="${f#"$dir"/}"
+            file_content="$(head -100 "$f" 2>/dev/null || true)"
+            contents+="--- $rel ---"$'\n'"$file_content"$'\n'$'\n'
+        done < <(find "$dir" -type f 2>/dev/null | sort)
+
+        assessment=$(claude -p "You are reviewing config files from ~/.config/$name to decide if they should be tracked in a dotfiles repo managed with GNU Stow.
+
+Here are the files (truncated to 100 lines each):
+
+$contents
+
+Answer with a single line in this format:
+VERDICT: [YES/NO/MAYBE] — reason
+
+Criteria:
+- YES if these are user-customized config files that would be useful to restore on a fresh install
+- NO if these are auto-generated, cache-like, contain only defaults, or are managed by another tool
+- MAYBE if it depends on whether the user has customized them
+- Be concise (one sentence)" 2>/dev/null || echo "VERDICT: SKIP — claude not available")
+
+        echo -e "  ${CYAN}$name${RESET}: $assessment"
+    done
+fi

@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check for files in stow target directories that aren't managed by dotfiles.
+# Helps identify config files that should be tracked but aren't.
+#
+# For each stow package, finds directories where the package has files and stow
+# created individual file symlinks (unfolded) rather than symlinking the whole
+# directory (folded). In those unfolded directories, reports files not managed
+# by dotfiles.
+
+DOTFILES_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+TARGET="$HOME"
+
+# Directories that are shared by many programs and too broad to scan.
+# Only the exact directory is skipped — subdirectories are still checked.
+SKIP_DIRS=(
+    "$HOME/.config"
+    "$HOME/.local/share"
+    "$HOME/.local/share/applications"
+)
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+# Parse args
+VERBOSE=false
+FILTER_PKG=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -v|--verbose) VERBOSE=true; shift ;;
+        *) FILTER_PKG="$1"; shift ;;
+    esac
+done
+
+found_untracked=false
+
+for pkg_dir in "$DOTFILES_DIR"/*/; do
+    pkg="$(basename "$pkg_dir")"
+
+    [[ "$pkg" == ".git" ]] && continue
+    [[ -n "$FILTER_PKG" && "$pkg" != "$FILTER_PKG" ]] && continue
+
+    # Find directories that directly contain files in this package.
+    # These are the directories the package "owns" — not intermediate dirs
+    # like .config/ that are just path components.
+    declare -A file_dirs=()
+    while IFS= read -r -d '' pkg_file; do
+        dir="$(dirname "$pkg_file")"
+        rel_dir="${dir#"$pkg_dir"}"
+        [[ -n "$rel_dir" ]] && file_dirs["$rel_dir"]=1
+    done < <(find "$pkg_dir" -type f -print0)
+
+    pkg_untracked=()
+
+    for rel_dir in "${!file_dirs[@]}"; do
+        target_dir="$TARGET/$rel_dir"
+
+        # Skip if target dir doesn't exist
+        [[ ! -d "$target_dir" && ! -L "$target_dir" ]] && continue
+
+        # Check if this directory (or an ancestor) is a folded symlink
+        check_dir="$target_dir"
+        folded=false
+        while [[ "$check_dir" != "$TARGET" && "$check_dir" != "/" ]]; do
+            if [[ -L "$check_dir" ]]; then
+                link_target="$(readlink -f "$check_dir")"
+                if [[ "$link_target" == "$DOTFILES_DIR"/* ]]; then
+                    folded=true
+                    break
+                fi
+            fi
+            check_dir="$(dirname "$check_dir")"
+        done
+        $folded && continue
+
+        # Skip broad shared directories
+        skip_this=false
+        for skip_dir in "${SKIP_DIRS[@]}"; do
+            if [[ "$target_dir" == "$skip_dir" ]]; then
+                skip_this=true
+                break
+            fi
+        done
+        $skip_this && continue
+
+        # List entries in this directory that are NOT symlinks into dotfiles
+        while IFS= read -r -d '' entry; do
+            # Skip plain directories
+            [[ -d "$entry" && ! -L "$entry" ]] && continue
+
+            if [[ -L "$entry" ]]; then
+                link_target="$(readlink -f "$entry")"
+                if [[ "$link_target" == "$DOTFILES_DIR"/* ]]; then
+                    continue  # managed by stow
+                fi
+            fi
+
+            entry_rel="${entry#"$TARGET/"}"
+            pkg_untracked+=("$entry_rel")
+        done < <(find "$target_dir" -maxdepth 1 -mindepth 1 -print0)
+    done
+
+    unset file_dirs
+
+    if [[ ${#pkg_untracked[@]} -gt 0 ]]; then
+        found_untracked=true
+        IFS=$'\n' sorted=($(sort <<<"${pkg_untracked[*]}")); unset IFS
+        echo -e "${BOLD}${YELLOW}$pkg${RESET} — untracked files in managed directories:"
+        for f in "${sorted[@]}"; do
+            full="$TARGET/$f"
+            if [[ -L "$full" ]]; then
+                link="$(readlink "$full")"
+                echo -e "  ${RED}$f${RESET} -> $link"
+            else
+                echo -e "  ${RED}$f${RESET}"
+            fi
+        done
+        echo
+    elif $VERBOSE; then
+        echo -e "${BOLD}${GREEN}$pkg${RESET} — fully tracked (or folded)"
+    fi
+done
+
+if ! $found_untracked; then
+    echo -e "${GREEN}All stow packages are fully tracked.${RESET}"
+fi
