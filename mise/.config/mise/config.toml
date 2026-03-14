@@ -79,3 +79,6 @@ oauth2c = "latest"
 [settings]
 experimental = true
 ignored_config_paths = []
+
+[settings.ruby]
+compile = false

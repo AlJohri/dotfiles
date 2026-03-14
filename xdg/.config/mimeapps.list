@@ -47,3 +47,4 @@ video/x-theora+ogg=mpv.desktop
 application/ogg=mpv.desktop
 x-scheme-handler/webcal=google-chrome.desktop
 x-scheme-handler/slack=Slack.desktop
+inode/directory=org.gnome.Nautilus.desktop
