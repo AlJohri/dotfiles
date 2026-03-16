@@ -52,5 +52,6 @@
 	helper = !gh auth git-credential
 [credential]
 	helper = cache --timeout 7200
-	helper = git-credential-oauth
+	# Git automatically prepends "git-credential-" to the helper name
+	helper = oauth
 
