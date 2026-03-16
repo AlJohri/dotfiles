@@ -98,6 +98,9 @@ if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" 
     curl -fsSL https://claude.ai/install.sh | bash
 fi
 
+echo "==> Installing Claude Code MCP servers..."
+"$DOTFILES_DIR/scripts/bin/claude-code-install-mcp-servers.sh"
+
 # code-server is installed via mise (see mise config).
 if [ ! -f "$HOME/.config/code-server/.env" ]; then
     echo "==> Generating code-server password..."

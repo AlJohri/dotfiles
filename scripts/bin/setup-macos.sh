@@ -32,6 +32,14 @@ DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
 cd "$DOTFILES_DIR"
 git submodule update --init
 
+if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" ]]; then
+    echo "==> Installing Claude Code..."
+    curl -fsSL https://claude.ai/install.sh | bash
+fi
+
+echo "==> Installing Claude Code MCP servers..."
+"$DOTFILES_DIR/scripts/bin/claude-code-install-mcp-servers.sh"
+
 echo "==> Stowing dotfiles..."
 make stow-portable
 
