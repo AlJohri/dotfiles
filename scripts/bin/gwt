@@ -6,8 +6,41 @@ if [ $# -eq 0 ]; then
   exit 0
 fi
 
+if [ "$1" = "prune" ]; then
+  # First, let git clean up worktrees with missing directories
+  echo "Pruning worktrees with missing directories..." >&2
+  git worktree prune -v >&2
+
+  # Then, remove worktrees whose remote branch has been deleted
+  echo "Checking for worktrees with deleted remote branches..." >&2
+  git fetch --prune >&2
+  git worktree list --porcelain | while IFS= read -r line; do
+    case "$line" in
+      "worktree "*)
+        wt_path="${line#worktree }"
+        ;;
+      "branch "*)
+        branch_ref="${line#branch }"
+        branch_name="${branch_ref#refs/heads/}"
+        # Skip the main worktree (bare/main branch)
+        REPO_ROOT="$(git worktree list | head -1 | awk '{print $1}')"
+        if [ "$wt_path" = "$REPO_ROOT" ]; then
+          continue
+        fi
+        # Check if remote tracking branch still exists
+        if ! git show-ref --verify --quiet "refs/remotes/origin/$branch_name"; then
+          echo "Removing worktree '$wt_path' (branch '$branch_name' no longer on remote)" >&2
+          git worktree remove "$wt_path" >&2
+        fi
+        ;;
+    esac
+  done
+  echo "Done." >&2
+  exit 0
+fi
+
 if [ $# -ne 1 ]; then
-  echo "Usage: gwt [<branch>]" >&2
+  echo "Usage: gwt [<branch>|prune]" >&2
   exit 1
 fi
 
