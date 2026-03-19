@@ -13,5 +13,11 @@
   },
   "voiceEnabled": true,
   "skipDangerousModePermissionPrompt": true,
-  "claudeInChromeDefaultEnabled": true
+  "claudeInChromeDefaultEnabled": true,
+  "model": "sonnet",
+  "permissions": {
+    "deny": [
+      "mcp__incidentio__create_incident_update"
+    ]
+  }
 }

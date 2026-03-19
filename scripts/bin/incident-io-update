@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage: incident-io-update <incident_id> <message> [--severity NAME] [--status-id ID] [--next-update-minutes N]
+#
+# Requires:
+#   INCIDENT_IO_ORG_ID env var (optional override; derived from browser session by default)
+#   Chrome logged into app.incident.io
+#   uvx (uv-based tool runner) and jq installed
+
+INCIDENT_REF="${1:?Usage: incident-io-update <incident_id> <message> [options]}"
+MESSAGE="${2:?Usage: incident-io-update <incident_id> <message> [options]}"
+shift 2
+
+# Omitting to_incident_status_id / to_severity_id preserves current values (verified empirically)
+STATUS_ID=""
+SEVERITY_ID=""
+NEXT_UPDATE_MINUTES=1440
+
+SEVERITY_NAME=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --status-id)     STATUS_ID="$2";           shift 2 ;;
+    --severity)      SEVERITY_NAME="$2";       shift 2 ;;
+    --next-update-minutes) NEXT_UPDATE_MINUTES="$2"; shift 2 ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+# Extract browser cookies
+COOKIE_HEADER=$(uvx get-browser-cookies --domain app.incident.io --browser chrome \
+  | jq -rs '[.[] | "\(.name)=\(.value)"] | join("; ")')
+
+if [[ -z "$COOKIE_HEADER" ]]; then
+  echo "Error: no cookies found for app.incident.io — are you logged in to Chrome?" >&2
+  exit 1
+fi
+
+# Derive org ID from identity endpoint (override with INCIDENT_IO_ORG_ID env var if needed)
+ORG_ID="${INCIDENT_IO_ORG_ID:-$(curl -sf "https://app.incident.io/api/identity/self?timezone=UTC" \
+  -H "Cookie: ${COOKIE_HEADER}" | jq -r '.identity.organisation_id')}"
+
+if [[ -z "$ORG_ID" || "$ORG_ID" == "null" ]]; then
+  echo "Error: could not determine organisation ID — are you logged in to Chrome?" >&2
+  exit 1
+fi
+
+# Resolve severity name to ID if --severity was used (case-insensitive)
+if [[ -n "$SEVERITY_NAME" ]]; then
+  SEVERITY_ID=$(curl -sf "https://app.incident.io/api/severities" \
+    -H "Cookie: ${COOKIE_HEADER}" -H "x-incident-organisation-id: ${ORG_ID}" \
+    | jq -r --arg name "$SEVERITY_NAME" '.severities[] | select(.name | ascii_downcase == ($name | ascii_downcase)) | .id')
+  if [[ -z "$SEVERITY_ID" || "$SEVERITY_ID" == "null" ]]; then
+    echo "Error: unknown severity '${SEVERITY_NAME}'" >&2
+    exit 1
+  fi
+fi
+
+# Resolve incident ID: accept opaque ID (01KM2...) or INC-32 style reference
+if [[ "$INCIDENT_REF" =~ ^INC-([0-9]+)$ ]]; then
+  INCIDENT_ID=$(curl -sf "https://app.incident.io/api/incidents/${BASH_REMATCH[1]}" \
+    -H "Cookie: ${COOKIE_HEADER}" -H "x-incident-organisation-id: ${ORG_ID}" \
+    | jq -r '.incident.id')
+else
+  INCIDENT_ID="$INCIDENT_REF"
+fi
+
+if [[ -z "$INCIDENT_ID" || "$INCIDENT_ID" == "null" ]]; then
+  echo "Error: could not resolve incident '${INCIDENT_REF}'" >&2
+  exit 1
+fi
+
+# Build ProseMirror text_node message
+MESSAGE_JSON=$(jq -n --arg text "$MESSAGE" '{
+  text_node: {
+    type: "doc",
+    content: [{
+      type: "paragraph",
+      content: [{ type: "text", text: $text }]
+    }]
+  }
+}')
+
+# Build full request body
+BODY=$(jq -n \
+  --argjson message "$MESSAGE_JSON" \
+  --arg status_id "$STATUS_ID" \
+  --arg severity_id "$SEVERITY_ID" \
+  --argjson next_update "$NEXT_UPDATE_MINUTES" \
+  '{
+    custom_field_entries: [],
+    incident_role_assignments: [],
+    incident_timestamp_values: [],
+    message: $message,
+    next_update_in_minutes: $next_update,
+    summary_source: "human"
+  }
+  | if $status_id != "" then . + {to_incident_status_id: $status_id} else . end
+  | if $severity_id != "" then . + {to_severity_id: $severity_id} else . end
+')
+
+curl -s -f \
+  -X POST "https://app.incident.io/api/incidents/${INCIDENT_ID}/actions/update" \
+  -H "Content-Type: application/json" \
+  -H "x-incident-organisation-id: ${ORG_ID}" \
+  -H "Cookie: ${COOKIE_HEADER}" \
+  -d "$BODY" \
+  | jq '{status: .incident.incident_status.name, severity: .incident.severity.name, updated_at: .incident.updated_at}'
