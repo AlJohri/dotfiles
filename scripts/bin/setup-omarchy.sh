@@ -9,6 +9,18 @@ sudo pacman -Sy
 # github-cli is also installed via mise, but we need it here early so
 # `gh auth token` is available to provide GITHUB_TOKEN for mise install,
 # avoiding GitHub API rate limits.
+echo "==> Detecting GPU for 32-bit Vulkan driver..."
+gpu_info=$(lspci | grep -iE 'VGA|3D|Display')
+if echo "$gpu_info" | grep -qi 'AMD/ATI\|Radeon'; then
+    echo "    AMD GPU detected, installing lib32-vulkan-radeon..."
+    sudo pacman -S --noconfirm --needed lib32-vulkan-radeon
+else
+    echo "ERROR: Could not detect a supported GPU vendor." >&2
+    echo "  lspci output: $gpu_info" >&2
+    echo "  See https://wiki.archlinux.org/title/Vulkan#Installation for the correct lib32-vulkan-driver package." >&2
+    exit 1
+fi
+
 echo "==> Installing extra packages (not in omarchy-base)..."
 # rendering images: kitten icat image.png, chafa image.png
 sudo pacman -S --noconfirm --needed \
@@ -42,11 +54,6 @@ sudo pacman -S --noconfirm --needed \
     chafa \
     steam \
     wine
-
-if lspci | grep -q 'VGA.*AMD/ATI'; then
-    echo "==> AMD GPU detected, installing 32-bit Vulkan driver..."
-    sudo pacman -S --noconfirm --needed lib32-vulkan-radeon
-fi
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
