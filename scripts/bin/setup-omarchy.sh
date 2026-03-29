@@ -80,7 +80,7 @@ yay -S --noconfirm --needed \
     libappindicator-gtk3 \
     proton-ge-custom
 
-if [ -n "$SSH_CONNECTION" ]; then
+if [ -n "${SSH_CONNECTION:-}" ]; then
     echo "==> SSH session detected, skipping fingerprint setup (requires physical access)."
 else
     fprint_output=$(fprintd-list "$USER" 2>&1 || true)
