@@ -10,6 +10,8 @@ Given `/mise <tool>`, figure out if the tool can be installed via [mise](https:/
 
 Mise supports many backends beyond its built-in registry, so a tool not appearing in `mise search` does NOT mean it can't be installed. You must explore multiple backends.
 
+**IMPORTANT: Never use the `ubi` backend.** It produces broken installs too often. If `ubi` is the only option for a tool, skip it and try other backends instead.
+
 ## Step 1: Check the mise registry first
 
 Run `mise search <tool>` to see if there's a direct match or close match in the registry.
@@ -21,8 +23,8 @@ If a match is found, skip to Step 3 using that short name (e.g. `ripgrep`, `neov
 If `mise search` didn't find a match, try to find the tool across mise's backends. Research in this order:
 
 1. **GitHub Releases** — Search GitHub for the project. If you find a repo that publishes binary releases, the tool can likely be installed via:
-   - `github:<owner>/<repo>` (uses [aqua](https://mise.jdx.dev/dev-tools/backends/ubi.html) or [ubi](https://mise.jdx.dev/dev-tools/backends/ubi.html) under the hood)
-   - `ubi:<owner>/<repo>` (explicitly use the [ubi backend](https://mise.jdx.dev/dev-tools/backends/ubi.html))
+   - `github:<owner>/<repo>` (uses [aqua](https://mise.jdx.dev/dev-tools/backends/aqua.html) under the hood)
+   - **Do NOT use `ubi:<owner>/<repo>`** — the ubi backend is unreliable and must not be used.
 
 2. **PyPI** — If the tool is a Python package, it can be installed via:
    - `pipx:<package>` ([pipx backend](https://mise.jdx.dev/dev-tools/backends/pipx.html))
