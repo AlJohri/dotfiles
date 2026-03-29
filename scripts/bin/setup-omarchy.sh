@@ -107,7 +107,7 @@ if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" 
 fi
 
 echo "==> Installing Claude Code MCP servers..."
-"$DOTFILES_DIR/scripts/bin/claude-code-install-mcp-servers.sh"
+"$DOTFILES_DIR/scripts/bin/setup-claude-code-mcp-servers.sh"
 
 echo "==> Configuring Claude Code settings..."
 "$DOTFILES_DIR/scripts/bin/setup-claude-code-settings.sh"
