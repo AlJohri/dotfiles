@@ -39,7 +39,9 @@ sudo pacman -S --noconfirm --needed \
     zed \
     pandoc-cli \
     kitty \
-    chafa
+    chafa \
+    steam \
+    wine
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -75,7 +77,8 @@ yay -S --noconfirm --needed \
     dropbox \
     dropbox-cli \
     nautilus-dropbox \
-    libappindicator-gtk3
+    libappindicator-gtk3 \
+    proton-ge-custom
 
 if [ -n "$SSH_CONNECTION" ]; then
     echo "==> SSH session detected, skipping fingerprint setup (requires physical access)."
