@@ -1,5 +1,21 @@
 {
   "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Read(//home/aljohri/.config/waybar/**)",
+      "Bash(stow --help)",
+      "Bash(readlink -f ~/.bashrc)",
+      "Bash(hyprctl monitors:*)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "WebFetch(domain:zsh.sourceforge.io)",
+      "Bash(systemctl:*)"
+    ],
+    "deny": [
+      "mcp__incidentio__create_incident_update"
+    ],
+    "ask": []
+  },
   "enabledPlugins": {
     "rust-analyzer-lsp@claude-plugins-official": false,
     "code-review@claude-plugins-official": false,
@@ -12,11 +28,5 @@
     "playground@claude-plugins-official": false
   },
   "voiceEnabled": true,
-  "skipDangerousModePermissionPrompt": true,
-  "claudeInChromeDefaultEnabled": true,
-  "permissions": {
-    "deny": [
-      "mcp__incidentio__create_incident_update"
-    ]
-  }
+  "skipDangerousModePermissionPrompt": true
 }

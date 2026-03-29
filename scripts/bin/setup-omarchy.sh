@@ -43,6 +43,11 @@ sudo pacman -S --noconfirm --needed \
     steam \
     wine
 
+if lspci | grep -q 'VGA.*AMD/ATI'; then
+    echo "==> AMD GPU detected, installing 32-bit Vulkan driver..."
+    sudo pacman -S --noconfirm --needed lib32-vulkan-radeon
+fi
+
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
 DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
@@ -103,6 +108,9 @@ fi
 
 echo "==> Installing Claude Code MCP servers..."
 "$DOTFILES_DIR/scripts/bin/claude-code-install-mcp-servers.sh"
+
+echo "==> Configuring Claude Code settings..."
+"$DOTFILES_DIR/scripts/bin/setup-claude-code-settings.sh"
 
 # code-server is installed via mise (see mise config).
 if [ ! -f "$HOME/.config/code-server/.env" ]; then
