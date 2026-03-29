@@ -78,6 +78,9 @@ oauth2c = "latest"
 "conda:clang" = "latest"
 deno = "latest"
 "github:cometkim/op-fast" = "latest"
+"github:bojand/ghz" = "latest"
+"pipx:huggingface_hub" = "latest"
+"github:AlJohri/coraza-validate" = "0.1.0"
 
 [settings]
 experimental = true
