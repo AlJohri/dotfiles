@@ -1,5 +1,6 @@
 {
   "remoteControlAtStartup": true,
   "claudeInChromeDefaultEnabled": true,
-  "verbose": true
+  "verbose": true,
+  "showSpinnerTree": true
 }
