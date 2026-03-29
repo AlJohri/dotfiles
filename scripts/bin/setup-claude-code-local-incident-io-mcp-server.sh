@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Installs MCP servers for Claude Code using `claude mcp add`.
-# Idempotent: re-running overwrites existing entries with the same name.
+# DEPRECATED: The local Go-based MCP server is being deprecated.
+# See: https://github.com/incident-io/incidentio-mcp-golang/commit/b94bc15b990b3bbd035b50d9bfed738f01e02bbe
+# Use the remote MCP server instead: https://docs.incident.io/ai/remote-mcp
+#
+# Sets up the local incident.io MCP server for Claude Code.
+# Uses the Go-based MCP server with an API key from 1Password.
+# Idempotent: re-running overwrites the existing entry.
 
 missing=()
 for cmd in claude go op op-fast; do
@@ -25,7 +30,7 @@ echo "==> Priming op-fast cache..."
 OP_ACCOUNT=seltz.1password.com op-fast read "op://Private/Incident.io Admin API Key/credential" >/dev/null
 echo "    op-fast cache primed."
 
-echo "==> Installing Claude Code MCP servers..."
+echo "==> Setting up local incident.io MCP server..."
 
 claude mcp remove incidentio --scope user 2>/dev/null || true
 claude mcp add incidentio --scope user -- \

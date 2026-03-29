@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: journal-append <heading> [body]" >&2
+  echo "" >&2
+  echo "Append an interstitial journal entry to today's Obsidian journal." >&2
+  echo "" >&2
+  echo "Arguments:" >&2
+  echo "  heading   Short heading for the entry (used in ### HH:MM <heading>)" >&2
+  echo "  body      Markdown body (optional, can also be piped via stdin)" >&2
+  echo "" >&2
+  echo "Examples:" >&2
+  echo "  journal-append 'debugging auth' 'Found the root cause...'" >&2
+  echo "  echo '**bold** note' | journal-append 'quick note'" >&2
+  exit 1
+}
+
+if [ $# -lt 1 ]; then
+  usage
+fi
+
+heading="$1"
+shift
+
+# Body from arg, or stdin if piped
+if [ $# -ge 1 ]; then
+  body="$1"
+elif [ ! -t 0 ]; then
+  body=$(cat)
+else
+  body=""
+fi
+
+# Today's journal file
+date_stamp=$(date +%Y%m%d)
+time_stamp=$(date +%H:%M)
+journal_file="$HOME/Obsidian/journals/${date_stamp}.md"
+
+# Create file with header if it doesn't exist
+if [[ ! -f "$journal_file" ]]; then
+  mkdir -p "$(dirname "$journal_file")"
+  printf '# %s\n\n' "$date_stamp" > "$journal_file"
+fi
+
+# Build the entry
+entry="### ${time_stamp} ${heading}"
+if [ -n "$body" ]; then
+  entry="${entry}
+
+${body}"
+fi
+
+# Append with a blank line separator
+printf '\n%s\n' "$entry" >> "$journal_file"
+
+echo "$journal_file" >&2

@@ -1,0 +1,146 @@
+#!/usr/bin/env -S uv run --script --python 3.11
+# /// script
+# requires-python = ">=3.7, <3.12"
+# dependencies = [
+#   "slacktokens @ git+https://github.com/AlJohri/slacktokens@always-copy",
+#   "leveldb==0.201",
+#   "requests",
+# ]
+# ///
+"""
+Get Slack file/canvas info including which channels it is shared in.
+Fills the gap where MCP/search tools don't expose channel associations.
+
+Usage: slack-file-info <file-id-or-permalink-url>
+
+Tokens are extracted automatically from the local Slack desktop app
+using https://github.com/hraftery/slacktokens — no manual token setup needed.
+"""
+
+import sys
+import re
+import time
+import logging
+import datetime
+import requests
+import slacktokens
+
+logging.basicConfig(
+    level=logging.DEBUG if "SLACK_FILE_INFO_DEBUG" in __import__("os").environ else logging.WARNING,
+    format="[debug] %(message)s",
+    stream=sys.stderr,
+)
+
+
+def extract_file_id(arg: str) -> str:
+    """Extract file ID from a Slack permalink URL or return the arg as-is."""
+    if arg.startswith("http"):
+        match = re.search(r"/(F[A-Z0-9]+)(?:/|$)", arg)
+        if not match:
+            print(f"Error: could not extract file ID from URL: {arg}", file=sys.stderr)
+            sys.exit(1)
+        return match.group(1)
+    return arg
+
+
+def pick_token(workspace_url: str, tokens: dict) -> tuple[str, str]:
+    """Pick the token and cookie for the workspace matching the file URL."""
+    # Normalize workspace URL for comparison (strip trailing slash)
+    workspace_url = workspace_url.rstrip("/")
+    for url, info in tokens["tokens"].items():
+        if url.rstrip("/") == workspace_url:
+            return info["token"], tokens["cookie"]["value"]
+    # Fall back to first available workspace
+    first_url, first_info = next(iter(tokens["tokens"].items()))
+    print(
+        f"Warning: workspace {workspace_url!r} not found, using {first_url!r}",
+        file=sys.stderr,
+    )
+    return first_info["token"], tokens["cookie"]["value"]
+
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: slack-file-info <file-id-or-permalink-url>", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Tokens are extracted automatically from the Slack desktop app.", file=sys.stderr)
+        sys.exit(1)
+
+    arg = sys.argv[1]
+    file_id = extract_file_id(arg)
+
+    # Derive workspace URL from permalink (e.g. https://seltz-ai.slack.com/docs/...)
+    workspace_url = None
+    if arg.startswith("http"):
+        match = re.match(r"(https://[^/]+slack\.com)", arg)
+        if match:
+            workspace_url = match.group(1)
+
+    try:
+        t0 = time.monotonic()
+        tokens = slacktokens.get_tokens_and_cookie()
+        logging.debug(f"token extraction took {time.monotonic() - t0:.3f}s")
+    except Exception as e:
+        print(f"Error extracting Slack tokens: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if not tokens["tokens"]:
+        print("Error: no Slack workspaces found. Is the Slack desktop app installed?", file=sys.stderr)
+        sys.exit(1)
+
+    if workspace_url:
+        token, cookie = pick_token(workspace_url, tokens)
+    else:
+        first_url, first_info = next(iter(tokens["tokens"].items()))
+        token, cookie = first_info["token"], tokens["cookie"]["value"]
+
+    t0 = time.monotonic()
+    resp = requests.get(
+        "https://slack.com/api/files.info",
+        params={"file": file_id},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Cookie": f"d={cookie}",
+        },
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    logging.debug(f"files.info API call took {time.monotonic() - t0:.3f}s")
+
+    if not data.get("ok"):
+        print(f"Error from Slack API: {data.get('error', 'unknown')}", file=sys.stderr)
+        sys.exit(1)
+
+    f = data["file"]
+    created = datetime.datetime.fromtimestamp(f["created"]).strftime("%Y-%m-%d %H:%M:%S")
+
+    print(f"Title:    {f.get('title', '(untitled)')}")
+    print(f"Type:     {f.get('pretty_type', f.get('filetype', 'unknown'))}")
+    print(f"ID:       {f['id']}")
+    print(f"Created:  {created}")
+    print(f"User:     {f.get('user', 'unknown')}")
+    print()
+
+    channels = f.get("channels", [])
+    groups = f.get("groups", [])
+    ims = f.get("ims", [])
+    shares = f.get("shares", {})
+    all_shares = {**shares.get("public", {}), **shares.get("private", {})}
+
+    print("=== Channel Associations ===")
+    print(f"Public channels:  {', '.join(channels) if channels else '(none)'}")
+    print(f"Private channels: {', '.join(groups) if groups else '(none)'}")
+    print(f"DMs:              {', '.join(ims) if ims else '(none)'}")
+
+    if all_shares:
+        print()
+        print("=== Shares Detail ===")
+        for ch_id, msgs in all_shares.items():
+            for msg in (msgs if isinstance(msgs, list) else [msgs]):
+                ch_name = msg.get("channel_name", ch_id)
+                ts = msg.get("ts", "")
+                print(f"  #{ch_name} ({ch_id})  ts={ts}")
+
+
+if __name__ == "__main__":
+    main()
