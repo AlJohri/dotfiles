@@ -16,10 +16,16 @@ for dir in */; do
             branch=$default_branch
         fi
 
-        if git -C "$dir" pull; then
-            echo -e "\033[32m✓ ${dir%/} (${branch}) succeeded\033[0m"
+        if [[ "$branch" != "main" ]]; then
+            branch_display="\033[33m${branch}\033[0m"
         else
-            echo -e "\033[31m✗ ${dir%/} (${branch}) failed\033[0m"
+            branch_display="${branch}"
+        fi
+
+        if git -C "$dir" pull; then
+            echo -e "\033[32m✓ ${dir%/}\033[0m (${branch_display}) \033[32msucceeded\033[0m"
+        else
+            echo -e "\033[31m✗ ${dir%/}\033[0m (${branch_display}) \033[31mfailed\033[0m"
         fi
     fi
 done

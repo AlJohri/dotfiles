@@ -2,7 +2,63 @@
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
-  git worktree list
+  # Try to enrich output with PR numbers via a single batched gh call
+  if command -v gh &>/dev/null && command -v jq &>/dev/null; then
+    # Build branch→PR map from one network call; fall back silently on failure
+    pr_json=$(timeout 5s gh pr list --json number,headRefName,url --limit 200 --state all 2>/dev/null || true)
+  fi
+
+  # Parse worktrees and print enriched listing
+  current_worktree=""
+  current_branch=""
+  current_commit=""
+  current_bare=""
+  while IFS= read -r line; do
+    case "$line" in
+      "worktree "*)
+        current_worktree="${line#worktree }"
+        current_branch=""
+        current_commit=""
+        current_bare=""
+        ;;
+      "HEAD "*)
+        current_commit="${line#HEAD }"
+        ;;
+      "branch "*)
+        branch_ref="${line#branch }"
+        current_branch="${branch_ref#refs/heads/}"
+        ;;
+      "bare")
+        current_bare="1"
+        ;;
+      "")
+        # End of a stanza — print the line
+        if [ -n "$current_worktree" ]; then
+          short_commit="${current_commit:0:7}"
+          if [ -n "$current_bare" ]; then
+            label="(bare)"
+          elif [ -n "$current_branch" ]; then
+            label="[$current_branch]"
+          else
+            label="(detached)"
+          fi
+          pr_col=""
+          if [ -n "$pr_json" ] && [ -n "$current_branch" ]; then
+            pr_info=$(printf '%s' "$pr_json" | jq -r --arg b "$current_branch" '.[] | select(.headRefName==$b) | "#\(.number)\t\(.url)"' 2>/dev/null | head -1)
+            if [ -n "$pr_info" ]; then
+              pr_num="${pr_info%%$'\t'*}"
+              pr_url="${pr_info#*$'\t'}"
+              ESC=$'\e'
+              BEL=$'\a'
+              pr_col="  ${ESC}]8;;${pr_url}${BEL}${ESC}[36m${pr_num}${ESC}]8;;${BEL}${ESC}[0m"
+            fi
+          fi
+          printf "%-50s  %s  %s%s\n" "$current_worktree" "$short_commit" "$label" "$pr_col"
+        fi
+        current_worktree=""
+        ;;
+    esac
+  done < <(git worktree list --porcelain; echo "")
   exit 0
 fi
 
