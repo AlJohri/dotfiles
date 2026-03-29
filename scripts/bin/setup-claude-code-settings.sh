@@ -42,4 +42,15 @@ else
     echo "    All settings already up to date."
 fi
 
+echo "==> Trusting home directory workspace..."
+
+trusted=$(jq -r '.projects["/home/aljohri"].hasTrustDialogAccepted // false' "$CLAUDE_JSON")
+if [ "$trusted" = "true" ]; then
+    echo "    Already trusted."
+else
+    tmp=$(mktemp)
+    jq '.projects["/home/aljohri"].hasTrustDialogAccepted = true' "$CLAUDE_JSON" > "$tmp" && mv "$tmp" "$CLAUDE_JSON"
+    echo "    /home/aljohri: false -> true"
+fi
+
 echo "==> Done."
