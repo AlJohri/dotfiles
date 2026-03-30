@@ -22,8 +22,10 @@ else
 fi
 
 echo "==> Installing extra packages (not in omarchy-base)..."
+# bc: arbitrary-precision calculator language, also used by scripts that need shell arithmetic with decimals
 # rendering images: kitten icat image.png, chafa image.png
 sudo pacman -S --noconfirm --needed \
+    bc \
     stow \
     make \
     most \
@@ -53,7 +55,9 @@ sudo pacman -S --noconfirm --needed \
     kitty \
     chafa \
     steam \
-    wine
+    wine \
+    fwupd \
+    dmidecode
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
