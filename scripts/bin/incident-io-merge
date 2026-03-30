@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage: incident-io-merge <source_incident> <target_incident>
+#
+# Merges source incident INTO target incident (source gets "Merged" status).
+# Accepts INC-32 style references or opaque IDs.
+#
+# Requires:
+#   Chrome logged into app.incident.io
+#   uvx (uv-based tool runner) and jq installed
+
+SOURCE_REF="${1:?Usage: incident-io-merge <source_incident> <target_incident>}"
+TARGET_REF="${2:?Usage: incident-io-merge <source_incident> <target_incident>}"
+
+# Extract browser cookies
+COOKIE_HEADER=$(uvx get-browser-cookies --domain app.incident.io --browser chrome \
+  | jq -rs '[.[] | "\(.name)=\(.value)"] | join("; ")')
+
+if [[ -z "$COOKIE_HEADER" ]]; then
+  echo "Error: no cookies found for app.incident.io — are you logged in to Chrome?" >&2
+  exit 1
+fi
+
+# Derive org ID from identity endpoint
+ORG_ID="${INCIDENT_IO_ORG_ID:-$(curl -sf "https://app.incident.io/api/identity/self?timezone=UTC" \
+  -H "Cookie: ${COOKIE_HEADER}" | jq -r '.identity.organisation_id')}"
+
+if [[ -z "$ORG_ID" || "$ORG_ID" == "null" ]]; then
+  echo "Error: could not determine organisation ID — are you logged in to Chrome?" >&2
+  exit 1
+fi
+
+# Resolve incident reference to opaque ID
+resolve_id() {
+  local ref="$1"
+  if [[ "$ref" =~ ^INC-([0-9]+)$ ]]; then
+    curl -sf "https://app.incident.io/api/incidents/${BASH_REMATCH[1]}" \
+      -H "Cookie: ${COOKIE_HEADER}" -H "x-incident-organisation-id: ${ORG_ID}" \
+      | jq -r '.incident.id'
+  else
+    echo "$ref"
+  fi
+}
+
+SOURCE_ID=$(resolve_id "$SOURCE_REF")
+TARGET_ID=$(resolve_id "$TARGET_REF")
+
+if [[ -z "$SOURCE_ID" || "$SOURCE_ID" == "null" ]]; then
+  echo "Error: could not resolve source incident '${SOURCE_REF}'" >&2
+  exit 1
+fi
+
+if [[ -z "$TARGET_ID" || "$TARGET_ID" == "null" ]]; then
+  echo "Error: could not resolve target incident '${TARGET_REF}'" >&2
+  exit 1
+fi
+
+# Merged status ID (from incident.io org config)
+MERGED_STATUS_ID="01KG24TNRES4G9N439WT4FP0FZ"
+
+BODY=$(jq -n \
+  --arg merged_into "$TARGET_ID" \
+  --arg status_id "$MERGED_STATUS_ID" \
+  '{
+    custom_field_entries: [],
+    incident_role_assignments: [],
+    incident_timestamp_values: [],
+    merged_into_incident_id: $merged_into,
+    next_update_in_minutes: 30,
+    summary_source: "human",
+    to_incident_status_id: $status_id
+  }')
+
+echo "Merging ${SOURCE_REF} (${SOURCE_ID}) into ${TARGET_REF} (${TARGET_ID})..."
+
+HTTP_CODE=$(curl -s -o /tmp/incident-io-merge-response.json -w '%{http_code}' \
+  -X POST "https://app.incident.io/api/incidents/${SOURCE_ID}/actions/update" \
+  -H "Content-Type: application/json" \
+  -H "x-incident-organisation-id: ${ORG_ID}" \
+  -H "Cookie: ${COOKIE_HEADER}" \
+  -d "$BODY")
+
+if [[ "$HTTP_CODE" == "200" ]]; then
+  jq '{source_reference: .incident.reference, status: .incident.incident_status.name}' /tmp/incident-io-merge-response.json
+elif [[ "$HTTP_CODE" == "422" ]]; then
+  MSG=$(jq -r '.errors[0].message // "unknown error"' /tmp/incident-io-merge-response.json)
+  echo "  Skipped: ${MSG}" >&2
+  exit 0
+else
+  echo "  Error (HTTP ${HTTP_CODE}):" >&2
+  cat /tmp/incident-io-merge-response.json >&2
+  exit 1
+fi
