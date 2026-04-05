@@ -1,0 +1,77 @@
+#!/usr/bin/env -S uv run --script --python 3.11
+# /// script
+# requires-python = ">=3.7, <3.12"
+# dependencies = [
+#   "slacktokens @ git+https://github.com/AlJohri/slacktokens@always-copy",
+#   "leveldb==0.201",
+# ]
+# ///
+"""
+Print Slack token and cookie extracted from the local Slack desktop app.
+
+The Slack desktop app uses xoxc- session tokens which ALWAYS require the
+companion cookie for authentication. Both are printed by default as shell
+export statements.
+
+Usage:
+  eval "$(slack-token)"                  # export SLACK_TOKEN and SLACK_COOKIE
+  eval "$(slack-token --workspace URL)"  # pick a specific workspace
+  slack-token --json                     # {"token": "...", "cookie": "..."}
+
+Examples:
+  # Use token + cookie in a curl command
+  eval "$(slack-token)" && curl -H "Authorization: Bearer $SLACK_TOKEN" -H "Cookie: $SLACK_COOKIE" https://slack.com/api/auth.test
+
+  # Use in Python
+  import json, subprocess
+  creds = json.loads(subprocess.check_output(["slack-token", "--json"]))
+  headers = {"Authorization": f"Bearer {creds['token']}", "Cookie": creds["cookie"]}
+"""
+
+import sys
+import json
+import argparse
+import slacktokens
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Extract Slack token from desktop app")
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    parser.add_argument("--workspace", help="Workspace URL to match (e.g. https://seltz-ai.slack.com)")
+    args = parser.parse_args()
+
+    try:
+        tokens = slacktokens.get_tokens_and_cookie()
+    except Exception as e:
+        print(f"Error extracting Slack tokens: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if not tokens["tokens"]:
+        print("Error: no Slack workspaces found. Is the Slack desktop app running?", file=sys.stderr)
+        sys.exit(1)
+
+    if args.workspace:
+        ws = args.workspace.rstrip("/")
+        for url, info in tokens["tokens"].items():
+            if url.rstrip("/") == ws:
+                token = info["token"]
+                break
+        else:
+            print(f"Error: workspace {ws!r} not found", file=sys.stderr)
+            print(f"Available: {', '.join(tokens['tokens'].keys())}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        first_info = next(iter(tokens["tokens"].values()))
+        token = first_info["token"]
+
+    cookie = tokens["cookie"]["value"]
+
+    if args.json:
+        print(json.dumps({"token": token, "cookie": f"d={cookie}"}))
+    else:
+        print(f"export SLACK_TOKEN={token}")
+        print(f"export SLACK_COOKIE='d={cookie}'")
+
+
+if __name__ == "__main__":
+    main()
