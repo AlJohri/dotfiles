@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Convert the current git repo to a bare repo and create a worktree for the default branch.
+
+# Determine repo root and whether it's already bare
+ALREADY_BARE="$(git rev-parse --is-bare-repository 2>/dev/null)"
+if [ "$ALREADY_BARE" = "true" ]; then
+  GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+  GIT_DIR="$(cd "$GIT_DIR" && pwd)"
+  # If git-dir is a .git subdirectory, the repo root is its parent
+  if [ "$(basename "$GIT_DIR")" = ".git" ]; then
+    REPO_ROOT="$(dirname "$GIT_DIR")"
+  else
+    REPO_ROOT="$GIT_DIR"
+  fi
+else
+  REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+    echo "Error: not inside a git repository." >&2
+    exit 1
+  }
+  # Check for dirty state (tracked changes or untracked files)
+  DIRTY=""
+  if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+    DIRTY="yes"
+  fi
+  if [ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]; then
+    DIRTY="yes"
+  fi
+
+  CURRENT_BRANCH="$(git branch --show-current 2>/dev/null || true)"
+fi
+
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+if [ "$ALREADY_BARE" != "true" ]; then
+  echo "This will:" >&2
+  echo "  1. Mark the repo as bare" >&2
+  echo "  2. Delete all working tree files from: $REPO_ROOT" >&2
+  echo "  3. Create a worktree for '$DEFAULT_BRANCH'" >&2
+  if [ -n "$DIRTY" ]; then
+    echo "  4. Move dirty changes to a 'dirty-<hash>' worktree on '$CURRENT_BRANCH'" >&2
+  fi
+  echo >&2
+  read -rp "Continue? [y/N] " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Aborted." >&2
+    exit 1
+  fi
+fi
+
+cd "$REPO_ROOT"
+
+# Stash dirty changes before converting (including untracked files)
+STASHED=""
+if [ "$ALREADY_BARE" != "true" ] && [ -n "$DIRTY" ]; then
+  git stash push --include-untracked -m "git-make-bare: dirty changes" >&2
+  STASHED="yes"
+  echo "Stashed dirty changes" >&2
+fi
+
+# Mark as bare (idempotent)
+if [ "$ALREADY_BARE" != "true" ]; then
+  git config core.bare true
+  echo "Set core.bare = true" >&2
+fi
+
+# Ensure fetch refspec tracks remote branches
+CURRENT_FETCH=$(git config remote.origin.fetch 2>/dev/null || true)
+if [ "$CURRENT_FETCH" != "+refs/heads/*:refs/remotes/origin/*" ]; then
+  git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+  echo "Fixed remote.origin.fetch refspec" >&2
+fi
+
+# Delete working tree files (everything except .git/ and .claude/)
+find "$REPO_ROOT" -maxdepth 1 -not -name '.git' -not -name '.claude' -not -path "$REPO_ROOT" -exec rm -rf {} +
+echo "Cleaned working tree files" >&2
+
+# Create worktree for the default branch (skip if it already exists)
+WORKTREE_DIR="$REPO_ROOT/.claude/worktrees/$DEFAULT_BRANCH"
+if git worktree list | grep -qF "[$DEFAULT_BRANCH]"; then
+  echo "Worktree for '$DEFAULT_BRANCH' already exists" >&2
+else
+  mkdir -p "$(dirname "$WORKTREE_DIR")"
+  git worktree add "$WORKTREE_DIR" "$DEFAULT_BRANCH" >&2
+  # Ensure tracking is set (git clone --bare doesn't set up branch tracking)
+  git -C "$WORKTREE_DIR" branch --set-upstream-to="origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH" 2>/dev/null || true
+  echo "Created worktree at $WORKTREE_DIR" >&2
+fi
+
+# If we stashed dirty changes, restore them to a worktree
+if [ -n "$STASHED" ]; then
+  DIRTY_BRANCH="${CURRENT_BRANCH:-$DEFAULT_BRANCH}"
+  if [ "$DIRTY_BRANCH" = "$DEFAULT_BRANCH" ]; then
+    # Dirty changes were on the default branch — apply to its worktree directly
+    git -C "$WORKTREE_DIR" stash pop >&2
+    echo "Restored dirty changes to $WORKTREE_DIR" >&2
+  else
+    # Dirty changes were on a different branch — create a dedicated worktree
+    SHORT_HASH="$(git rev-parse --short HEAD)"
+    DIRTY_NAME="dirty-${SHORT_HASH}"
+    DIRTY_DIR="$REPO_ROOT/.claude/worktrees/$DIRTY_NAME"
+    mkdir -p "$(dirname "$DIRTY_DIR")"
+    git worktree add "$DIRTY_DIR" "$DIRTY_BRANCH" >&2
+    git -C "$DIRTY_DIR" stash pop >&2
+    echo "Restored dirty changes to $DIRTY_DIR (branch '$DIRTY_BRANCH')" >&2
+  fi
+fi
+
+echo >&2
+echo "Done. Use 'gwt $DEFAULT_BRANCH' to switch to your working tree." >&2
