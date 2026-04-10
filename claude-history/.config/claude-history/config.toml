@@ -1,0 +1,2 @@
+[resume]
+default_args = ["--dangerously-skip-permissions"]
