@@ -10,28 +10,24 @@ Show the file path to the current conversation's transcript JSONL file.
 
 ## Steps
 
-### 1. Determine the project directory
+### 1. Find the transcript
 
-Claude Code stores transcripts under `~/.claude/projects/<project-dir>/` where `<project-dir>` is the absolute working directory path with `/` replaced by `-`.
+Claude Code stores transcripts at `~/.claude/projects/<project-dir>/<session-id>.jsonl` where `<project-dir>` is the absolute working directory path with `/` replaced by `-`.
 
-Derive the project directory from the current working directory:
+Run these as **separate** bash commands (not chained), checking each result before proceeding.
+
+First, derive the project directory and find the most recent transcript:
 
 ```bash
 project_dir=$(echo "$PWD" | sed 's|/|-|g')
-transcript_base="$HOME/.claude/projects/${project_dir}"
+ls -t "$HOME/.claude/projects/${project_dir}"/*.jsonl 2>/dev/null | head -1
 ```
 
-### 2. Find the most recently modified transcript
+If the `ls` output is empty or the command fails, tell the user no transcript was found and show the project directory path so they can debug. **Do not proceed to step 2.**
 
-The current session's transcript is the most recently modified `.jsonl` file in the project directory (excluding `subagents/`):
+### 2. Extract session metadata
 
-```bash
-transcript=$(ls -t "${transcript_base}"/*.jsonl 2>/dev/null | head -1)
-```
-
-### 3. Extract session metadata
-
-Parse the first line of the transcript to get the session ID and timestamp:
+Only run this after confirming step 1 returned a valid file path. Pass the **full path from step 1** as a literal string (do not rely on shell variables from a previous command):
 
 ```bash
 python3 -c "
@@ -42,15 +38,15 @@ with open(sys.argv[1]) as f:
         sid = d.get('sessionId', '')
         ts = d.get('timestamp', '')
         cwd = d.get('cwd', '')
-        if sid:
+        if sid and ts and cwd:
             print(f'Session ID: {sid}')
             print(f'Started:    {ts}')
             print(f'CWD:        {cwd}')
             break
-" "$transcript"
+" "/full/path/from/step1.jsonl"
 ```
 
-### 4. Present the result
+### 3. Present the result
 
 Show the user:
 - **Transcript path** (the full path to the `.jsonl` file)
