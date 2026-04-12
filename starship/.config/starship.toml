@@ -1,6 +1,6 @@
 add_newline = true
 command_timeout = 200
-format = "$hostname[$directory$git_branch$git_status]($style)$character"
+format = "$hostname[${custom.dir}$git_branch$git_status]($style)$character"
 
 [hostname]
 ssh_only = true
@@ -11,10 +11,18 @@ error_symbol = "[✗](bold cyan)"
 success_symbol = "[❯](bold cyan)"
 
 [directory]
+disabled = true
 truncation_length = 2
 truncation_symbol = "…/"
 repo_root_style = "bold cyan"
 repo_root_format = "[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
+
+[custom.dir]
+description = "Directory display with worktree-aware repo name"
+when = " "
+format = "[$output]($style) "
+style = "bold cyan"
+command = "starship-dir"
 
 [git_branch]
 format = "[$branch]($style) "

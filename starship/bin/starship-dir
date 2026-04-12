@@ -1,0 +1,63 @@
+#!/bin/sh
+# Custom directory display for starship prompt.
+# Remaps worktree paths to show the parent repo name instead of the worktree leaf.
+# Truncates to 2 path components (matching starship's truncation_length = 2).
+
+truncate_path() {
+  # Show last N components of a path, prefixed with …/ if truncated
+  n=2
+  path="$1"
+  # Count components
+  IFS='/' count=0
+  for part in $path; do
+    if [ -n "$part" ]; then count=$((count + 1)); fi
+  done
+  if [ "$count" -le "$n" ]; then
+    printf '%s' "$path"
+  else
+    # Get last N components
+    printf '…/%s' "$(echo "$path" | rev | cut -d/ -f1-"$n" | rev)"
+  fi
+}
+
+case "$PWD" in
+  */.claude/worktrees/*)
+    repo_root="${PWD%%/.claude/worktrees/*}"
+    repo_name=$(basename "$repo_root")
+    parent=$(basename "$(dirname "$repo_root")")
+    # Strip repo_root/.claude/worktrees/<branch> prefix
+    branch_and_rest="${PWD#"$repo_root"/.claude/worktrees/}"
+    rest="${branch_and_rest#*/}"
+    # If no slash was found, rest equals branch_and_rest (we're at the root)
+    if [ "$rest" = "$branch_and_rest" ]; then rest=""; fi
+    if [ -n "$rest" ]; then
+      printf '…/%s/%s/%s' "$parent" "$repo_name" "$rest"
+    else
+      printf '…/%s/%s' "$parent" "$repo_name"
+    fi
+    ;;
+  *)
+    toplevel=$(git rev-parse --show-toplevel 2>/dev/null) || true
+    if [ -z "$toplevel" ]; then
+      # Maybe a bare repo
+      is_bare=$(git rev-parse --is-bare-repository 2>/dev/null) || true
+      if [ "$is_bare" = "true" ]; then
+        toplevel="$PWD"
+      fi
+    fi
+    if [ -n "$toplevel" ]; then
+      repo_name=$(basename "$toplevel")
+      parent=$(basename "$(dirname "$toplevel")")
+      rel="${PWD#"$toplevel"}"
+      rel="${rel#/}"
+      if [ -n "$rel" ]; then
+        printf '…/%s/%s/%s' "$parent" "$repo_name" "$rel"
+      else
+        printf '…/%s/%s' "$parent" "$repo_name"
+      fi
+    else
+      home_rel=$(echo "$PWD" | sed "s|^$HOME|~|")
+      truncate_path "$home_rel"
+    fi
+    ;;
+esac
