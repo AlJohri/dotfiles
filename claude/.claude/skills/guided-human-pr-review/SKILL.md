@@ -14,7 +14,7 @@ This skill requires `patchutils` (for `filterdiff`), `delta`, and `glow` to be i
 
 ## Rendering
 
-- **Markdown context** (PR summary, review plan, per-hunk explanations): Render via `glow` by piping a heredoc through `CLICOLOR_FORCE=1 glow -s dark -w <WIDTH>`. This produces styled terminal output that fills the user's terminal width and renders correctly in Claude Code.
+- **Markdown context** (PR summary, review plan, per-hunk explanations): Render via `glow` by piping a heredoc through `CLICOLOR_FORCE=1 glow -s dracula -w <WIDTH>`. The Bash tool runs without a TTY, so `COLORTERM=truecolor` is needed to tell glow it can use full 24-bit colors (without it, glow falls back to basic 256-color mode and produces washed-out pastels). This produces styled terminal output that fills the user's terminal width and renders correctly in Claude Code.
 - **Determining terminal width:** The Bash tool runs without a TTY, so `$COLUMNS` and `tput cols` return wrong defaults. At the start of a review session, detect the real width by walking the process tree to find an ancestor with a real TTY:
   ```bash
   pid=$$; while [ "$pid" -gt 1 ]; do tty_nr=$(awk '{print $7}' /proc/$pid/stat); if [ "$tty_nr" -ne 0 ]; then stty size < /proc/$pid/fd/0 2>/dev/null | awk '{print $2}'; break; fi; pid=$(awk '{print $4}' /proc/$pid/stat); done
@@ -63,7 +63,7 @@ Some hunks may be trivially small (e.g. a single import line). In these cases, r
 Render the review plan via glow using the Bash tool:
 
 ```bash
-CLICOLOR_FORCE=1 glow -s dark -w <TERM_WIDTH> <<'EOF'
+CLICOLOR_FORCE=1 glow -s dracula -w <TERM_WIDTH> <<'EOF'
 ## PR Summary
 This PR adds a health check endpoint to the DataNode service so that
 load balancers can verify the node is alive. It introduces a lightweight
@@ -121,7 +121,7 @@ If the user wants to proceed (or confirms they're ready after chatting), continu
 
 For each step in the review plan:
 
-1. **Render context and review assessment via glow**: Render a single glow block (using `CLICOLOR_FORCE=1 glow -s dark -w <TERM_WIDTH>` with a heredoc) containing two sections:
+1. **Render context and review assessment via glow**: Render a single glow block (using `CLICOLOR_FORCE=1 glow -s dracula -w <TERM_WIDTH>` with a heredoc) containing two sections:
    - **Explanation**: 2-4 sentences explaining what this chunk does, why it exists, and how it connects to the rest of the PR.
    - **Review Assessment**: Your assessment as a code reviewer. Call out bugs, edge cases, naming issues, missing validation, performance concerns, readability problems, or design decisions worth questioning. If the code looks good, say so briefly and note why (e.g. "Clean use of X pattern, no issues spotted"). Be direct and specific — act as a thorough reviewer, not a cheerleader.
 
