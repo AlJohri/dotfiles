@@ -82,6 +82,7 @@ deno = "latest"
 "pipx:huggingface_hub" = "latest"
 "github:AlJohri/coraza-validate" = "0.1.0"
 "github:raine/claude-history" = "latest"
+"github:grafana/grafanactl" = "latest"
 
 [settings]
 experimental = true
