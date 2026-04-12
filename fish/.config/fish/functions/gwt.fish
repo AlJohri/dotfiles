@@ -5,6 +5,6 @@ function gwt
         command gwt prune
     else
         set dir (command gwt $argv)
-        and builtin cd $dir
+        and cd $dir
     end
 end

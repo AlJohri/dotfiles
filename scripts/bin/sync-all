@@ -1,31 +1,59 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 for dir in */; do
-    if [[ -d "${dir}.git" ]]; then
-        branch=$(git -C "$dir" branch --show-current)
+    repo="${dir%/}"
 
-        # If the current branch tracks a remote branch that no longer exists, switch to default branch
-        remote_branch=$(git -C "$dir" config --get "branch.${branch}.merge" 2>/dev/null || true)
-        if [[ -n "$remote_branch" ]] && ! git -C "$dir" ls-remote --exit-code --heads origin "$remote_branch" &>/dev/null; then
-            default_branch=$(git -C "$dir" remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
-            default_branch=${default_branch:-main}
-            echo -e "\033[33m⟳ ${dir%/} (${branch}) remote branch gone, switching to ${default_branch}\033[0m"
-            git -C "$dir" checkout "$default_branch"
-            branch=$default_branch
-        fi
-
-        if [[ "$branch" != "main" ]]; then
-            branch_display="\033[33m${branch}\033[0m"
-        else
-            branch_display="${branch}"
-        fi
-
-        if git -C "$dir" pull; then
-            echo -e "\033[32m✓ ${dir%/}\033[0m (${branch_display}) \033[32msucceeded\033[0m"
-        else
-            echo -e "\033[31m✗ ${dir%/}\033[0m (${branch_display}) \033[31mfailed\033[0m"
-        fi
+    # Skip non-git directories
+    if [ ! -d "${dir}.git" ] && [ ! -f "${dir}.git" ]; then
+        continue
     fi
+
+    # Fetch once per repo
+    if git -C "$dir" fetch --prune 2>/dev/null; then
+        echo -e "\033[34m⟳ ${repo}\033[0m fetched"
+    else
+        echo -e "\033[31m✗ ${repo}\033[0m fetch failed"
+        continue
+    fi
+
+    # Iterate over all worktrees (skip bare root and detached HEADs)
+    wt_path="" wt_branch="" wt_bare=""
+    while IFS= read -r line; do
+        case "$line" in
+            "worktree "*)
+                wt_path="${line#worktree }"
+                wt_branch=""
+                wt_bare=""
+                ;;
+            "branch "*)
+                branch_ref="${line#branch }"
+                wt_branch="${branch_ref#refs/heads/}"
+                ;;
+            "bare")
+                wt_bare="1"
+                ;;
+            "")
+                if [ -n "$wt_bare" ] || [ -z "$wt_branch" ] || [ -z "$wt_path" ]; then
+                    wt_path="" wt_branch="" wt_bare=""
+                    continue
+                fi
+
+                # Only fast-forward if the branch tracks a remote
+                upstream=$(git -C "$wt_path" config "branch.${wt_branch}.remote" 2>/dev/null || true)
+                if [ -z "$upstream" ]; then
+                    wt_path="" wt_branch="" wt_bare=""
+                    continue
+                fi
+
+                if git -C "$wt_path" merge --ff-only 2>/dev/null; then
+                    echo -e "  \033[32m✓ ${wt_branch}\033[0m"
+                else
+                    echo -e "  \033[33m⚠ ${wt_branch}\033[0m (not fast-forwardable or dirty)"
+                fi
+
+                wt_path="" wt_branch="" wt_bare=""
+                ;;
+        esac
+    done < <(git -C "$dir" worktree list --porcelain; echo "")
 done

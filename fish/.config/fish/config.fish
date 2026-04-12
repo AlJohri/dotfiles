@@ -8,7 +8,7 @@ alias vim=nvim
 alias happy="happy --yolo"
 alias cat='bat --paging=never --style=plain'
 alias zed='zeditor'
-alias gst='git status'
+alias gst='git_status_or_worktrees'
 alias k='kubectl'
 
 # Add ~/bin and ~/.local/bin to PATH
