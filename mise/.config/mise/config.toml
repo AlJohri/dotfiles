@@ -1,6 +1,7 @@
 [tools]
 amazon-ecr-credential-helper = "latest"
 argocd = "latest"
+argo = "latest"
 awscli = { version = "latest", symlink_bins = "true" }
 bat = "latest"
 colima = "latest"
@@ -83,10 +84,22 @@ deno = "latest"
 "github:AlJohri/coraza-validate" = "0.1.0"
 "github:raine/claude-history" = "latest"
 "github:grafana/grafanactl" = "latest"
+kafkactl = "latest"
+"asdf:mise-plugins/mise-kafka" = "apache-4.1.1"
+"github:swsnr/mdcat" = "latest"
+s5cmd = "latest"
+"aqua:rui314/mold" = "latest"
+loki-logcli = "3.6.7"
+"github:grafana/pyroscope" = "1.21.0"
+"go:github.com/google/pprof" = "latest"
+cmake = "latest"
 
 [settings]
 experimental = true
 ignored_config_paths = []
+
+[settings.github]
+use_git_credentials = true
 
 [settings.ruby]
 compile = false

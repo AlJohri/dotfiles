@@ -1,0 +1,16 @@
+[Unit]
+Description=libinput touchpad event logger (journald)
+Documentation=man:libinput-debug-events(1)
+
+[Service]
+Type=exec
+# Device path is Framework 13 AMD touchpad (AMD I2C HID). Verify with `ls /dev/input/by-path/`.
+ExecStart=/usr/bin/libinput debug-events --device /dev/input/by-path/platform-AMDI0010:03-event-mouse
+Restart=on-failure
+RestartSec=5
+SyslogIdentifier=touchpad-debug
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

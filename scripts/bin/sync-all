@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-for dir in */; do
-    repo="${dir%/}"
-
-    # Skip non-git directories
-    if [ ! -d "${dir}.git" ] && [ ! -f "${dir}.git" ]; then
-        continue
-    fi
+sync_repo() {
+    local dir="$1"
+    local repo="$2"
 
     # Fetch once per repo
     if git -C "$dir" fetch --prune 2>/dev/null; then
         echo -e "\033[34m⟳ ${repo}\033[0m fetched"
     else
         echo -e "\033[31m✗ ${repo}\033[0m fetch failed"
-        continue
+        return
     fi
 
+    # Prune worktree entries with missing directories
+    git -C "$dir" worktree prune 2>/dev/null
+
+    # Determine repo root to skip it during pruning
+    local repo_root
+    repo_root="$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+    repo_root="${repo_root%/.git}"
+
     # Iterate over all worktrees (skip bare root and detached HEADs)
-    wt_path="" wt_branch="" wt_bare=""
+    local wt_path="" wt_branch="" wt_bare=""
     while IFS= read -r line; do
         case "$line" in
             "worktree "*)
@@ -27,7 +31,7 @@ for dir in */; do
                 wt_bare=""
                 ;;
             "branch "*)
-                branch_ref="${line#branch }"
+                local branch_ref="${line#branch }"
                 wt_branch="${branch_ref#refs/heads/}"
                 ;;
             "bare")
@@ -39,7 +43,25 @@ for dir in */; do
                     continue
                 fi
 
+                # Skip the repo root itself
+                if [ "$wt_path" = "$repo_root" ]; then
+                    wt_path="" wt_branch="" wt_bare=""
+                    continue
+                fi
+
+                # Remove worktrees whose remote branch has been deleted
+                if ! git -C "$dir" show-ref --verify --quiet "refs/remotes/origin/$wt_branch"; then
+                    if git -C "$dir" worktree remove "$wt_path" 2>/dev/null; then
+                        echo -e "  \033[31m✗ ${wt_branch}\033[0m (removed — branch deleted from remote)"
+                    else
+                        echo -e "  \033[33m⚠ ${wt_branch}\033[0m (branch deleted from remote but worktree has changes)"
+                    fi
+                    wt_path="" wt_branch="" wt_bare=""
+                    continue
+                fi
+
                 # Only fast-forward if the branch tracks a remote
+                local upstream
                 upstream=$(git -C "$wt_path" config "branch.${wt_branch}.remote" 2>/dev/null || true)
                 if [ -z "$upstream" ]; then
                     wt_path="" wt_branch="" wt_bare=""
@@ -56,4 +78,22 @@ for dir in */; do
                 ;;
         esac
     done < <(git -C "$dir" worktree list --porcelain; echo "")
+}
+
+# If we're inside a bare git repo, sync just this repo
+if git rev-parse --is-bare-repository 2>/dev/null | grep -q true; then
+    sync_repo "." "$(basename "$PWD")"
+    exit 0
+fi
+
+# Otherwise, iterate over subdirectories
+for dir in */; do
+    repo="${dir%/}"
+
+    # Skip non-git directories
+    if [ ! -d "${dir}.git" ] && [ ! -f "${dir}.git" ]; then
+        continue
+    fi
+
+    sync_repo "$dir" "$repo"
 done

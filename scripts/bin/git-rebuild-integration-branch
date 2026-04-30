@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+# git-rebuild-integration-branch — force-rebuild an integration branch from
+# its base branch plus a set of in-flight feature branches.
+#
+# The set of staged branches is derived from the target ref's own merge
+# history: this script records each merge with the subject
+# "Merge 'X' into <ref>" and later reads those subjects back to reconstruct
+# the list. No external manifest file required — the branch's log IS the
+# manifest.
+#
+# Typical workflow (GitOps test branch, bors-style try-merge ref, etc.):
+#
+#   # stage a new feature for testing
+#   git rebuild-integration-branch staging --add my-feature
+#
+#   # refresh (pick up latest commits on each staged branch)
+#   git rebuild-integration-branch staging
+#
+#   # unstage a feature whose PR is abandoned
+#   git rebuild-integration-branch staging --remove abandoned-feature
+#
+#   # replace one feature with another
+#   git rebuild-integration-branch staging \
+#     --remove old-approach --add new-approach
+#
+# Branches that have already been merged into the base branch are dropped
+# automatically on every rebuild.
+#
+# Assumptions:
+#   - The remote's name is "origin" (override with -r / --remote).
+#   - The base branch is "main" (override with -b / --base).
+#   - The integration branch is force-pushable by the caller. This
+#     intentionally rewrites history on the remote.
+
+set -euo pipefail
+
+usage() {
+    cat <<EOF
+usage: $(basename "$0") <staging-ref> [--add BRANCH]... [--remove BRANCH]...
+                                     [-b|--base BRANCH] [-r|--remote NAME]
+                                     [--dry-run]
+
+Rebuild <staging-ref> as <base> + each currently-staged feature branch.
+The staged set is parsed from merge commits on <staging-ref>.
+
+Options:
+  --add BRANCH        stage BRANCH (can be given multiple times)
+  --remove BRANCH     unstage BRANCH (can be given multiple times)
+  -b, --base BRANCH   base branch to rebuild from (default: main)
+  -r, --remote NAME   remote name (default: origin)
+  --dry-run           print what would happen, don't push
+  -h, --help          show this message
+EOF
+    exit "${1:-0}"
+}
+
+STAGING_REF=""
+BASE="main"
+REMOTE="origin"
+DRY_RUN=0
+adds=()
+removes=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --add)
+            [[ -z "${2:-}" ]] && { echo "--add requires a branch name" >&2; exit 1; }
+            adds+=("$2"); shift 2
+            ;;
+        --remove)
+            [[ -z "${2:-}" ]] && { echo "--remove requires a branch name" >&2; exit 1; }
+            removes+=("$2"); shift 2
+            ;;
+        -b|--base)
+            [[ -z "${2:-}" ]] && { echo "$1 requires a branch name" >&2; exit 1; }
+            BASE="$2"; shift 2
+            ;;
+        -r|--remote)
+            [[ -z "${2:-}" ]] && { echo "$1 requires a remote name" >&2; exit 1; }
+            REMOTE="$2"; shift 2
+            ;;
+        --dry-run)
+            DRY_RUN=1; shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        --)
+            shift; break
+            ;;
+        -*)
+            echo "unknown flag: $1" >&2; usage 1
+            ;;
+        *)
+            if [[ -z "$STAGING_REF" ]]; then
+                STAGING_REF="$1"; shift
+            else
+                echo "unexpected positional argument: $1" >&2; usage 1
+            fi
+            ;;
+    esac
+done
+
+[[ -n "$STAGING_REF" ]] || usage 1
+
+log() { echo "  $*" >&2; }
+
+git fetch --quiet --prune "$REMOTE"
+
+# 1. Derive the current set from merge-commit subjects on the staging ref.
+#    Parses three subject formats:
+#      "Merge 'X' into <ref>"                            (this script's format)
+#      "Merge branch 'X' into <ref>"                     (git default)
+#      "Merge remote-tracking branch 'origin/X' into <ref>" (git default)
+#    Any merge whose subject doesn't match is silently ignored.
+staged=()
+if git rev-parse --quiet --verify "$REMOTE/$STAGING_REF" >/dev/null; then
+    mapfile -t staged < <(
+        git log --merges "$REMOTE/$BASE..$REMOTE/$STAGING_REF" --format='%s' |
+        grep -oE "^Merge( remote-tracking)?( branch)? '[^']+'" |
+        sed -E "s|^Merge( remote-tracking)?( branch)? '(.+/)?([^']+)'|\4|" |
+        grep -v "^$BASE\$" |  # drop "Merge branch 'main' into X" catch-up merges
+        tac |                 # oldest-merged first, stable order
+        awk '!seen[$0]++'     # dedupe, keeping first (= oldest) occurrence
+    )
+    log "currently staged on $REMOTE/$STAGING_REF:"
+    if (( ${#staged[@]} == 0 )); then
+        log "  (none)"
+    else
+        printf '    %s\n' "${staged[@]}" >&2
+    fi
+else
+    log "$REMOTE/$STAGING_REF does not exist yet, bootstrapping from $BASE"
+fi
+
+# 2. Apply --remove edits.
+for rem in "${removes[@]}"; do
+    found=0
+    tmp=()
+    for b in "${staged[@]:-}"; do
+        [[ -z "$b" ]] && continue
+        if [[ "$b" == "$rem" ]]; then
+            found=1
+            continue
+        fi
+        tmp+=("$b")
+    done
+    if (( found )); then
+        log "dropping $rem"
+    else
+        log "WARN: --remove $rem but it is not currently staged"
+    fi
+    staged=("${tmp[@]:-}")
+done
+
+# 3. Apply --add edits (dedupe).
+for add in "${adds[@]}"; do
+    already=0
+    for b in "${staged[@]:-}"; do
+        [[ -z "$b" ]] && continue
+        if [[ "$b" == "$add" ]]; then
+            already=1
+            break
+        fi
+    done
+    if (( already )); then
+        log "$add already staged (will pick up latest tip on rebuild)"
+    else
+        staged+=("$add")
+        log "adding $add"
+    fi
+done
+
+# 4. Drop branches that are missing upstream or already merged to base.
+active=()
+for b in "${staged[@]:-}"; do
+    [[ -z "$b" ]] && continue
+    if ! git fetch --quiet "$REMOTE" "$b" 2>/dev/null; then
+        log "WARN: $REMOTE/$b no longer exists, dropping"
+        continue
+    fi
+    if git merge-base --is-ancestor "$REMOTE/$b" "$REMOTE/$BASE"; then
+        log "$b is already on $BASE, dropping"
+        continue
+    fi
+    active+=("$b")
+done
+
+log ""
+log "rebuilding $STAGING_REF = $BASE + ${#active[@]} branch(es):"
+if (( ${#active[@]} > 0 )); then
+    printf '    %s\n' "${active[@]}" >&2
+fi
+
+if (( DRY_RUN )); then
+    log "--dry-run: not checking out, merging, or pushing"
+    exit 0
+fi
+
+# 5. Pick where to do the rebuild. If $STAGING_REF is already checked out
+#    in some worktree, work there. Otherwise create a throwaway worktree so
+#    the caller's current worktree is left untouched.
+existing_worktree=$(git worktree list --porcelain | awk -v ref="refs/heads/$STAGING_REF" '
+    /^worktree / { wt = substr($0, 10) }
+    /^branch /   { if ($2 == ref) { print wt; exit } }
+')
+
+orig_cwd=$PWD
+tmp_worktree=""
+
+if [[ -n "$existing_worktree" ]]; then
+    log "using existing worktree at $existing_worktree"
+    cd "$existing_worktree"
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo "error: $existing_worktree has uncommitted changes; refusing to clobber" >&2
+        exit 1
+    fi
+    git checkout -B "$STAGING_REF" "$REMOTE/$BASE"
+else
+    slug=${STAGING_REF//\//-}
+    tmp_worktree=$(mktemp -d "${TMPDIR:-/tmp}/git-rebuild-${slug}-XXXXXX")
+    log "using temporary worktree at $tmp_worktree"
+    git worktree add -B "$STAGING_REF" "$tmp_worktree" "$REMOTE/$BASE"
+    cd "$tmp_worktree"
+fi
+
+# 6. Merge each staged branch and push. On conflict, set -e exits before
+#    cleanup so the temp worktree (if any) is preserved for investigation.
+#    If rerere fully resolved the conflict (no remaining unmerged paths),
+#    `git merge` still exits non-zero because rerere stages but does not
+#    commit. Detect that case and commit the staged resolution.
+for b in "${active[@]:-}"; do
+    [[ -z "$b" ]] && continue
+    msg="Merge '$b' into $STAGING_REF"
+    if ! git merge --no-ff "$REMOTE/$b" -m "$msg"; then
+        if [[ -z "$(git ls-files --unmerged)" ]]; then
+            log "rerere resolved all conflicts for $b, committing"
+            git commit --no-edit -m "$msg"
+        else
+            echo "error: unresolved conflicts merging $b" >&2
+            exit 1
+        fi
+    fi
+done
+
+git push --force-with-lease "$REMOTE" "$STAGING_REF"
+log "pushed $REMOTE/$STAGING_REF"
+
+if [[ -n "$tmp_worktree" ]]; then
+    cd "$orig_cwd"
+    git worktree remove --force "$tmp_worktree"
+fi

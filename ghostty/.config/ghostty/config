@@ -30,6 +30,10 @@ keybind = super+control+shift+alt+arrow_up=resize_split:up,100
 keybind = super+control+shift+alt+arrow_left=resize_split:left,100
 keybind = super+control+shift+alt+arrow_right=resize_split:right,100
 
+# Scroll to top/bottom of scrollback (Framework 13 has no Home/End key)
+keybind = ctrl+shift+k=scroll_to_top
+keybind = ctrl+shift+j=scroll_to_bottom
+
 # Slowdown mouse scrolling
 mouse-scroll-multiplier = 0.95
 
