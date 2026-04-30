@@ -109,7 +109,16 @@ echo "    If you haven't disabled SIP yet, reboot into Recovery Mode (hold Power
 echo "    open Terminal, run: csrutil disable"
 echo "    then reboot and re-run this script."
 echo ""
-echo "$(whoami) ALL=(root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | cut -d " " -f 1) $(which yabai) --load-sa" | sudo tee /private/etc/sudoers.d/yabai
+yabai_sudoers_line="$(whoami) ALL=(root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | cut -d " " -f 1) $(which yabai) --load-sa"
+yabai_sudoers_marker="$HOME/.cache/setup-macos/yabai-sudoers.sha256"
+yabai_sudoers_hash=$(echo "$yabai_sudoers_line" | shasum -a 256 | cut -d " " -f 1)
+if [ -f "$yabai_sudoers_marker" ] && [ "$(cat "$yabai_sudoers_marker")" = "$yabai_sudoers_hash" ]; then
+    echo "    yabai sudoers entry already up to date, skipping."
+else
+    echo "$yabai_sudoers_line" | sudo tee /private/etc/sudoers.d/yabai
+    mkdir -p "$(dirname "$yabai_sudoers_marker")"
+    echo "$yabai_sudoers_hash" > "$yabai_sudoers_marker"
+fi
 
 echo "==> Starting services..."
 skhd --start-service
