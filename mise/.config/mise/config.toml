@@ -4,7 +4,7 @@ argocd = "latest"
 awscli = { version = "latest", symlink_bins = "true" }
 bat = "latest"
 colima = "latest"
-"conda:pv" = { version = "latest", os = ["linux"] }
+"conda:pv" = { version = "1.8.14", os = ["linux"] }
 delta = "latest"
 direnv = "latest"
 docker-cli = "latest"
@@ -86,6 +86,7 @@ deno = "latest"
 
 [settings]
 experimental = true
+log_level = "warn"
 ignored_config_paths = []
 
 [settings.ruby]

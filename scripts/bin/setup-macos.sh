@@ -25,8 +25,8 @@ brew install --cask 1password-cli
 brew install gh
 
 echo "==> Installing mise..."
-if ! command -v mise &> /dev/null; then
-    curl https://mise.jdx.dev/install.sh | sh
+if [ ! -f "$HOME/.local/bin/mise" ]; then
+    curl https://mise.run | sh
 fi
 
 echo "==> Initializing git submodules..."
