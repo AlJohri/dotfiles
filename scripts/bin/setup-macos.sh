@@ -50,6 +50,12 @@ fi
 echo "==> Installing Claude Code MCP servers..."
 "$DOTFILES_DIR/scripts/bin/setup-claude-code-mcp-servers.sh"
 
+echo "==> Installing WhichSpace..."
+if [ ! -d "/Applications/WhichSpace.app" ]; then
+    brew install --cask gechr/tap/whichspace
+    xattr -r -d com.apple.quarantine /Applications/WhichSpace.app
+fi
+
 echo "==> Installing skhd..."
 if ! command -v skhd &> /dev/null; then
     brew install koekeishiya/formulae/skhd
