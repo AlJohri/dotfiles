@@ -90,6 +90,11 @@ if ! git diff --quiet; then
     fi
 fi
 
+echo "==> Configuring macOS defaults..."
+defaults write -g NSWindowShouldDragOnGesture -bool true
+defaults write -g KeyRepeat -int 1
+defaults write -g InitialKeyRepeat -int 10
+
 echo "==> Configuring yabai scripting addition (requires SIP disabled)..."
 echo "    If you haven't disabled SIP yet, reboot into Recovery Mode (hold Power),"
 echo "    open Terminal, run: csrutil disable"
