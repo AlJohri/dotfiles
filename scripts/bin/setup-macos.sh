@@ -56,6 +56,15 @@ if [ ! -d "/Applications/WhichSpace.app" ]; then
     xattr -r -d com.apple.quarantine /Applications/WhichSpace.app
 fi
 
+echo "==> Adding WhichSpace to Login Items..."
+osascript <<'EOF'
+tell application "System Events"
+    if not (exists login item "WhichSpace") then
+        make login item at end with properties {path:"/Applications/WhichSpace.app", hidden:true}
+    end if
+end tell
+EOF
+
 echo "==> Installing skhd..."
 if ! command -v skhd &> /dev/null; then
     brew install koekeishiya/formulae/skhd
