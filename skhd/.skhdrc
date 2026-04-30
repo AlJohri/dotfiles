@@ -2,6 +2,10 @@
 cmd - return : open -na Ghostty
 cmd + shift - b : open -na "Google Chrome" --args --new-window
 cmd + shift - s : open -a Slack
+cmd + shift - a : open -a ChatGPT
+
+# toggle Obsidian (hide if frontmost, otherwise show/launch)
+cmd + shift - o : osascript -e 'if application "Obsidian" is running then' -e 'tell application "System Events" to tell process "Obsidian"' -e 'if frontmost then set visible to false' -e 'if not frontmost then set frontmost to true' -e 'end tell' -e 'else' -e 'tell application "Obsidian" to activate' -e 'end if'
 
 # focus space
 cmd - 1 : yabai -m space --focus 1
