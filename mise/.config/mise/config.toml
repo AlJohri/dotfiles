@@ -5,7 +5,7 @@ argo = "latest"
 awscli = { version = "latest", symlink_bins = "true" }
 bat = "latest"
 colima = "latest"
-"conda:pv" = "latest"
+"conda:pv" = { version = "1.8.14", os = ["linux"] }
 delta = "latest"
 direnv = "latest"
 docker-cli = "latest"
@@ -63,10 +63,10 @@ argo-rollouts = "latest"
 yamllint = "latest"
 kubeconform = "latest"
 stylua = "latest"
-"github:lunarmodules/luacheck" = { version = "latest", platforms = '{ linux-x64 = { asset_pattern = "luacheck" } }' }
+"github:lunarmodules/luacheck" = { version = "latest", os = ["linux"], platforms = '{ linux-x64 = { asset_pattern = "luacheck" } }' }
 cloudflared = "latest"
 "github:hickford/git-credential-oauth" = "0.17.2"
-"forgejo:forgejo-contrib/forgejo-cli" = "0.4.0"
+"forgejo:forgejo-contrib/forgejo-cli" = { version = "0.4.0", os = ["linux"] }
 "forgejo:gitea/tea" = { version = "0.10.1", api_url = "https://gitea.com/api/v1" }
 "github:grafana/alloy" = { version = "latest", rename_exe = "alloy" }
 "github:open-telemetry/opentelemetry-collector-releases" = { version = "latest", rename_exe = "otelcol", platforms = '{ linux-x64 = { asset_pattern = "otelcol-contrib_*_linux_amd64.tar.gz" }, macos-arm64 = { asset_pattern = "otelcol-contrib_*_darwin_arm64.tar.gz" }, macos-x64 = { asset_pattern = "otelcol-contrib_*_darwin_amd64.tar.gz" } }' }
@@ -96,6 +96,7 @@ cmake = "latest"
 
 [settings]
 experimental = true
+log_level = "warn"
 ignored_config_paths = []
 
 [settings.github]

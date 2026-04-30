@@ -3,6 +3,11 @@ set -euo pipefail
 
 # Setup script for macOS
 
+# macOS doesn't have readlink -f, use Python instead
+REAL_SCRIPT="$(python3 -c "import os; print(os.path.realpath('${BASH_SOURCE[0]}'))")"
+DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
+cd "$DOTFILES_DIR"
+
 echo "==> Checking for Homebrew..."
 if ! command -v brew &> /dev/null; then
     echo "==> Installing Homebrew..."
@@ -16,21 +21,26 @@ brew install \
     make \
     git \
     fish
+brew install --cask 1password-cli
+brew install gh
 
 echo "==> Installing mise..."
-if ! command -v mise &> /dev/null; then
-    curl https://mise.jdx.dev/install.sh | sh
+if [ ! -f "$HOME/.local/bin/mise" ]; then
+    curl https://mise.run | sh
+fi
+
+echo "==> Initializing git submodules..."
+git submodule update --init
+
+if ! gh auth token &>/dev/null; then
+    echo "==> Logging into GitHub (mise installs binaries from GitHub in bulk and will get 403 rate-limited without a token)..."
+    gh auth login
 fi
 
 echo "==> Installing mise tools..."
-mise install
-
-echo "==> Initializing git submodules..."
-# macOS doesn't have readlink -f, use Python instead
-REAL_SCRIPT="$(python3 -c "import os; print(os.path.realpath('${BASH_SOURCE[0]}'))")"
-DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
-cd "$DOTFILES_DIR"
-git submodule update --init
+mise trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
+GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
+eval "$(mise env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 
 if ! command -v claude &> /dev/null && [[ ! -x "$HOME/.claude/local/bin/claude" ]]; then
     echo "==> Installing Claude Code..."
@@ -40,7 +50,78 @@ fi
 echo "==> Installing Claude Code MCP servers..."
 "$DOTFILES_DIR/scripts/bin/setup-claude-code-mcp-servers.sh"
 
+echo "==> Installing WhichSpace..."
+if [ ! -d "/Applications/WhichSpace.app" ]; then
+    brew install --cask gechr/tap/whichspace
+    xattr -r -d com.apple.quarantine /Applications/WhichSpace.app
+fi
+
+echo "==> Adding WhichSpace to Login Items..."
+osascript <<'EOF'
+tell application "System Events"
+    if not (exists login item "WhichSpace") then
+        make login item at end with properties {path:"/Applications/WhichSpace.app", hidden:true}
+    end if
+end tell
+EOF
+
+echo "==> Installing skhd..."
+if ! command -v skhd &> /dev/null; then
+    brew install koekeishiya/formulae/skhd
+fi
+
+echo "==> Installing yabai..."
+if ! command -v yabai &> /dev/null; then
+    curl -L https://raw.githubusercontent.com/asmvik/yabai/master/scripts/install.sh | sh /dev/stdin
+fi
+
 echo "==> Stowing dotfiles..."
-make stow-portable
+make stow-macos
+
+# --adopt pulls existing files into the repo, which on a fresh install means
+# system defaults overwrite our tracked files. Show what changed and let
+# the user decide whether to restore their versions.
+if ! git diff --quiet; then
+    echo ""
+    echo "==> stow --adopt imported the following changes from system defaults:"
+    echo "    (These are files in ~ that differed from your dotfiles.)"
+    echo ""
+    git --no-pager diff --stat
+    echo ""
+    git --no-pager diff
+    echo ""
+    read -rp "==> Restore your dotfiles versions? (Y/n) " answer
+    if [[ "${answer:-Y}" =~ ^[Yy]$ ]]; then
+        git checkout .
+        echo "==> Restored dotfiles to your tracked versions."
+    else
+        echo "==> Keeping adopted changes."
+    fi
+fi
+
+echo "==> Configuring macOS defaults..."
+defaults write -g NSWindowShouldDragOnGesture -bool true
+defaults write -g KeyRepeat -int 1
+defaults write -g InitialKeyRepeat -int 10
+
+echo "==> Configuring yabai scripting addition (requires SIP disabled)..."
+echo "    If you haven't disabled SIP yet, reboot into Recovery Mode (hold Power),"
+echo "    open Terminal, run: csrutil disable"
+echo "    then reboot and re-run this script."
+echo ""
+yabai_sudoers_line="$(whoami) ALL=(root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | cut -d " " -f 1) $(which yabai) --load-sa"
+yabai_sudoers_marker="$HOME/.cache/setup-macos/yabai-sudoers.sha256"
+yabai_sudoers_hash=$(echo "$yabai_sudoers_line" | shasum -a 256 | cut -d " " -f 1)
+if [ -f "$yabai_sudoers_marker" ] && [ "$(cat "$yabai_sudoers_marker")" = "$yabai_sudoers_hash" ]; then
+    echo "    yabai sudoers entry already up to date, skipping."
+else
+    echo "$yabai_sudoers_line" | sudo tee /private/etc/sudoers.d/yabai
+    mkdir -p "$(dirname "$yabai_sudoers_marker")"
+    echo "$yabai_sudoers_hash" > "$yabai_sudoers_marker"
+fi
+
+echo "==> Starting services..."
+skhd --start-service
+yabai --start-service
 
 echo "==> Done! Restart your shell or run: exec fish"

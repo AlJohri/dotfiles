@@ -73,5 +73,6 @@ User bindings override the base config. If a binding isn't in the user file, che
 - Tmux plugins are git submodules under `tmux/.config/tmux/plugins/` (TPM and omarchy-tmux)
 - Uses Omarchy theme system (`~/.config/omarchy/current/theme/`) across tmux, git, and nvim
 - The delta package uses `--no-folding` with target `~/.local` (not home directory)
+- The claude package is stowed with `--no-folding` so `~/.claude/skills/` stays a real directory. This lets skills managed outside this repo (e.g. from `~/Development/seltz/skills`) drop into `~/.claude/skills/` alongside the dotfiles ones without being absorbed into a folded symlink.
 - Setup scripts are in `scripts/bin/` (e.g., `setup-omarchy.sh`, `setup-ubuntu.sh`, `setup-macos.sh`, `setup-portable.sh`)
 - `windows.ps1` contains a PowerShell script for Windows environment setup
