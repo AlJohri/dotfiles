@@ -30,7 +30,7 @@
 [user]
 	name = Al Johri
 	email = al.johri@gmail.com
-	signingkey = /home/aljohri/.ssh/id_ed25519.pub
+	signingkey = ~/.ssh/id_ed25519.pub
 [rebase]
 	autoStash = true
 [status]
