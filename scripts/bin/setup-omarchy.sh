@@ -3,8 +3,14 @@ set -euo pipefail
 
 # Setup script for Omarchy Linux (Arch-based)
 
-echo "==> Syncing package databases..."
-sudo pacman -Sy
+# Sync package databases only if they don't exist yet (fresh system).
+# On an already-synced system, skip `pacman -Sy` to avoid the partial-upgrade
+# trap: refreshing DBs without `-u` can pull new deps (e.g. libcbor soname bumps)
+# that conflict with installed packages still pinned to the old soname.
+if ! compgen -G "/var/lib/pacman/sync/*.db" > /dev/null; then
+    echo "==> Syncing package databases (first run)..."
+    sudo pacman -Sy
+fi
 
 # github-cli is also installed via mise, but we need it here early so
 # `gh auth token` is available to provide GITHUB_TOKEN for mise install,
@@ -85,7 +91,19 @@ eval "$(mise env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 # - aqua backend only lists macOS: https://github.com/aquaproj/aqua-registry/blob/main/pkgs/aws/session-manager-plugin/registry.yaml
 # - non-standard Go project structure prevents use of the go backend: https://github.com/aws/session-manager-plugin
 echo "==> Installing AUR packages..."
-yay -S --noconfirm --needed \
+# PATH override: mise (activated above) injects toolchain shims that can hijack
+# `ld` during AUR builds, causing source-built packages (snapd, lib32-gstreamer,
+# etc.) to fail linking against the system glibc/glib. Scope yay's PATH to the
+# system toolchain for this one invocation; mise stays active for later steps.
+#
+# --assume-installed lib32-jack=lib32-pipewire-jack: lib32-gstreamer (pulled in
+# transitively by proton-ge-custom / Steam / Wine) depends on the virtual
+# `lib32-jack`, which has two providers: lib32-jack2 and lib32-pipewire-jack.
+# With --noconfirm, yay silently picks the default (lib32-jack2), which would
+# uninstall lib32-pipewire-jack and break PipeWire's JACK routing. Pin the
+# PipeWire shim explicitly.
+PATH=/usr/bin:/usr/local/bin yay -S --noconfirm --needed \
+    --assume-installed lib32-jack=lib32-pipewire-jack \
     hyprmon-bin \
     slack-desktop \
     volumeboost \
