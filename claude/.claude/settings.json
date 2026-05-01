@@ -27,6 +27,7 @@
     "lua-lsp@claude-plugins-official": false,
     "claude-md-management@claude-plugins-official": true,
     "playground@claude-plugins-official": false,
+    "clangd-lsp@claude-plugins-official": false,
     "skill-creator@claude-plugins-official": true
   },
   "effortLevel": "medium",

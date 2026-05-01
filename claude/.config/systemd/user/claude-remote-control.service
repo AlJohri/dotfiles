@@ -1,0 +1,15 @@
+[Unit]
+Description=Claude Remote Control
+After=network.target
+
+[Service]
+Type=exec
+WorkingDirectory=%h
+ExecStart=%h/.local/bin/claude remote-control
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
