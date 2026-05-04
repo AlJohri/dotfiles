@@ -93,6 +93,7 @@ loki-logcli = "3.6.7"
 "github:grafana/pyroscope" = "1.21.0"
 "go:github.com/google/pprof" = "latest"
 cmake = "latest"
+"cargo:cargo-chef" = "0.1.77"
 
 [settings]
 experimental = true
