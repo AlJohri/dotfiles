@@ -16,10 +16,14 @@ sync_repo() {
     # Prune worktree entries with missing directories
     git -C "$dir" worktree prune 2>/dev/null
 
-    # Determine repo root to skip it during pruning
-    local repo_root
-    repo_root="$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
-    repo_root="${repo_root%/.git}"
+    # For bare repos, skip the bare root during iteration (it has no working tree).
+    # For non-bare repos, the main worktree IS the repo root and should be pulled.
+    local is_bare repo_root=""
+    is_bare="$(git -C "$dir" rev-parse --is-bare-repository 2>/dev/null || echo false)"
+    if [ "$is_bare" = "true" ]; then
+        repo_root="$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+        repo_root="${repo_root%/.git}"
+    fi
 
     # Iterate over all worktrees (skip bare root and detached HEADs)
     local wt_path="" wt_branch="" wt_bare=""
@@ -43,8 +47,8 @@ sync_repo() {
                     continue
                 fi
 
-                # Skip the repo root itself
-                if [ "$wt_path" = "$repo_root" ]; then
+                # Skip the bare repo root (has no working tree)
+                if [ -n "$repo_root" ] && [ "$wt_path" = "$repo_root" ]; then
                     wt_path="" wt_branch="" wt_bare=""
                     continue
                 fi
