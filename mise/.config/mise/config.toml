@@ -86,9 +86,9 @@ deno = "latest"
 "github:grafana/grafanactl" = "latest"
 kafkactl = "latest"
 "asdf:mise-plugins/mise-kafka" = "apache-4.1.1"
-"github:swsnr/mdcat" = "latest"
+"github:swsnr/mdcat" = { version = "latest", os = ["linux"] }
 s5cmd = "latest"
-"aqua:rui314/mold" = "latest"
+"aqua:rui314/mold" = { version = "latest", os = ["linux"] }
 loki-logcli = "3.6.7"
 "github:grafana/pyroscope" = "1.21.0"
 "go:github.com/google/pprof" = "latest"
