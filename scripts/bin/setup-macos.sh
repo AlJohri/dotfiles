@@ -103,6 +103,45 @@ echo "==> Configuring macOS defaults..."
 defaults write -g NSWindowShouldDragOnGesture -bool true
 defaults write -g KeyRepeat -int 1
 defaults write -g InitialKeyRepeat -int 10
+# Don't jump to another Space when activating an app that already has windows
+# elsewhere — keeps `cmd+enter`-launched Ghostty windows on the current space.
+# AppleSpacesSwitchOnActivate alone is ignored by AppleScript `activate`; the
+# Dock's workspaces-auto-swoosh is the actual toggle, and Dock must restart.
+defaults write -g AppleSpacesSwitchOnActivate -bool false
+defaults write com.apple.dock workspaces-auto-swoosh -bool NO
+killall Dock 2>/dev/null || true
+
+# Rebind screenshot shortcuts off cmd+shift+{3,4,5} so skhd can use those for
+# space switching (matches the omarchy keymap). New bindings: cmd+ctrl+{3,4,5}.
+# IDs: 28=screen→file, 30=area→file, 184=screenshot UI.
+# Modifier mask cmd+ctrl = 0x100000 | 0x040000 = 1310720.
+# Param tuple is (unicode_char, keycode, modifier_mask); keycodes 3=20, 4=21, 5=23.
+# NOTE: must use PlistBuddy (not `defaults write -dict-add` with a literal
+# plist string) — the literal-string form writes everything as CFString, and
+# the WindowServer silently ignores entries whose enabled/parameters aren't
+# proper integers, so the rebind appears in `defaults read` but never takes
+# effect.
+osascript -e 'tell application "System Settings" to quit' 2>/dev/null || true
+hotkeys_plist="$HOME/Library/Preferences/com.apple.symbolichotkeys.plist"
+for entry in "28 51 20" "30 52 21" "184 53 23"; do
+    set -- $entry
+    id=$1; char=$2; code=$3
+    /usr/libexec/PlistBuddy -c "Delete :AppleSymbolicHotKeys:${id}" "$hotkeys_plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy \
+        -c "Add :AppleSymbolicHotKeys:${id} dict" \
+        -c "Add :AppleSymbolicHotKeys:${id}:enabled bool true" \
+        -c "Add :AppleSymbolicHotKeys:${id}:value dict" \
+        -c "Add :AppleSymbolicHotKeys:${id}:value:type string standard" \
+        -c "Add :AppleSymbolicHotKeys:${id}:value:parameters array" \
+        -c "Add :AppleSymbolicHotKeys:${id}:value:parameters: integer ${char}" \
+        -c "Add :AppleSymbolicHotKeys:${id}:value:parameters: integer ${code}" \
+        -c "Add :AppleSymbolicHotKeys:${id}:value:parameters: integer 1310720" \
+        "$hotkeys_plist"
+done
+killall cfprefsd 2>/dev/null || true
+/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u || true
+echo "    (If shortcuts still don't fire, log out and back in — Sequoia's"
+echo "     WindowServer caches the binding table at session start.)"
 
 echo "==> Configuring yabai scripting addition (requires SIP disabled)..."
 echo "    If you haven't disabled SIP yet, reboot into Recovery Mode (hold Power),"

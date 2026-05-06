@@ -1,5 +1,5 @@
 # open applications
-cmd - return : open -na Ghostty
+cmd - return : osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to tell process "Ghostty" to keystroke "n" using command down'
 cmd + shift - b : open -na "Google Chrome" --args --new-window
 cmd + shift - a : open -a ChatGPT
 

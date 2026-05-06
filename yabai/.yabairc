@@ -40,9 +40,11 @@ yabai -m config                                 \
 yabai -m signal --add app='^Ghostty$' event=window_created action='yabai -m space --layout bsp'
 yabai -m signal --add app='^Ghostty$' event=window_destroyed action='yabai -m space --layout bsp'
 
-# ensure 9 spaces exist
-for _ in $(seq 1 $(( 9 - $(yabai -m query --spaces | jq length) ))); do
+# ensure at least 9 spaces exist (create only if missing; never destroy)
+current=$(yabai -m query --spaces | jq length)
+while [ "$current" -lt 9 ]; do
   yabai -m space --create
+  current=$((current + 1))
 done
 
 echo "yabai configuration loaded.."
