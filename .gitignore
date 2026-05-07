@@ -1,3 +1,4 @@
 code-server/.config/code-server/.env
 __pycache__
+.claude/scheduled_tasks.lock
 
