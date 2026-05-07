@@ -1,6 +1,11 @@
 #!/bin/bash
 # Toggle an app's visibility, pulling its windows to the current yabai space.
 # Usage: toggle-app <AppName>
+#
+# Slack gets special handling: only the "main" window is hidden/shown, leaving
+# huddle and popout (thread/DM) windows untouched. The main window is identified
+# by matching yabai window frame against Slack's persisted mainWindowSettings.
+# bounds; falling back to lowest-id non-huddle non-ghost window.
 
 APP="$1"
 
@@ -9,13 +14,91 @@ if [ -z "$APP" ]; then
     exit 1
 fi
 
+LOG="${TMPDIR:-/tmp}/toggle-app.log"
+log() { printf '[%s] %s\n' "$(date '+%H:%M:%S.%3N')" "$*" >> "$LOG"; }
+slack_dump() { yabai -m query --windows 2>/dev/null | jq -c '[.[] | select(.app=="Slack") | {id,title,space,"is-visible","is-minimized",frame:{x:.frame.x,y:.frame.y,w:.frame.w,h:.frame.h}}]'; }
+log "===== invoke app=$APP ====="
+log "slack windows pre: $(slack_dump)"
+
 is_running=$(osascript -e "application \"$APP\" is running")
-if [ "$is_running" = "true" ]; then
-    is_frontmost=$(osascript -e "tell application \"System Events\" to tell process \"$APP\" to frontmost" 2>/dev/null)
-    if [ "$is_frontmost" = "true" ]; then
-        osascript -e "tell application \"System Events\" to tell process \"$APP\" to set visible to false"
+if [ "$is_running" != "true" ]; then
+    open -a "$APP"
+    exit 0
+fi
+
+if [ "$APP" = "Slack" ]; then
+    SLACK_STATE="$HOME/Library/Application Support/Slack/storage/root-state.json"
+
+    # Identify the main window: lowest-id Slack window with a non-empty title
+    # that isn't a huddle. The empty-title filter excludes ghost windows that
+    # `yabai --close` leaves behind. Title markers ([Main]/🏠) get priority
+    # when present (during huddles).
+    find_main() {
+        local extra="$1"
+        yabai -m query --windows 2>/dev/null | jq -r "
+            [.[]
+             | select(.app==\"Slack\")
+             | select((.title // \"\") != \"\")
+             | select((.title // \"\") | test(\"^Huddle:\") | not)
+             ${extra:+| $extra}]
+            | map(. + {_marked: (if ((.title // \"\") | test(\"\\\\[Main\\\\]|🏠\")) then 1 else 0 end)})
+            | sort_by(-._marked, .id)
+            | .[0].id // empty
+        "
+    }
+
+    is_frontmost=$(osascript -e 'tell application "System Events" to tell process "Slack" to frontmost' 2>/dev/null)
+    visible_main=$(find_main 'select(."is-visible"==true)')
+    log "frontmost=$is_frontmost visible_main=$visible_main"
+
+    if [ "$is_frontmost" = "true" ] && [ -n "$visible_main" ]; then
+        log "HIDE: closing $visible_main"
+        yabai -m window "$visible_main" --close 2>/dev/null
+        log "  rc=$?"
+        log "post-hide: $(slack_dump)"
         exit 0
     fi
+
+    log "SHOW: reopen Slack (frontmost=$is_frontmost)"
+    if [ "$is_frontmost" = "true" ]; then
+        # `reopen` is a no-op when target is already frontmost. Drop Slack via
+        # Finder so applicationShouldHandleReopen fires and recreates main.
+        osascript -e 'tell application "Finder" to activate'
+    fi
+    osascript -e 'tell application "Slack" to reopen' \
+              -e 'tell application "Slack" to activate'
+
+    # Wait for Slack to materialize the main window. Poll briefly. We don't
+    # filter on is-visible here: yabai considers a window invisible if it's on
+    # a non-active space, which would hide the main from us when we're toggling
+    # from a different space. The reopen+activate above already raised it;
+    # we just need any non-ghost non-huddle main to exist.
+    revealed=""
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        revealed=$(find_main)
+        [ -n "$revealed" ] && break
+        sleep 0.05
+    done
+    log "revealed=$revealed"
+
+    if [ -n "$revealed" ]; then
+        SPACE=$(yabai -m query --spaces --space 2>/dev/null | jq .index)
+        main_space=$(yabai -m query --windows --window "$revealed" 2>/dev/null | jq .space)
+        log "current space=$SPACE main_space=$main_space"
+        if [ -n "$SPACE" ] && [ "$SPACE" != "null" ] && [ "$main_space" != "$SPACE" ]; then
+            yabai -m window "$revealed" --space "$SPACE" 2>/dev/null
+            log "moved $revealed to space $SPACE rc=$?"
+            osascript -e 'tell application "Slack" to activate'
+        fi
+    fi
+    log "post-show: $(slack_dump)"
+    exit 0
+fi
+
+is_frontmost=$(osascript -e "tell application \"System Events\" to tell process \"$APP\" to frontmost" 2>/dev/null)
+if [ "$is_frontmost" = "true" ]; then
+    osascript -e "tell application \"System Events\" to tell process \"$APP\" to set visible to false"
+    exit 0
 fi
 
 SPACE=$(yabai -m query --spaces --space 2>/dev/null | jq .index)
