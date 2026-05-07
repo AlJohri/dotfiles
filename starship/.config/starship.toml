@@ -23,7 +23,7 @@ when = true
 format = "[$output]($style) "
 style = "bold cyan"
 command = "starship-dir"
-shell = ["/bin/sh", "-c"]
+shell = ["/bin/sh"]
 
 [git_branch]
 format = "[$branch]($style) "
