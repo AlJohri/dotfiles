@@ -19,10 +19,11 @@ repo_root_format = "[$repo_root]($repo_root_style)[$path]($style)[$read_only]($r
 
 [custom.dir]
 description = "Directory display with worktree-aware repo name"
-when = " "
+when = true
 format = "[$output]($style) "
 style = "bold cyan"
 command = "starship-dir"
+shell = ["/bin/sh", "-c"]
 
 [git_branch]
 format = "[$branch]($style) "
