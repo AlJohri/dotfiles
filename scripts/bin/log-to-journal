@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Append an entry to today's Obsidian journal.
+
+Writes ~/Obsidian/journals/YYYYMMDD.md, creating it with `# YYYYMMDD` if
+absent. Appends `### HH:MM <title>` followed by a blank line and the body.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import sys
+from datetime import datetime
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+_helper = Path(__file__).resolve().parent / "ensure-daily-journal"
+_spec = importlib.util.spec_from_loader(
+    "ensure_daily_journal", SourceFileLoader("ensure_daily_journal", str(_helper))
+)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+ensure_daily_journal = _mod.ensure
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("title", help="short inline title for the entry")
+    parser.add_argument(
+        "body",
+        nargs="?",
+        help="entry body; if omitted, read from stdin",
+    )
+    args = parser.parse_args()
+
+    body = args.body if args.body is not None else sys.stdin.read()
+    body = body.rstrip() + "\n"
+
+    now = datetime.now()
+    time_str = now.strftime("%H:%M")
+    path = ensure_daily_journal(now)
+
+    existing = path.read_text()
+    if existing.endswith("\n\n"):
+        sep = ""
+    elif existing.endswith("\n"):
+        sep = "\n"
+    else:
+        sep = "\n\n"
+
+    with path.open("a") as f:
+        f.write(f"{sep}### {time_str} {args.title}\n\n{body}")
+
+    print(path)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

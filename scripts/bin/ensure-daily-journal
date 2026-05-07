@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""Ensure today's Obsidian daily journal file exists, creating from template if missing.
+
+Reads ~/Obsidian/templates/Daily Journal.md and substitutes Obsidian's
+{{date:FORMAT}} tokens (YYYY, MM, DD, HH, mm, ss). Prints the journal path.
+"""
+
+from __future__ import annotations
+
+import re
+import sys
+from datetime import datetime
+from pathlib import Path
+
+VAULT = Path.home() / "Obsidian"
+TEMPLATE = VAULT / "templates" / "Daily Journal.md"
+JOURNALS = VAULT / "journals"
+
+# Obsidian moment.js tokens → strftime directives. Order matters: longer tokens
+# are substituted first so MM doesn't eat the M in YYYY-MM-DD.
+TOKENS = [
+    ("YYYY", "%Y"),
+    ("YY",   "%y"),
+    ("MM",   "%m"),
+    ("DD",   "%d"),
+    ("HH",   "%H"),
+    ("mm",   "%M"),
+    ("ss",   "%S"),
+]
+
+
+def render_format(fmt: str, now: datetime) -> str:
+    placeholders = {f"\0{i}\0": s for i, (_, s) in enumerate(TOKENS)}
+    out = fmt
+    for i, (token, _) in enumerate(TOKENS):
+        out = out.replace(token, f"\0{i}\0")
+    for marker, strftime_token in placeholders.items():
+        out = out.replace(marker, strftime_token)
+    return now.strftime(out)
+
+
+def render_template(template: str, now: datetime) -> str:
+    return re.sub(
+        r"\{\{date:([^}]+)\}\}",
+        lambda m: render_format(m.group(1), now),
+        template,
+    )
+
+
+def ensure(now: datetime | None = None) -> Path:
+    now = now or datetime.now()
+    JOURNALS.mkdir(parents=True, exist_ok=True)
+    path = JOURNALS / f"{now.strftime('%Y%m%d')}.md"
+    if not path.exists():
+        if TEMPLATE.exists():
+            path.write_text(render_template(TEMPLATE.read_text(), now))
+        else:
+            path.write_text(f"# {now.strftime('%Y%m%d')}\n\n")
+    return path
+
+
+if __name__ == "__main__":
+    print(ensure())
+    sys.exit(0)

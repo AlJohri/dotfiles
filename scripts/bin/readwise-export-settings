@@ -1,0 +1,108 @@
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["browser_cookie3", "requests"]
+# ///
+"""Read or write Readwise's Obsidian export-template settings.
+
+Auth is pulled from Chrome's cookie store via browser_cookie3 — no manual
+copy-paste each session. The Django-style CSRF flow uses the `csrftoken`
+cookie value as the `x-csrftoken` header, and the `rwsessionid` cookie
+for session.
+
+Usage:
+    readwise-export-settings get
+    readwise-export-settings get <field>
+    readwise-export-settings set <field> <value>
+    readwise-export-settings set-from-stdin <field>
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+
+import browser_cookie3
+import requests
+
+
+API = "https://readwise.io/api/export_settings/obsidian"
+DOMAIN = "readwise.io"
+
+
+def auth_session() -> requests.Session:
+    jar = browser_cookie3.chrome(domain_name=DOMAIN)
+    csrftoken = next((c.value for c in jar if c.name == "csrftoken"), None)
+    if not csrftoken:
+        sys.exit(
+            "no csrftoken cookie found for readwise.io — log in to Readwise in Chrome"
+        )
+    s = requests.Session()
+    s.cookies = jar
+    s.headers.update(
+        {
+            "x-csrftoken": csrftoken,
+            "x-requested-with": "XMLHttpRequest",
+            "referer": "https://readwise.io/export/obsidian/preferences",
+        }
+    )
+    return s
+
+
+def cmd_get(args: argparse.Namespace) -> int:
+    s = auth_session()
+    r = s.get(API)
+    r.raise_for_status()
+    data = r.json()
+    prefs = data.get("user_preferences", data)
+    if args.field:
+        if args.field not in prefs:
+            print(f"unknown field: {args.field}", file=sys.stderr)
+            print(f"available: {sorted(prefs)}", file=sys.stderr)
+            return 1
+        value = prefs[args.field]
+        if isinstance(value, str):
+            print(value)
+        else:
+            print(json.dumps(value, indent=2))
+    else:
+        json.dump(data, sys.stdout, indent=2, ensure_ascii=False)
+        print()
+    return 0
+
+
+def cmd_set(args: argparse.Namespace) -> int:
+    value = sys.stdin.read() if args.value is None else args.value
+    s = auth_session()
+    r = s.post(API, data={args.field: value})
+    if not r.ok:
+        print(f"HTTP {r.status_code}: {r.text}", file=sys.stderr)
+        r.raise_for_status()
+    print(f"set {args.field} ({len(value)} bytes)")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p_get = sub.add_parser("get", help="dump settings (or one field)")
+    p_get.add_argument("field", nargs="?", help="single field to print (raw)")
+    p_get.set_defaults(func=cmd_get)
+
+    p_set = sub.add_parser("set", help="set one field")
+    p_set.add_argument("field")
+    p_set.add_argument("value", nargs="?", help="(omit and pipe via stdin)")
+    p_set.set_defaults(func=cmd_set)
+
+    p_stdin = sub.add_parser("set-from-stdin", help="set field from stdin")
+    p_stdin.add_argument("field")
+    p_stdin.set_defaults(func=lambda a: cmd_set(argparse.Namespace(field=a.field, value=None)))
+
+    args = parser.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

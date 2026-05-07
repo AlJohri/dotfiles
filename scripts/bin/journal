@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
+# Open today's Obsidian daily journal in nvim, creating it from the
+# Daily Journal template if it doesn't exist yet.
 
-# Get current date in YYYYMMDD format
-date=$(date +%Y%m%d)
-
-# Define journal file path
-journal_file="$HOME/Obsidian/journals/${date}.md"
-
-# Create file with header if it doesn't exist
-if [[ ! -f "$journal_file" ]]; then
-    mkdir -p "$(dirname "$journal_file")"
-    echo "# ${date}" > "$journal_file"
-    echo "" >> "$journal_file"
-fi
-
-# Open in nvim
+set -e
+journal_file=$(ensure-daily-journal)
 nvim "$journal_file"
