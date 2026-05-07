@@ -65,32 +65,27 @@ Render the review plan via glow using the Bash tool:
 ```bash
 CLICOLOR_FORCE=1 glow -s dracula -w <TERM_WIDTH> <<'EOF'
 ## PR Summary
-This PR adds a health check endpoint to the DataNode service so that
-load balancers can verify the node is alive. It introduces a lightweight
-TCP listener that responds to health probes on a configurable port.
+This PR adds retry logic to the HTTP client so transient network
+failures no longer surface as user-facing errors. It introduces a
+configurable exponential backoff with a max-attempts cap.
 
 ### Motivation
-Production load balancers currently have no way to detect an unhealthy
-DataNode, leading to traffic being routed to nodes that are down.
+Flaky upstream APIs were causing intermittent 500s in production.
 *(Source: PR description)*
 
 ### Alternatives
-- **HTTP health endpoint instead of raw TCP**: Would allow richer
-  status reporting (e.g. disk usage, replication lag) but adds an HTTP
-  dependency. TCP is simpler and sufficient for binary alive/dead checks.
-- **Use an existing sidecar or service mesh probe**: Avoids code changes
-  but couples the service to infrastructure that may not be present in
-  all deployments.
-- **Assessment**: The TCP listener approach is a good fit here — minimal
-  footprint, no new dependencies, and easy to integrate with any load
-  balancer.
+- **Circuit breaker instead of retries**: Better for sustained outages
+  but doesn't help with brief blips, which are the common case here.
+- **Retry at the caller layer**: More flexible per-call tuning but
+  duplicates logic across every call site.
+- **Assessment**: Centralized retry in the client is the right call —
+  one place to tune, consistent behavior everywhere.
 
 ## Review Plan
-1. `data_node_cli.rs` hunk 5 — Wiring into the main DataNode startup (big picture)
-2. `data_node_cli.rs` hunk 4 — Health check server spawn logic
-3. `data_node_cli.rs` hunks 2-3 — HealthCheck struct and its configuration
-4. `data_node_cli.rs` hunk 1 — New imports for health check types
-5. `Cargo.toml` + `seltz_data_node/Cargo.toml` — New dependency additions
+1. `client.py` hunk 3 — Wiring retry into the request method (big picture)
+2. `client.py` hunk 2 — Backoff calculation
+3. `client.py` hunk 1 — New imports and `RetryConfig` dataclass
+4. `tests/test_client.py` — New retry tests
 EOF
 ```
 
