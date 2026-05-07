@@ -95,6 +95,7 @@ loki-logcli = "3.6.7"
 cmake = "latest"
 "cargo:cargo-chef" = "0.1.77"
 "github:nidor1998/s7cmd" = "latest"
+"github:kunobi-ninja/kache" = "0.2.0"
 
 [settings]
 experimental = true
