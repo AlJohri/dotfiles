@@ -101,16 +101,25 @@ cmake = "latest"
 cargo-binstall = "latest"
 "cargo:cargo-chef" = "latest"
 "github:nidor1998/s7cmd" = "latest"
-"github:kunobi-ninja/kache" = "latest"
+# Pinned to fork until https://github.com/kunobi-ninja/kache PR merges.
+# The fix normalises the workspace target dir in cache keys + remap-path-prefix,
+# making cache keys stable across worktrees / branches / sandboxes.
+# Switch back by commenting this line and uncommenting the github: line below.
+"cargo:https://github.com/AlJohri/kache" = { version = "branch:fix/normalize-target-dir-paths", crate = "kache" }
+# "github:kunobi-ninja/kache" = "latest"
 hyperfine = "latest"
 protobuf = "latest"
 "github:nextest-rs/nextest" = "latest"
 buf = "latest"
 markdownlint-cli2 = "latest"
+mermaid-ascii = "latest"
+"npm:@mermaid-js/mermaid-cli" = "latest"
 
 [plugins]
-# Pinned to fork until https://github.com/kennyg/mise-zerobrew/pull/2 merges
-zerobrew = "https://github.com/AlJohri/mise-zerobrew.git#fix-prefix-path-mismatch"
+# Pinned to AlJohri fork's dev branch (fix-prefix-path-mismatch +
+# skip-list-versions-fetch). Until kennyg/mise-zerobrew#2 lands and we
+# sort out a proper caching fix for BackendListVersions upstream.
+zerobrew = "https://github.com/AlJohri/mise-zerobrew.git#dev"
 
 [settings]
 experimental = true
