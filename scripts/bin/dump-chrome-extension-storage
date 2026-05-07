@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Dump a Chrome extension's chrome.storage data (LevelDB) as JSON.
+# Wrapper sets CPPFLAGS/LDFLAGS for the bundled leveldb build before invoking uv.
+# Requires: brew install snappy (one-time).
+
+set -e
+
+if command -v brew >/dev/null 2>&1; then
+    snappy_prefix=$(brew --prefix snappy 2>/dev/null || true)
+    if [ -n "$snappy_prefix" ]; then
+        export CPPFLAGS="-I${snappy_prefix}/include ${CPPFLAGS:-}"
+        export LDFLAGS="-L${snappy_prefix}/lib ${LDFLAGS:-}"
+    fi
+fi
+
+exec uv run --quiet --script "$(dirname "$0")/dump-chrome-extension-storage.py" "$@"
