@@ -111,6 +111,15 @@ defaults write -g AppleSpacesSwitchOnActivate -bool false
 defaults write com.apple.dock workspaces-auto-swoosh -bool NO
 killall Dock 2>/dev/null || true
 
+# Save screenshots to ~/Pictures instead of ~/Desktop. macOS TCC protects
+# Desktop, which blocks Claude Code (and other CLI tools) from reading
+# screenshot files even with Full Disk Access granted —
+# https://github.com/anthropics/claude-code/issues/51312. Pictures is not
+# TCC-protected so files there are readable.
+mkdir -p "$HOME/Pictures"
+defaults write com.apple.screencapture location -string "$HOME/Pictures"
+killall SystemUIServer 2>/dev/null || true
+
 # Rebind screenshot shortcuts off cmd+shift+{3,4,5} so skhd can use those for
 # space switching (matches the omarchy keymap). New bindings: cmd+ctrl+{3,4,5}.
 # IDs: 28=screen→file, 30=area→file, 184=screenshot UI.
