@@ -1,8 +1,31 @@
 {
+  "icon_theme": "Zed (Default)",
+  "agent_servers": {
+    "claude-acp": {
+      "type": "registry"
+    }
+  },
+  "project_panel": {
+    "dock": "right"
+  },
+  "outline_panel": {
+    "dock": "right"
+  },
+  "collaboration_panel": {
+    "dock": "right"
+  },
+  "agent": {
+    "dock": "left",
+    "favorite_models": [],
+    "model_parameters": []
+  },
+  "git_panel": {
+    "dock": "right"
+  },
   "ui_font_size": 16,
   "buffer_font_size": 15,
   "theme": {
-    "mode": "dark",
+    "mode": "light",
     "light": "One Light",
     "dark": "Ayu Dark"
   },
