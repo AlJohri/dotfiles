@@ -96,6 +96,7 @@ cmake = "latest"
 "cargo:cargo-chef" = "latest"
 "github:nidor1998/s7cmd" = "latest"
 "github:kunobi-ninja/kache" = "latest"
+hyperfine = "latest"
 
 [settings]
 experimental = true
