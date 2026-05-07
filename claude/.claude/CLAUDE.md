@@ -53,7 +53,7 @@ git config --bool core.bare 2>/dev/null   # "true" → bare; otherwise normal
   ```
 - To switch to an existing worktree, `cd "$REPO_ROOT/<branch>"`. Check `git worktree list` first if unsure what exists.
 - After creating or entering a worktree:
-  - Run `mise trust` if a `mise.toml` or `.mise.toml` exists.
+  - Run `mise trust` from the worktree root. mise walks parent directories looking for `mise.toml`, `mise.local.toml`, `.mise.toml`, `.mise.local.toml`, and `.config/mise.toml`; any of them — including in the bare-repo root above the worktree — must be trusted before mise will load it. If a build or env-dependent command fails with "Config files in ... are not trusted", the fix is `mise trust` (re-run from the worktree).
   - If a `.pre-commit-config.yaml` exists, ensure hooks are installed (see pre-commit instructions below).
 - Never use `git checkout` or `git switch` to change branches. Always create a new worktree for the target branch and `cd` into it.
 
@@ -75,3 +75,18 @@ Always use explicit profile/context flags — never rely on ambient defaults:
 ## Chrome MCP
 
 If a `mcp__claude-in-chrome__*` tool returns "Browser extension is not connected", just **call the tool again**. The websocket bridge between the extension and claude.ai drops occasionally (idle, claude.ai session refresh, etc.) and reconnects on the next request. No need to restart Chrome or ask the user to reconnect manually unless the retry also fails.
+
+## Obsidian journal
+
+When the user says "add X to my journal" (or similar), run
+`log-to-journal "<short title>" "<body>"` — it appends `### HH:MM <title>`
++ body to `~/Obsidian/journals/YYYYMMDD.md`, creating today's file if
+needed. Pick a 3–8 word title summarizing the entry.
+
+## Work-specific overrides
+
+Work-specific preferences (paths, conventions, internal tooling) live in a
+separate private file that is only present on work machines. If it exists,
+load it:
+
+@~/.claude/CLAUDE.work.md
