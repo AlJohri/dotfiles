@@ -7,6 +7,9 @@ cmd + shift - a : open -a ChatGPT
 cmd + shift - o : ~/bin/toggle-app Obsidian
 cmd + shift - s : ~/bin/toggle-app Slack
 
+# toggle reading mode (centers focused window with wide left/right padding)
+cmd + alt - r : ~/bin/yabai-reading-toggle
+
 # focus space
 cmd - 1 : yabai -m space --focus 1
 cmd - 2 : yabai -m space --focus 2
