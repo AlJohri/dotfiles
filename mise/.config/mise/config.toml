@@ -93,9 +93,9 @@ loki-logcli = "3.6.7"
 "github:grafana/pyroscope" = "1.21.0"
 "go:github.com/google/pprof" = "latest"
 cmake = "latest"
-"cargo:cargo-chef" = "0.1.77"
+"cargo:cargo-chef" = "latest"
 "github:nidor1998/s7cmd" = "latest"
-"github:kunobi-ninja/kache" = "0.2.0"
+"github:kunobi-ninja/kache" = "latest"
 
 [settings]
 experimental = true
