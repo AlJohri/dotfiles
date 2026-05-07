@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Clone a repo into a bare-repo + worktrees layout:
+#
+#   <dir>/
+#   ├── .git/                  # bare repo
+#   └── <default-branch>/      # worktree for the default branch
+#
+# Additional worktrees are created as siblings via `gwt <branch>`.
+
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+  echo "Usage: git-clone-bare <url> [<dir>]" >&2
+  exit 1
+fi
+
+URL="$1"
+if [ $# -eq 2 ]; then
+  DIR="$2"
+else
+  # Derive directory from the URL the same way `git clone` does:
+  # strip trailing slash, take basename, drop trailing ".git".
+  DIR="${URL%/}"
+  DIR="${DIR##*/}"
+  DIR="${DIR%.git}"
+fi
+
+if [ -e "$DIR" ]; then
+  echo "Error: '$DIR' already exists." >&2
+  exit 1
+fi
+
+mkdir -p "$DIR"
+cd "$DIR"
+
+# Clone bare into .git so the parent dir is a valid git context.
+git clone --bare "$URL" .git >&2
+
+# `git clone --bare` sets the fetch refspec to mirror branches into local refs.
+# For a worktree workflow we want remote branches under refs/remotes/origin/*
+# so they're visible to `git worktree add <branch>` and friends.
+git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+git fetch origin >&2
+
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+# Point bare HEAD at the default branch so prompts show a sensible name when
+# sitting at the bare repo root.
+if git show-ref --verify --quiet "refs/heads/$DEFAULT_BRANCH"; then
+  git symbolic-ref HEAD "refs/heads/$DEFAULT_BRANCH"
+fi
+
+# Create the default-branch worktree as a sibling of .git/.
+git worktree add "$DEFAULT_BRANCH" "$DEFAULT_BRANCH" >&2
+git -C "$DEFAULT_BRANCH" branch --set-upstream-to="origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH" 2>/dev/null || true
+
+# Trust mise config if present.
+if [ -f "$DEFAULT_BRANCH/mise.toml" ] || [ -f "$DEFAULT_BRANCH/.mise.toml" ]; then
+  mise trust "$DEFAULT_BRANCH" >&2 2>/dev/null || true
+fi
+
+echo >&2
+echo "Cloned into $(pwd)" >&2
+echo "Default-branch worktree: $(pwd)/$DEFAULT_BRANCH" >&2

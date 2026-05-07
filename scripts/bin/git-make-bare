@@ -5,8 +5,25 @@ set -euo pipefail
 
 # Determine repo root and whether it's already bare
 ALREADY_BARE="$(git rev-parse --is-bare-repository 2>/dev/null)"
+
+# `--is-bare-repository` returns false from inside a linked worktree even when
+# the underlying repo is bare. Detect that case by comparing git-dir to
+# git-common-dir, and check core.bare on the common dir.
+if [ "$ALREADY_BARE" != "true" ]; then
+  GIT_DIR_RAW="$(git rev-parse --git-dir 2>/dev/null || true)"
+  COMMON_DIR_RAW="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+  if [ -n "$GIT_DIR_RAW" ] && [ -n "$COMMON_DIR_RAW" ]; then
+    GIT_DIR_ABS="$(cd "$GIT_DIR_RAW" && pwd)"
+    COMMON_DIR_ABS="$(cd "$COMMON_DIR_RAW" && pwd)"
+    if [ "$GIT_DIR_ABS" != "$COMMON_DIR_ABS" ] && \
+       [ "$(git --git-dir="$COMMON_DIR_ABS" config --bool core.bare 2>/dev/null || true)" = "true" ]; then
+      ALREADY_BARE="true"
+    fi
+  fi
+fi
+
 if [ "$ALREADY_BARE" = "true" ]; then
-  GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)"
+  GIT_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
   GIT_DIR="$(cd "$GIT_DIR" && pwd)"
   # If git-dir is a .git subdirectory, the repo root is its parent
   if [ "$(basename "$GIT_DIR")" = ".git" ]; then
@@ -73,15 +90,26 @@ if [ "$CURRENT_FETCH" != "+refs/heads/*:refs/remotes/origin/*" ]; then
 fi
 
 # Delete working tree files (everything except .git/ and .claude/)
+# Worktrees will be created as top-level siblings after this — they don't exist yet.
 find "$REPO_ROOT" -maxdepth 1 -not -name '.git' -not -name '.claude' -not -path "$REPO_ROOT" -exec rm -rf {} +
 echo "Cleaned working tree files" >&2
 
+# Point the bare repo's HEAD at the default branch so prompts (starship, etc.)
+# show a sensible branch name when sitting at the bare repo root. The bare HEAD
+# is otherwise a vestigial pointer; checkouts/switches done by mistake at the
+# root may have left it pointing at an unrelated branch.
+CURRENT_BARE_HEAD="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+if [ "$CURRENT_BARE_HEAD" != "$DEFAULT_BRANCH" ] && \
+   git show-ref --verify --quiet "refs/heads/$DEFAULT_BRANCH"; then
+  git symbolic-ref HEAD "refs/heads/$DEFAULT_BRANCH"
+  echo "Pointed bare HEAD at '$DEFAULT_BRANCH' (was '${CURRENT_BARE_HEAD:-unset}')" >&2
+fi
+
 # Create worktree for the default branch (skip if it already exists)
-WORKTREE_DIR="$REPO_ROOT/.claude/worktrees/$DEFAULT_BRANCH"
+WORKTREE_DIR="$REPO_ROOT/$DEFAULT_BRANCH"
 if git worktree list | grep -qF "[$DEFAULT_BRANCH]"; then
   echo "Worktree for '$DEFAULT_BRANCH' already exists" >&2
 else
-  mkdir -p "$(dirname "$WORKTREE_DIR")"
   git worktree add "$WORKTREE_DIR" "$DEFAULT_BRANCH" >&2
   # Ensure tracking is set (git clone --bare doesn't set up branch tracking)
   git -C "$WORKTREE_DIR" branch --set-upstream-to="origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH" 2>/dev/null || true
@@ -99,8 +127,7 @@ if [ -n "$STASHED" ]; then
     # Dirty changes were on a different branch — create a dedicated worktree
     SHORT_HASH="$(git rev-parse --short HEAD)"
     DIRTY_NAME="dirty-${SHORT_HASH}"
-    DIRTY_DIR="$REPO_ROOT/.claude/worktrees/$DIRTY_NAME"
-    mkdir -p "$(dirname "$DIRTY_DIR")"
+    DIRTY_DIR="$REPO_ROOT/$DIRTY_NAME"
     git worktree add "$DIRTY_DIR" "$DIRTY_BRANCH" >&2
     git -C "$DIRTY_DIR" stash pop >&2
     echo "Restored dirty changes to $DIRTY_DIR (branch '$DIRTY_BRANCH')" >&2

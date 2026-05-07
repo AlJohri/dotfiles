@@ -118,15 +118,13 @@ if [ -n "$EXISTING" ]; then
   fi
 fi
 
-WORKTREE_DIR="$REPO_ROOT/.claude/worktrees/$BRANCH"
+WORKTREE_DIR="$REPO_ROOT/$BRANCH"
 
 # If the worktree directory already exists (e.g. registered under a different branch name), just use it
 if [ -d "$WORKTREE_DIR" ]; then
   echo "$WORKTREE_DIR"
   exit 0
 fi
-
-mkdir -p "$(dirname "$WORKTREE_DIR")"
 
 # Check if the branch exists locally or in a remote
 if git show-ref --verify --quiet "refs/heads/$BRANCH"; then

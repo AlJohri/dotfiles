@@ -19,23 +19,43 @@
 
 ## Bare Repos & Git Worktrees
 
-I use bare git repositories with all work done in git worktrees. The bare repo root has no working tree — only `.git/` and `.claude/`.
+Some of my repos are bare with all work done in git worktrees; others are normal repos where I work on branches in a single working tree. **Detect which kind you're in and act accordingly:**
 
-**Directory layout:**
-```
-<repo>/                              # bare repo (no working tree)
-<repo>/.claude/worktrees/main/       # main branch worktree (always exists)
-<repo>/.claude/worktrees/<name>/     # feature/task worktrees
+```bash
+git config --bool core.bare 2>/dev/null   # "true" → bare; otherwise normal
 ```
 
-**Rules:**
-- Never edit files in the bare repo root. If the session starts in a bare repo root, call `EnterWorktree` before making any changes.
-- To start a new task/branch, use `EnterWorktree` to create a fresh worktree. If already inside a worktree, first `cd` to the bare repo root (e.g., `cd "$(git rev-parse --path-format=absolute --git-common-dir | sed 's/\.git$//')"`) before calling `EnterWorktree`.
-- To switch to an existing worktree (e.g., `main`), use `cd` to navigate to it directly.
-- The worktree name must match the branch name exactly (e.g., branch `fix-auth-timeout` → worktree name `fix-auth-timeout`). Pass the branch name as the `name` parameter to `EnterWorktree`.
-- After entering a worktree, run `mise trust` if a `mise.toml` or `.mise.toml` exists.
-- After entering a worktree, if a `.pre-commit-config.yaml` exists, ensure hooks are installed (see pre-commit instructions below).
-- Never use `git checkout` or `git switch` to change branches. Always create a new worktree for the target branch and `cd` into it (or use `EnterWorktree`).
+- **Normal repo:** use regular branches. `git switch -c <branch>` / `git switch <branch>` are fine. The rest of this section does not apply.
+- **Bare repo:** all work happens in worktrees, organized as siblings of `.git/`:
+
+  ```
+  <repo>/              # bare repo (no working tree); .git/ has core.bare=true
+  <repo>/main/         # main branch worktree (always exists)
+  <repo>/<name>/       # feature/task worktrees, sibling to main
+  ```
+
+**Rules for bare repos:**
+- Use the `git worktree` CLI directly — do NOT use the `EnterWorktree` tool (it places worktrees under `.claude/worktrees/`, which is the wrong location for this layout).
+- Never edit files in the bare repo root. If the session starts in a bare repo root, create or enter a worktree first.
+- The worktree directory name must match the branch name exactly (branch `fix-auth-timeout` → directory `<repo>/fix-auth-timeout/`).
+- To find the bare repo root from anywhere inside the repo:
+  ```bash
+  REPO_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)"
+  REPO_ROOT="${REPO_ROOT%/.git}"
+  ```
+- To create a new worktree (branch exists locally or on origin):
+  ```bash
+  git worktree add "$REPO_ROOT/<branch>" <branch>
+  ```
+- To create a new worktree on a brand-new branch off the default branch:
+  ```bash
+  git worktree add -b <branch> "$REPO_ROOT/<branch>" main
+  ```
+- To switch to an existing worktree, `cd "$REPO_ROOT/<branch>"`. Check `git worktree list` first if unsure what exists.
+- After creating or entering a worktree:
+  - Run `mise trust` if a `mise.toml` or `.mise.toml` exists.
+  - If a `.pre-commit-config.yaml` exists, ensure hooks are installed (see pre-commit instructions below).
+- Never use `git checkout` or `git switch` to change branches. Always create a new worktree for the target branch and `cd` into it.
 
 ## Kubernetes / GitOps
 

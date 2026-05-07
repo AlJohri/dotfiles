@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Migrate worktrees from the legacy nested layout to the sibling layout:
+#
+#   <repo>/.claude/worktrees/<branch>/   →   <repo>/<branch>/
+#
+# Run from anywhere inside the bare repo (or one of its worktrees).
+
+REPO_ROOT="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || {
+  echo "Error: not inside a git repository." >&2
+  exit 1
+}
+REPO_ROOT="${REPO_ROOT%/.git}"
+
+OLD_BASE="$REPO_ROOT/.claude/worktrees"
+if [ ! -d "$OLD_BASE" ]; then
+  echo "Nothing to migrate: $OLD_BASE does not exist." >&2
+  exit 0
+fi
+
+# Collect (old_path, branch) pairs by walking `git worktree list --porcelain`
+# rather than scanning the filesystem — this avoids touching stale dirs that
+# git no longer tracks.
+moves=()
+collisions=()
+current_path=""
+current_branch=""
+
+while IFS= read -r line; do
+  case "$line" in
+    "worktree "*)
+      current_path="${line#worktree }"
+      current_branch=""
+      ;;
+    "branch "*)
+      branch_ref="${line#branch }"
+      current_branch="${branch_ref#refs/heads/}"
+      ;;
+    "")
+      if [ -n "$current_path" ] && [ -n "$current_branch" ]; then
+        case "$current_path" in
+          "$OLD_BASE"/*)
+            new_path="$REPO_ROOT/$current_branch"
+            if [ -e "$new_path" ]; then
+              collisions+=("$current_branch")
+            else
+              moves+=("$current_path|$new_path|$current_branch")
+            fi
+            ;;
+        esac
+      fi
+      current_path=""
+      current_branch=""
+      ;;
+  esac
+done < <(git worktree list --porcelain; echo "")
+
+if [ ${#moves[@]} -eq 0 ] && [ ${#collisions[@]} -eq 0 ]; then
+  echo "No worktrees under $OLD_BASE to migrate." >&2
+elif [ ${#moves[@]} -eq 0 ]; then
+  echo "All candidate worktrees collide with existing paths at the repo root:" >&2
+  for b in "${collisions[@]}"; do echo "  - $b" >&2; done
+  exit 1
+fi
+
+# Refuse to run from inside a worktree being migrated — `git worktree move`
+# can't move the current worktree.
+CURRENT_WT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+for entry in "${moves[@]}"; do
+  old="${entry%%|*}"
+  if [ "$CURRENT_WT" = "$old" ]; then
+    echo "Error: current directory is inside '$old', which is being migrated." >&2
+    echo "cd to the bare repo root ($REPO_ROOT) and re-run." >&2
+    exit 1
+  fi
+done
+
+echo "Will move:" >&2
+for entry in "${moves[@]}"; do
+  old="${entry%%|*}"
+  rest="${entry#*|}"
+  new="${rest%%|*}"
+  echo "  $old → $new" >&2
+done
+if [ ${#collisions[@]} -gt 0 ]; then
+  echo "Will skip (target already exists at repo root):" >&2
+  for b in "${collisions[@]}"; do echo "  - $b" >&2; done
+fi
+echo >&2
+read -rp "Continue? [y/N] " confirm
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+  echo "Aborted." >&2
+  exit 1
+fi
+
+for entry in "${moves[@]}"; do
+  old="${entry%%|*}"
+  rest="${entry#*|}"
+  new="${rest%%|*}"
+  branch="${rest#*|}"
+  git worktree move "$old" "$new" >&2
+  echo "Moved $branch" >&2
+done
+
+# Clean up empty .claude/worktrees and .claude if nothing else lives there.
+if [ -d "$OLD_BASE" ] && [ -z "$(ls -A "$OLD_BASE" 2>/dev/null)" ]; then
+  rmdir "$OLD_BASE"
+  echo "Removed empty $OLD_BASE" >&2
+  CLAUDE_DIR="$REPO_ROOT/.claude"
+  if [ -d "$CLAUDE_DIR" ] && [ -z "$(ls -A "$CLAUDE_DIR" 2>/dev/null)" ]; then
+    rmdir "$CLAUDE_DIR"
+    echo "Removed empty $CLAUDE_DIR" >&2
+  fi
+fi
+
+echo "Done." >&2

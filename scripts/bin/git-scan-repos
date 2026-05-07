@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Scan immediate subdirectories of a parent directory and classify each as:
+#
+#   normal      — non-bare git repo (has working tree)
+#   bare-new    — bare repo with sibling worktrees: <repo>/<branch>/
+#   bare-legacy — bare repo with nested worktrees: <repo>/.claude/worktrees/<branch>/
+#   bare-mixed  — bare repo with BOTH legacy and sibling worktrees
+#   bare-empty  — bare repo with no worktrees registered
+#   not-a-repo  — anything else
+#
+# Usage: git-scan-repos [<dir>]   (defaults to cwd)
+
+ROOT="${1:-.}"
+if [ ! -d "$ROOT" ]; then
+  echo "Error: '$ROOT' is not a directory." >&2
+  exit 1
+fi
+ROOT="$(cd "$ROOT" && pwd)"
+
+# Color helpers (skip if not a tty).
+if [ -t 1 ]; then
+  C_NORMAL=$'\033[32m'   # green
+  C_NEW=$'\033[36m'      # cyan
+  C_LEGACY=$'\033[33m'   # yellow
+  C_MIXED=$'\033[35m'    # magenta
+  C_EMPTY=$'\033[90m'    # grey
+  C_NONE=$'\033[90m'     # grey
+  C_RESET=$'\033[0m'
+else
+  C_NORMAL=""; C_NEW=""; C_LEGACY=""; C_MIXED=""; C_EMPTY=""; C_NONE=""; C_RESET=""
+fi
+
+classify() {
+  local dir="$1"
+  if [ ! -e "$dir/.git" ]; then
+    printf 'not-a-repo'
+    return
+  fi
+
+  # Resolve git-dir (handles both `.git` directory and `.git` pointer file).
+  local git_dir
+  git_dir="$(git -C "$dir" rev-parse --git-dir 2>/dev/null)" || {
+    printf 'not-a-repo'
+    return
+  }
+  case "$git_dir" in
+    /*) ;;
+    *) git_dir="$dir/$git_dir" ;;
+  esac
+
+  local is_bare
+  is_bare="$(git -C "$dir" config --bool core.bare 2>/dev/null || echo false)"
+
+  if [ "$is_bare" != "true" ]; then
+    printf 'normal'
+    return
+  fi
+
+  # Bare repo — inspect registered worktrees to determine layout.
+  local has_legacy=0 has_sibling=0 wt_path
+  while IFS= read -r line; do
+    case "$line" in
+      "worktree "*)
+        wt_path="${line#worktree }"
+        # Skip the bare repo itself (its own entry shows up in the listing).
+        if [ "$wt_path" = "$dir" ]; then
+          continue
+        fi
+        case "$wt_path" in
+          "$dir/.claude/worktrees/"*) has_legacy=1 ;;
+          "$dir"/*)
+            # Sibling worktree if it sits exactly one level under the repo.
+            local rel="${wt_path#"$dir"/}"
+            case "$rel" in
+              */*) ;;     # deeper than one level — ignore
+              *)   has_sibling=1 ;;
+            esac
+            ;;
+        esac
+        ;;
+    esac
+  done < <(git -C "$dir" worktree list --porcelain 2>/dev/null)
+
+  if [ "$has_legacy" -eq 1 ] && [ "$has_sibling" -eq 1 ]; then
+    printf 'bare-mixed'
+  elif [ "$has_legacy" -eq 1 ]; then
+    printf 'bare-legacy'
+  elif [ "$has_sibling" -eq 1 ]; then
+    printf 'bare-new'
+  else
+    printf 'bare-empty'
+  fi
+}
+
+color_for() {
+  case "$1" in
+    normal)      printf '%s' "$C_NORMAL" ;;
+    bare-new)    printf '%s' "$C_NEW" ;;
+    bare-legacy) printf '%s' "$C_LEGACY" ;;
+    bare-mixed)  printf '%s' "$C_MIXED" ;;
+    bare-empty)  printf '%s' "$C_EMPTY" ;;
+    not-a-repo)  printf '%s' "$C_NONE" ;;
+  esac
+}
+
+# Collect entries first so we can compute column width.
+declare -a names=() kinds=()
+max_name=0
+shopt -s nullglob
+for entry in "$ROOT"/*/; do
+  name="${entry%/}"
+  name="${name##*/}"
+  kind="$(classify "$ROOT/$name")"
+  names+=("$name")
+  kinds+=("$kind")
+  [ "${#name}" -gt "$max_name" ] && max_name="${#name}"
+done
+shopt -u nullglob
+
+if [ "${#names[@]}" -eq 0 ]; then
+  echo "No subdirectories in $ROOT." >&2
+  exit 0
+fi
+
+for i in "${!names[@]}"; do
+  name="${names[$i]}"
+  kind="${kinds[$i]}"
+  color="$(color_for "$kind")"
+  printf "%-${max_name}s  ${color}%s${C_RESET}\n" "$name" "$kind"
+done

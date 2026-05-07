@@ -16,58 +16,60 @@ find_repo_root() {
   return 1
 }
 
-case "$PWD" in
-  */.claude/worktrees/*)
-    repo_root="${PWD%%/.claude/worktrees/*}"
-    repo_name="${repo_root##*/}"
-    parent_dir="${repo_root%/*}"
-    parent="${parent_dir##*/}"
-    branch_and_rest="${PWD#"$repo_root"/.claude/worktrees/}"
-    rest="${branch_and_rest#*/}"
-    [ "$rest" = "$branch_and_rest" ] && rest=""
-    if [ -n "$rest" ]; then
-      printf '…/%s/%s/%s' "$parent" "$repo_name" "$rest"
-    else
-      printf '…/%s/%s' "$parent" "$repo_name"
+toplevel=$(find_repo_root) || toplevel=""
+# Bare repos have no .git on disk — fall back to asking git.
+if [ -z "$toplevel" ] && [ "$(git rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
+  toplevel="$PWD"
+fi
+if [ -n "$toplevel" ]; then
+  # Sibling-worktree layout: <repo>/.git is a directory (bare) and
+  # <repo>/<branch>/.git is a file. If toplevel's .git is a file AND its
+  # parent has a .git directory, we're in a sibling worktree — re-parent
+  # to the bare repo and elide the branch component from the displayed path
+  # (the git prompt indicator already shows the branch).
+  reparent=""
+  if [ -f "$toplevel/.git" ]; then
+    wt_parent="${toplevel%/*}"
+    if [ -d "$wt_parent/.git" ]; then
+      toplevel="$wt_parent"
+      reparent="1"
     fi
-    ;;
-  *)
-    toplevel=$(find_repo_root) || toplevel=""
-    # Bare repos have no .git on disk — fall back to asking git.
-    if [ -z "$toplevel" ] && [ "$(git rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
-      toplevel="$PWD"
-    fi
-    if [ -n "$toplevel" ]; then
-      repo_name="${toplevel##*/}"
-      parent_dir="${toplevel%/*}"
-      parent="${parent_dir##*/}"
-      rel="${PWD#"$toplevel"}"
-      rel="${rel#/}"
-      if [ -n "$rel" ]; then
-        printf '…/%s/%s/%s' "$parent" "$repo_name" "$rel"
-      else
-        printf '…/%s/%s' "$parent" "$repo_name"
-      fi
-    else
-      path="$PWD"
-      case "$path" in
-        "$HOME") printf '~'; exit 0 ;;
-        "$HOME"/*) path="~${path#"$HOME"}" ;;
-      esac
-      rest="$path"
-      slashes=0
-      while [ "$rest" != "${rest#*/}" ]; do
-        rest="${rest#*/}"
-        slashes=$((slashes + 1))
-      done
-      if [ "$slashes" -le 2 ]; then
-        printf '%s' "$path"
-      else
-        last="${path##*/}"
-        prefix="${path%/*}"
-        second_last="${prefix##*/}"
-        printf '…/%s/%s' "$second_last" "$last"
-      fi
-    fi
-    ;;
-esac
+  fi
+  repo_name="${toplevel##*/}"
+  parent_dir="${toplevel%/*}"
+  parent="${parent_dir##*/}"
+  rel="${PWD#"$toplevel"}"
+  rel="${rel#/}"
+  if [ -n "$reparent" ]; then
+    # rel starts with "<branch>" or "<branch>/<rest>"; drop the branch.
+    case "$rel" in
+      */*) rel="${rel#*/}" ;;
+      *)   rel="" ;;
+    esac
+  fi
+  if [ -n "$rel" ]; then
+    printf '…/%s/%s/%s' "$parent" "$repo_name" "$rel"
+  else
+    printf '…/%s/%s' "$parent" "$repo_name"
+  fi
+else
+  path="$PWD"
+  case "$path" in
+    "$HOME") printf '~'; exit 0 ;;
+    "$HOME"/*) path="~${path#"$HOME"}" ;;
+  esac
+  rest="$path"
+  slashes=0
+  while [ "$rest" != "${rest#*/}" ]; do
+    rest="${rest#*/}"
+    slashes=$((slashes + 1))
+  done
+  if [ "$slashes" -le 2 ]; then
+    printf '%s' "$path"
+  else
+    last="${path##*/}"
+    prefix="${path%/*}"
+    second_last="${prefix##*/}"
+    printf '…/%s/%s' "$second_last" "$last"
+  fi
+fi
