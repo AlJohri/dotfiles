@@ -94,6 +94,7 @@ loki-logcli = "3.6.7"
 "go:github.com/google/pprof" = "latest"
 cmake = "latest"
 "cargo:cargo-chef" = "0.1.77"
+"github:nidor1998/s7cmd" = "latest"
 
 [settings]
 experimental = true
