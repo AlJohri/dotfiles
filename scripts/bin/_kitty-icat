@@ -1,0 +1,64 @@
+#!/bin/bash
+# Display a PNG inline via the raw Kitty graphics protocol at native pixel
+# size, sized to fit the current terminal pixel width. Helper used by mdcatv
+# and glowv to emit pre-rendered mermaid diagrams (mdcat fits images to the
+# markdown column box, which is too narrow for wide diagrams; emitting
+# directly via the Kitty protocol bypasses that).
+#
+# Usage: _kitty-icat <png-path>
+# Override target width with TARGET_PX env var.
+
+set -euo pipefail
+
+png="${1:?usage: $0 <png-path>}"
+[[ -r "$png" ]] || { echo "[_kitty-icat] cannot read $png" >&2; exit 1; }
+
+# CSI 14 t -> CSI 4 ; <h> ; <w> t (terminal pixel size). 1800 fallback.
+get_term_pixel_width() {
+  local response saved
+  if [[ ! -e /dev/tty ]]; then echo 1800; return; fi
+  saved=$(stty -g </dev/tty 2>/dev/null) || { echo 1800; return; }
+  stty raw -echo min 0 time 2 </dev/tty
+  printf '\e[14t' >/dev/tty
+  IFS= read -r -d 't' response </dev/tty || true
+  stty "$saved" </dev/tty
+  if [[ "$response" =~ \;([0-9]+)\;([0-9]+)$ ]]; then
+    echo "${BASH_REMATCH[2]}"
+  else
+    echo 1800
+  fi
+}
+
+term_px="${TARGET_PX:-$(( $(get_term_pixel_width) - 40 ))}"
+(( term_px < 800 )) && term_px=800
+
+# Work on a copy so the caller's source PNG (often cached/shared) is untouched.
+work=$(mktemp -t kitty-icat.XXXXXX).png
+trap 'rm -f "$work"' EXIT
+cp "$png" "$work"
+
+dims=$(file "$work" | sed -n 's/.*PNG image data, \([0-9]*\) x \([0-9]*\).*/\1x\2/p')
+actual_w="${dims%x*}"
+# Only downscale: upscaling small diagrams (flowcharts with a few nodes)
+# blows their text up to absurd sizes. Diagrams narrower than the terminal
+# render at their natural size, which is what we want.
+if (( actual_w > term_px )); then
+  sips -Z "$term_px" "$work" >/dev/null
+fi
+
+# Kitty graphics protocol: chunk base64 into 4 KiB pieces and emit each as its
+# own escape sequence. Done in awk because bash string slicing is O(n) per
+# access — for ~1 MB base64 strings the bash version takes ~8 s/image while
+# this awk pipeline is ~80 ms.
+#   f=100 PNG  a=T transmit+display  t=d direct  q=2 quiet  m=1 more chunks
+base64 < "$work" | tr -d '\n' | fold -w 4096 | awk '
+  { lines[NR] = $0 }
+  END {
+    for (i = 1; i <= NR; i++) {
+      more = (i < NR) ? 1 : 0
+      if (i == 1) printf "\033_Gf=100,a=T,t=d,q=2,m=%d;%s\033\\", more, lines[i]
+      else        printf "\033_Gm=%d;%s\033\\", more, lines[i]
+    }
+    printf "\n"
+  }
+'

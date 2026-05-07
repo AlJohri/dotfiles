@@ -1,0 +1,133 @@
+#!/bin/bash
+# View a markdown file with mdcat, starting from the top of a fresh scrollback,
+# with mermaid diagrams rendered inline at terminal-pixel size.
+#
+# Workflow:
+#   1. Run mmdc once over each input file in batch mode — this extracts every
+#      ```mermaid block, renders all of them in a single chromium session
+#      (~one startup cost regardless of block count), and rewrites the input
+#      to a processed copy with `![](./processed-N.png)` image refs.
+#   2. Walk the processed markdown line-by-line. Lines that match the image
+#      refs we emitted are sent through `_kitty-icat` (raw Kitty graphics
+#      protocol at native pixel size). Everything else gets buffered and
+#      flushed through mdcat.
+#   3. Synthesize Ctrl+Shift+K to scroll Ghostty to the top.
+#
+# Why this isn't just mdcat: mdcat fits images to its column box, so wide
+# mermaid diagrams come out unreadable. The Kitty graphics protocol path
+# emits at native pixel size up to the terminal width.
+
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+  echo "usage: mdcatv <markdown-file> [...]" >&2
+  exit 2
+fi
+
+default_cols=${MDCATV_COLUMNS:-110}
+term_cols=${COLUMNS:-}
+if [[ -z "$term_cols" ]]; then
+  term_cols=$( (stty size </dev/tty) 2>/dev/null | awk '{print $2}') || true
+fi
+term_cols=${term_cols:-$default_cols}
+cols=$(( default_cols < term_cols ? default_cols : term_cols ))
+
+tmpdir=$(mktemp -d -t mdcatv.XXXXXX)
+trap 'rm -rf "$tmpdir"' EXIT
+
+# Inline mermaid config — kept here so the script is self-contained. Override
+# with MERMAID_CONFIG=/path/to/your.json. Tunings: useMaxWidth=false lets the
+# layout grow past mermaid's natural cap; the bumped maxTextSize/maxEdges
+# avoid mermaid's safety bails on big diagrams; the spacing values are
+# balanced for sharp rasters when downscaled by sips.
+mermaid_config="${MERMAID_CONFIG:-}"
+if [[ -z "$mermaid_config" ]]; then
+  mermaid_config="$tmpdir/mermaid.json"
+  cat >"$mermaid_config" <<'EOF'
+{
+  "theme": "dark",
+  "maxTextSize": 500000,
+  "maxEdges": 5000,
+  "themeVariables": { "fontSize": "18px" },
+  "sequence": {
+    "useMaxWidth": false,
+    "actorMargin": 80,
+    "messageMargin": 40,
+    "boxMargin": 12,
+    "actorFontSize": 18,
+    "messageFontSize": 16,
+    "noteFontSize": 16,
+    "wrap": true
+  },
+  "flowchart": {
+    "useMaxWidth": false,
+    "nodeSpacing": 60,
+    "rankSpacing": 60,
+    "padding": 16
+  }
+}
+EOF
+fi
+cfg_arg=(-c "$mermaid_config")
+
+have_mermaid=0
+command -v mmdc >/dev/null 2>&1 && command -v _kitty-icat >/dev/null 2>&1 && have_mermaid=1
+
+# Batch-render mermaid blocks in $1 with one mmdc call. Outputs:
+#   $2          processed markdown (image refs replace mermaid blocks)
+#   $2 sibling  processed-N.png artefacts in the same directory
+# Returns non-zero if rendering fails — callers fall back to the raw source.
+batch_render_mermaid() {
+  local src="$1" dst="$2"
+  local artdir
+  artdir=$(dirname "$dst")
+  mmdc "${cfg_arg[@]}" -i "$src" -o "$dst" -e png -t dark -b transparent \
+    -w 1800 --scale 2 -a "$artdir" --quiet >/dev/null 2>&1
+}
+
+flush_prose() {
+  local buf="$1"
+  [[ -s "$buf" ]] || return 0
+  # </dev/null so mdcat doesn't consume the read loop's stdin.
+  mdcat --columns "$cols" "$buf" </dev/null
+  : > "$buf"
+}
+
+process_file() {
+  local file="$1"
+  local processed="$tmpdir/processed-$(basename "$file")"
+  local source="$file"
+  if (( have_mermaid )) && grep -q '^```mermaid' "$file" 2>/dev/null; then
+    if batch_render_mermaid "$file" "$processed"; then
+      source="$processed"
+    fi
+  fi
+
+  local prose="$tmpdir/prose"
+  : > "$prose"
+  local artdir
+  artdir=$(dirname "$processed")
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Image refs mmdc inserts look like `![diagram](./processed-N.png)`.
+    if [[ "$line" =~ ^!\[[^]]*\]\((\./)?(processed-[a-zA-Z0-9._-]+\.png)\)$ ]]; then
+      flush_prose "$prose"
+      _kitty-icat "$artdir/${BASH_REMATCH[2]}" </dev/null || printf '%s\n' "$line" >> "$prose"
+      continue
+    fi
+    printf '%s\n' "$line" >> "$prose"
+  done <"$source"
+  flush_prose "$prose"
+}
+
+clear
+printf '\e[3J'
+
+for f in "$@"; do
+  process_file "$f"
+done
+
+if command -v hyprctl >/dev/null 2>&1; then
+  hyprctl dispatch sendshortcut "CTRL SHIFT, K," >/dev/null
+elif [[ "$(uname)" == "Darwin" ]]; then
+  osascript -e 'tell application "System Events" to keystroke "k" using {control down, shift down}'
+fi
