@@ -1,0 +1,226 @@
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["requests"]
+# ///
+"""Backfill `captured_at` YAML field across all Readwise files.
+
+Walks ~/Obsidian/readwise/**/*.md, reads each file's `readwise_id`, looks
+the doc up in the appropriate Readwise API, and writes a `captured_at`
+ISO date into the YAML frontmatter.
+
+Field source by ID type:
+- `readerdocument:<ULID>`  →  v3 /api/v3/list/      `saved_at`
+- numeric integer          →  v2 /api/v2/books/<id>  `last_highlight_at`
+
+Idempotent: re-running overwrites `captured_at` with the current API
+value. Safe to re-run after a full re-sync that resets clipped dates.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+import time
+from pathlib import Path
+
+import requests
+
+
+VAULT = Path.home() / "Obsidian"
+READWISE_DIR = VAULT / "readwise"
+PLUGIN_DATA = VAULT / ".obsidian/plugins/readwise-official/data.json"
+USER_AGENT = "obsidian-readwise"
+
+
+def load_token() -> str:
+    return json.loads(PLUGIN_DATA.read_text())["token"]
+
+
+def auth_headers(token: str) -> dict[str, str]:
+    return {"Authorization": f"Token {token}", "User-Agent": USER_AGENT}
+
+
+def get_with_retry(url: str, headers: dict[str, str], params: dict | None = None) -> requests.Response:
+    """GET with exponential backoff on 429 (honors Retry-After when present)."""
+    delay = 1.0
+    for attempt in range(8):
+        r = requests.get(url, headers=headers, params=params, timeout=30)
+        if r.status_code != 429:
+            r.raise_for_status()
+            return r
+        wait = float(r.headers.get("Retry-After", delay))
+        print(f"  rate-limited; sleeping {wait:.1f}s (attempt {attempt + 1})", file=sys.stderr)
+        time.sleep(wait)
+        delay = min(delay * 2, 60)
+    r.raise_for_status()
+    return r
+
+
+def fetch_v3(token: str) -> tuple[dict[str, str], dict[str, str]]:
+    """Return ({ulid: saved_at}, {source_url: saved_at}) for every Reader doc."""
+    by_id: dict[str, str] = {}
+    by_url: dict[str, str] = {}
+    cursor = ""
+    page = 0
+    while True:
+        page += 1
+        params = {"pageCursor": cursor} if cursor else {}
+        r = get_with_retry(
+            "https://readwise.io/api/v3/list/",
+            auth_headers(token),
+            params=params,
+        )
+        data = r.json()
+        for d in data.get("results", []):
+            saved = d.get("saved_at")
+            if not saved:
+                continue
+            by_id[d["id"]] = saved
+            url = d.get("source_url")
+            if url:
+                by_url.setdefault(url, saved)
+        cursor = data.get("nextPageCursor")
+        print(f"  v3 page {page}: {len(data.get('results', []))} docs (total so far: {len(by_id)})", file=sys.stderr)
+        if not cursor:
+            break
+        time.sleep(0.3)
+    return by_id, by_url
+
+
+def fetch_v2(token: str) -> tuple[dict[str, str], dict[str, str]]:
+    """Return ({book_id: last_highlight_at}, {source_url: last_highlight_at}) for every book."""
+    by_id: dict[str, str] = {}
+    by_url: dict[str, str] = {}
+    page_url = "https://readwise.io/api/v2/books/?page_size=1000"
+    page = 0
+    while page_url:
+        page += 1
+        r = get_with_retry(page_url, auth_headers(token))
+        data = r.json()
+        for b in data.get("results", []):
+            lh = b.get("last_highlight_at")
+            if not lh:
+                continue
+            by_id[str(b["id"])] = lh
+            url = b.get("source_url")
+            if url:
+                by_url.setdefault(url, lh)
+        page_url = data.get("next")
+        print(f"  v2 page {page}: {len(data.get('results', []))} docs (total so far: {len(by_id)})", file=sys.stderr)
+        if page_url:
+            time.sleep(0.3)
+    return by_id, by_url
+
+
+FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
+ID_LINE_RE = re.compile(r"^readwise_id:\s*(.*?)\s*$", re.MULTILINE)
+SOURCE_LINE_RE = re.compile(r"^source:\s*(.*?)\s*$", re.MULTILINE)
+CAPTURED_LINE_RE = re.compile(r"^captured_at:.*\n?", re.MULTILINE)
+
+
+def to_date(iso_ts: str) -> str:
+    """ISO timestamp → 'YYYY-MM-DD' for clean YAML dates."""
+    return iso_ts[:10] if len(iso_ts) >= 10 else iso_ts
+
+
+def update_file(
+    path: Path,
+    v3_by_id: dict[str, str],
+    v2_by_id: dict[str, str],
+    v3_by_url: dict[str, str],
+    v2_by_url: dict[str, str],
+) -> str:
+    """Inject/replace captured_at in the file.
+
+    Lookup order:
+    1. readwise_id with `readerdocument:` prefix → v3 by ULID
+    2. numeric readwise_id → v2 by ID
+    3. fallback: match source URL → v3 then v2 by URL
+
+    Returns: 'updated', 'unchanged', 'no-match', 'no-frontmatter'.
+    """
+    text = path.read_text()
+    fm_match = FRONTMATTER_RE.match(text)
+    if not fm_match:
+        return "no-frontmatter"
+    fm = fm_match.group(1)
+    ts: str | None = None
+
+    id_match = ID_LINE_RE.search(fm)
+    if id_match:
+        raw_id = id_match.group(1).strip().strip('"').strip("'")
+        if raw_id.startswith("readerdocument:"):
+            ts = v3_by_id.get(raw_id.removeprefix("readerdocument:"))
+        elif raw_id:
+            ts = v2_by_id.get(raw_id)
+
+    if not ts:
+        src_match = SOURCE_LINE_RE.search(fm)
+        if src_match:
+            raw = src_match.group(1).strip()
+            # Source values are JSON-string-encoded by the |tojson filter, so
+            # `&` becomes `&` etc. Decode if it looks quoted.
+            url: str | None = None
+            if raw.startswith('"'):
+                try:
+                    url = json.loads(raw)
+                except json.JSONDecodeError:
+                    url = raw.strip('"')
+            else:
+                url = raw.strip("'")
+            if url:
+                ts = v3_by_url.get(url) or v2_by_url.get(url)
+                if not ts:
+                    # PDFs uploaded directly to Reader have a self-URL like
+                    # https://read.readwise.io/read/<ULID> — extract and look up.
+                    m = re.match(r"^https?://read\.readwise\.io/read/([0-9a-z]+)", url)
+                    if m:
+                        ts = v3_by_id.get(m.group(1))
+
+    if not ts:
+        return "no-match"
+
+    new_line = f'captured_at: {to_date(ts)}\n'
+
+    if CAPTURED_LINE_RE.search(fm):
+        new_fm = CAPTURED_LINE_RE.sub(new_line, fm, count=1)
+    else:
+        new_fm = fm.rstrip() + "\n" + new_line.rstrip()
+
+    if new_fm == fm:
+        return "unchanged"
+
+    new_text = f"---\n{new_fm}\n---\n" + text[fm_match.end():]
+    path.write_text(new_text)
+    return "updated"
+
+
+def main() -> int:
+    if not READWISE_DIR.is_dir():
+        print(f"not found: {READWISE_DIR}", file=sys.stderr)
+        return 1
+    token = load_token()
+
+    print("Fetching v3 (Reader docs)…", file=sys.stderr)
+    v3_by_id, v3_by_url = fetch_v3(token)
+    print(f"v3: {len(v3_by_id)} docs by id, {len(v3_by_url)} indexed by URL", file=sys.stderr)
+    print("Fetching v2 (books)…", file=sys.stderr)
+    v2_by_id, v2_by_url = fetch_v2(token)
+    print(f"v2: {len(v2_by_id)} docs by id, {len(v2_by_url)} indexed by URL", file=sys.stderr)
+
+    counts: dict[str, int] = {}
+    for path in sorted(READWISE_DIR.rglob("*.md")):
+        status = update_file(path, v3_by_id, v2_by_id, v3_by_url, v2_by_url)
+        counts[status] = counts.get(status, 0) + 1
+
+    total = sum(counts.values())
+    print(f"\nProcessed {total} files:", file=sys.stderr)
+    for k in sorted(counts):
+        print(f"  {k}: {counts[k]}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
