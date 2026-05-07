@@ -6,7 +6,10 @@ end
 # Aliases
 alias vim=nvim
 alias happy="happy --yolo"
-alias zed='zeditor'
+# On Linux the Zed CLI is `zeditor` (the package name); on macOS it's `zed`.
+if type -q zeditor; and not type -q zed
+    alias zed='zeditor'
+end
 alias gst='git_status_or_worktrees'
 alias k='kubectl'
 
