@@ -117,6 +117,16 @@ SOURCE_BRANCH="${2:-}"
 REPO_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)"
 REPO_ROOT="${REPO_ROOT%/.git}"
 
+# Trust the mise configs at and above $1 if any are present and untrusted.
+# Called from every code path that hands a worktree path back to the caller —
+# including pre-existing worktrees that never went through gwt's create flow.
+trust_mise_configs() {
+  local dir="$1"
+  for cfg in "$dir/mise.toml" "$dir/.mise.toml" "$dir/mise.local.toml" "$dir/.mise.local.toml"; do
+    [ -f "$cfg" ] && mise trust "$cfg" >&2 2>/dev/null || true
+  done
+}
+
 # If the branch is already checked out in an existing worktree, go there —
 # but only when no explicit source-branch was given. With a source-branch the
 # user's intent is to create a NEW branch off it, so an existing branch by
@@ -129,6 +139,7 @@ if [ -n "$EXISTING" ]; then
     exit 1
   fi
   if [ -d "$EXISTING" ]; then
+    trust_mise_configs "$EXISTING"
     echo "$EXISTING"
     exit 0
   else
@@ -146,6 +157,7 @@ if [ -d "$WORKTREE_DIR" ]; then
     echo "Worktree dir '$WORKTREE_DIR' already exists. Drop the second arg to use it, or pick a new name." >&2
     exit 1
   fi
+  trust_mise_configs "$WORKTREE_DIR"
   echo "$WORKTREE_DIR"
   exit 0
 fi
@@ -187,10 +199,7 @@ else
   BASE_BRANCH="$DEFAULT_BRANCH"
 fi
 
-# Trust mise config if present
-if [ -f "$WORKTREE_DIR/mise.toml" ] || [ -f "$WORKTREE_DIR/.mise.toml" ]; then
-  mise trust "$WORKTREE_DIR" >&2 2>/dev/null || true
-fi
+trust_mise_configs "$WORKTREE_DIR"
 
 # For rust workspaces, hardlink registry-dep build artifacts from the
 # sibling worktree we branched off. Cargo treats the hardlinked artifacts
