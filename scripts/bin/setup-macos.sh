@@ -20,7 +20,8 @@ brew install \
     stow \
     make \
     git \
-    fish
+    fish \
+    duti
 brew install --cask 1password-cli
 brew install gh
 
@@ -151,6 +152,9 @@ killall cfprefsd 2>/dev/null || true
 /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u || true
 echo "    (If shortcuts still don't fire, log out and back in — Sequoia's"
 echo "     WindowServer caches the binding table at session start.)"
+
+echo "==> Applying duti default-application bindings..."
+duti "$DOTFILES_DIR/duti/defaults.duti"
 
 echo "==> Configuring yabai scripting addition (requires SIP disabled)..."
 echo "    If you haven't disabled SIP yet, reboot into Recovery Mode (hold Power),"

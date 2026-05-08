@@ -1,0 +1,11 @@
+# macOS default-application bindings, applied by setup-macos.sh via duti.
+# Format: <bundle id>  <UTI-or-extension>  <role>
+#   - role `all` covers viewer + editor + shell + none.
+#   - extensions are written with a leading dot (e.g. `.md`, not `md`).
+#   - lookup a bundle id with: mdls -name kMDItemCFBundleIdentifier /Applications/<App>.app
+#
+# Re-apply manually with: duti ~/dotfiles/duti/defaults.duti
+
+# Markdown — open in VSCode (was Typora).
+com.microsoft.VSCode    .md         all
+com.microsoft.VSCode    .markdown   all
