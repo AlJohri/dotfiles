@@ -96,19 +96,31 @@ if [ "$1" = "prune" ]; then
   exit 0
 fi
 
-if [ $# -ne 1 ]; then
-  echo "Usage: gwt [<branch>|prune]" >&2
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+  echo "Usage: gwt <branch> [<source-branch>]" >&2
+  echo "       gwt prune" >&2
+  echo "       gwt              (list worktrees)" >&2
+  echo "" >&2
+  echo "If <source-branch> is omitted, new branches fork off the default branch (origin/HEAD)." >&2
   exit 1
 fi
 
 BRANCH="$1"
+SOURCE_BRANCH="${2:-}"
 REPO_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)"
 REPO_ROOT="${REPO_ROOT%/.git}"
 
-# If the branch is already checked out in an existing worktree, go there
+# If the branch is already checked out in an existing worktree, go there —
+# but only when no explicit source-branch was given. With a source-branch the
+# user's intent is to create a NEW branch off it, so an existing branch by
+# that name is a conflict, not a no-op.
 EXISTING=$(git worktree list | grep -F "[$BRANCH]" | awk '{print $1}' || true)
 
 if [ -n "$EXISTING" ]; then
+  if [ -n "$SOURCE_BRANCH" ]; then
+    echo "Branch '$BRANCH' is already checked out at $EXISTING. Drop the second arg to navigate there, or pick a new name." >&2
+    exit 1
+  fi
   if [ -d "$EXISTING" ]; then
     echo "$EXISTING"
     exit 0
@@ -120,27 +132,129 @@ fi
 
 WORKTREE_DIR="$REPO_ROOT/$BRANCH"
 
-# If the worktree directory already exists (e.g. registered under a different branch name), just use it
+# If the worktree directory already exists (e.g. registered under a different branch name), just use it.
+# Same caveat as above: with an explicit source, this is a name conflict, not a no-op.
 if [ -d "$WORKTREE_DIR" ]; then
+  if [ -n "$SOURCE_BRANCH" ]; then
+    echo "Worktree dir '$WORKTREE_DIR' already exists. Drop the second arg to use it, or pick a new name." >&2
+    exit 1
+  fi
   echo "$WORKTREE_DIR"
   exit 0
 fi
 
-# Check if the branch exists locally or in a remote
-if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+# Validate explicit source branch (if given) before doing anything destructive.
+if [ -n "$SOURCE_BRANCH" ]; then
+  if ! git show-ref --verify --quiet "refs/heads/$SOURCE_BRANCH" \
+      && ! git show-ref --verify --quiet "refs/remotes/origin/$SOURCE_BRANCH"; then
+    echo "Source branch '$SOURCE_BRANCH' not found locally or in origin." >&2
+    exit 1
+  fi
+fi
+
+# Decide what to check out and track BASE_BRANCH so the link step (below) knows
+# which sibling worktree to copy registry deps from.
+if [ -n "$SOURCE_BRANCH" ]; then
+  # Explicit fork point. If $BRANCH already exists, refuse — forking off something
+  # else than where it currently sits would silently rewrite history.
+  if git show-ref --verify --quiet "refs/heads/$BRANCH" \
+      || git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+    echo "Branch '$BRANCH' already exists. Drop the second arg to check it out, or pick a new name." >&2
+    exit 1
+  fi
+  echo "Creating new branch '$BRANCH' from '$SOURCE_BRANCH'." >&2
+  git worktree add -b "$BRANCH" "$WORKTREE_DIR" "$SOURCE_BRANCH" >&2
+  BASE_BRANCH="$SOURCE_BRANCH"
+elif git show-ref --verify --quiet "refs/heads/$BRANCH"; then
   git worktree add "$WORKTREE_DIR" "$BRANCH" >&2
+  BASE_BRANCH="$BRANCH"
 elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
   git worktree add "$WORKTREE_DIR" "$BRANCH" >&2
+  BASE_BRANCH="$BRANCH"
 else
-  DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
   echo "Branch '$BRANCH' not found locally or in origin." >&2
   echo "Creating new branch from $DEFAULT_BRANCH." >&2
   git worktree add -b "$BRANCH" "$WORKTREE_DIR" "$DEFAULT_BRANCH" >&2
+  BASE_BRANCH="$DEFAULT_BRANCH"
 fi
 
 # Trust mise config if present
 if [ -f "$WORKTREE_DIR/mise.toml" ] || [ -f "$WORKTREE_DIR/.mise.toml" ]; then
   mise trust "$WORKTREE_DIR" >&2 2>/dev/null || true
+fi
+
+# For rust workspaces, hardlink registry-dep build artifacts from the
+# sibling worktree we branched off. Cargo treats the hardlinked artifacts
+# as up-to-date because their fingerprints come along — and because the new
+# branch starts at the base branch's commit, Cargo.lock matches and the
+# registry deps are byte-identical. This skips re-running -sys build scripts
+# (openssl-sys, aws-lc-sys, etc.) on the first build, which is the bulk of
+# cold-build time on a Rust workspace.
+#
+# Source-of-link selection (in priority order):
+#   1. The worktree of $BASE_BRANCH (the branch we forked off, or the branch
+#      itself if it already existed) — this guarantees a Cargo.lock match.
+#   2. Fallback: the worktree with the most-recently-modified target/debug,
+#      which is right when BASE_BRANCH itself isn't checked out anywhere.
+#      Cargo will detect any Cargo.lock divergence and rebuild the deltas
+#      itself, so this is best-effort but never wrong.
+#
+# Opt out entirely with GWT_SKIP_LINK=1.
+if [ -z "${GWT_SKIP_LINK:-}" ] \
+    && [ -f "$WORKTREE_DIR/Cargo.toml" ] \
+    && command -v cargo-share-registry-deps >/dev/null 2>&1; then
+  base_src=""
+  fallback_src=""
+  fallback_mtime=0
+  while IFS= read -r line; do
+    case "$line" in
+      "worktree "*)
+        wt="${line#worktree }"
+        wt_branch=""
+        ;;
+      "branch "*)
+        wt_branch="${line#branch }"
+        wt_branch="${wt_branch#refs/heads/}"
+        ;;
+      "")
+        if [ -z "$wt" ] || [ "$wt" = "$WORKTREE_DIR" ] || [ "$wt" = "$REPO_ROOT" ]; then
+          wt=""
+          continue
+        fi
+        fp_dir="$wt/target/debug/.fingerprint"
+        if [ ! -d "$fp_dir" ]; then
+          wt=""
+          continue
+        fi
+        if [ "$wt_branch" = "$BASE_BRANCH" ]; then
+          base_src="$wt"
+        else
+          m=$(perl -e 'print((stat $ARGV[0])[9])' "$fp_dir" 2>/dev/null || echo 0)
+          if [ "$m" -gt "$fallback_mtime" ]; then
+            fallback_mtime="$m"
+            fallback_src="$wt"
+          fi
+        fi
+        wt=""
+        ;;
+    esac
+  done < <(git worktree list --porcelain; echo "")
+
+  src_wt=""
+  if [ -n "$base_src" ]; then
+    src_wt="$base_src"
+    echo "Linking registry deps from base branch '$BASE_BRANCH' worktree at $src_wt..." >&2
+  elif [ -n "$fallback_src" ]; then
+    src_wt="$fallback_src"
+    echo "Base branch '$BASE_BRANCH' has no built worktree; falling back to most-recently-built sibling at $src_wt..." >&2
+  fi
+
+  if [ -n "$src_wt" ]; then
+    # Run from the new worktree so `cargo metadata` resolves its Cargo.lock.
+    (cd "$WORKTREE_DIR" && cargo-share-registry-deps "$src_wt/target" "$WORKTREE_DIR/target") >&2 || true
+  fi
 fi
 
 echo "$WORKTREE_DIR"

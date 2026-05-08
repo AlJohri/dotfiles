@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+# Hardlink registry/git dep build artifacts (deps/, .fingerprint/, build/)
+# from a populated cargo target dir into a fresh sibling worktree's target dir.
+#
+# Workspace crates are intentionally excluded — they're what you're actively
+# editing. Only external (registry+/git+) deps are linked. Hardlinks let cargo
+# treat them as up-to-date and skip both rustc and (more importantly) the
+# C-library compilation that *-sys build scripts perform.
+#
+# Adapted from https://blog.howardjohn.info/posts/shared-rust-build/.
+#
+# Usage: cargo-share-registry-deps <src-target-dir> <dst-target-dir>
+#
+# Run from any cwd that contains the Cargo.toml whose `cargo metadata` should
+# enumerate the registry deps to link (typically the dst worktree root).
+
+import json
+import os
+import re
+import subprocess
+import sys
+
+
+def main():
+    if len(sys.argv) != 3:
+        print("usage: cargo-share-registry-deps <src-target> <dst-target>", file=sys.stderr)
+        sys.exit(2)
+
+    src = os.path.join(sys.argv[1], "debug")
+    dst = os.path.join(sys.argv[2], "debug")
+
+    if not os.path.isdir(src):
+        print(f"src target dir is not populated: {src}", file=sys.stderr)
+        sys.exit(1)
+
+    meta = json.loads(
+        subprocess.check_output(["cargo", "metadata", "--format-version", "1"])
+    )
+
+    registry = set()
+    for pkg in meta["packages"]:
+        s = pkg.get("source") or ""
+        if s.startswith("registry+") or s.startswith("git+"):
+            registry.add(pkg["name"].replace("-", "_"))
+            for target in pkg["targets"]:
+                registry.add(target["name"].replace("-", "_"))
+
+    re_lib = re.compile(r"^lib")
+    re_ext = re.compile(r"\.[^.]*$")
+    re_hash = re.compile(r"-[^-]+$")
+
+    def pkg_name(f):
+        return re_hash.sub("", re_ext.sub("", re_lib.sub("", f)))
+
+    def syncdirtime(src_dir, dst_dir):
+        st = os.stat(src_dir)
+        os.utime(dst_dir, ns=(st.st_atime_ns, st.st_mtime_ns))
+
+    def link(src_path, dst_path):
+        try:
+            os.link(src_path, dst_path)
+        except FileExistsError:
+            os.unlink(dst_path)
+            os.link(src_path, dst_path)
+
+    os.makedirs(f"{dst}/deps", exist_ok=True)
+    os.makedirs(f"{dst}/.fingerprint", exist_ok=True)
+
+    linked_deps = 0
+    for f in os.scandir(f"{src}/deps"):
+        if pkg_name(f.name) in registry:
+            link(f.path, f"{dst}/deps/{f.name}")
+            linked_deps += 1
+
+    linked_fp = 0
+    for d in os.scandir(f"{src}/.fingerprint"):
+        if re_hash.sub("", d.name).replace("-", "_") in registry:
+            os.makedirs(f"{dst}/.fingerprint/{d.name}", exist_ok=True)
+            for f in os.scandir(d.path):
+                link(f.path, f"{dst}/.fingerprint/{d.name}/{f.name}")
+            syncdirtime(d.path, f"{dst}/.fingerprint/{d.name}")
+            linked_fp += 1
+
+    linked_build_dirs = 0
+    linked_build_files = 0
+    if os.path.isdir(f"{src}/build"):
+        for d in os.scandir(f"{src}/build"):
+            if re_hash.sub("", d.name).replace("-", "_") in registry:
+                for root, dirs, files in os.walk(d.path):
+                    rel = os.path.relpath(root, f"{src}/build")
+                    os.makedirs(f"{dst}/build/{rel}", exist_ok=True)
+                    for f in files:
+                        link(f"{root}/{f}", f"{dst}/build/{rel}/{f}")
+                        linked_build_files += 1
+                    syncdirtime(root, f"{dst}/build/{rel}")
+                linked_build_dirs += 1
+
+    print(
+        f"hardlinked {linked_deps} deps + {linked_fp} fingerprint dirs + "
+        f"{linked_build_dirs} build dirs ({linked_build_files} files) "
+        f"from {sys.argv[1]} → {sys.argv[2]}"
+    )
+
+
+if __name__ == "__main__":
+    main()
