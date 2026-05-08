@@ -35,7 +35,7 @@ git config --bool core.bare 2>/dev/null   # "true" → bare; otherwise normal
   ```
 
 **Rules for bare repos:**
-- **Always use `gwt` for worktree operations.** It's at `~/dotfiles/scripts/bin/gwt` (stowed to `~/bin/gwt`) and the source of truth for the bare-repo conventions: places worktrees as siblings of `.git/`, enforces the dir-name = branch-name rule, runs `mise trust`, and for Rust workspaces hardlinks registry-dep build artifacts from the base branch's worktree so the new worktree skips re-running `*-sys` build scripts on its first build. Do **not** issue `git worktree add`, `git checkout <branch>`, or `git switch` directly — they bypass these guarantees.
+- **Always use `gwt` for worktree operations.** It's at `~/dotfiles/scripts/bin/gwt` (stowed to `~/bin/gwt`) and the source of truth for the bare-repo conventions: places worktrees as siblings of `.git/`, enforces the dir-name = branch-name rule, runs `mise trust`, and for Rust workspaces hardlinks registry-dep build artifacts (`deps/`, `.fingerprint/`, `build/<crate>/out/`) from the base branch's worktree so the new worktree skips re-running `*-sys` build scripts on its first build. The hardlinking is done by `~/dotfiles/scripts/bin/cargo-share-registry-deps`, which gwt invokes. Do **not** issue `git worktree add`, `git checkout <branch>`, or `git switch` directly — they bypass these guarantees. **If gwt's behaviour surprises you, read the script directly** rather than guessing.
 - Do NOT use the `EnterWorktree` tool either (it places worktrees under `.claude/worktrees/`, which is the wrong location for this layout).
 - Never edit files in the bare repo root. If the session starts in a bare repo root, `cd` into a worktree first (e.g. `gwt main`).
 
