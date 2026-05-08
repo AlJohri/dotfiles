@@ -84,9 +84,16 @@ if [ "$1" = "prune" ]; then
         if [ "$wt_path" = "$REPO_ROOT" ]; then
           continue
         fi
-        # Check if remote tracking branch still exists
-        if ! git show-ref --verify --quiet "refs/remotes/origin/$branch_name"; then
-          echo "Removing worktree '$wt_path' (branch '$branch_name' no longer on remote)" >&2
+        # Distinguish "never pushed" from "remote deleted":
+        #   - upstream configured + remote ref missing → branch was deleted on
+        #     the remote, so the worktree is stale and we remove it.
+        #   - no upstream at all → branch was never pushed; keep the worktree.
+        upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "$branch_name@{upstream}" 2>/dev/null || true)
+        if [ -z "$upstream" ]; then
+          continue
+        fi
+        if ! git show-ref --verify --quiet "refs/remotes/$upstream"; then
+          echo "Removing worktree '$wt_path' (branch '$branch_name' tracked '$upstream' which is no longer on remote)" >&2
           git worktree remove "$wt_path" >&2
         fi
         ;;
