@@ -35,27 +35,35 @@ git config --bool core.bare 2>/dev/null   # "true" → bare; otherwise normal
   ```
 
 **Rules for bare repos:**
-- Use the `git worktree` CLI directly — do NOT use the `EnterWorktree` tool (it places worktrees under `.claude/worktrees/`, which is the wrong location for this layout).
+- **Prefer `gwt` over raw `git worktree`/`git checkout`/`git switch`.** `gwt` is a wrapper at `~/dotfiles/scripts/bin/gwt` (stowed to `~/bin/gwt`) that handles the bare-repo conventions, runs `mise trust` automatically (both for new and existing worktrees), and for Rust workspaces hardlinks registry-dep build artifacts from the base branch's worktree so the new worktree skips re-running `*-sys` build scripts on its first build. **Use it instead of issuing `git worktree add`, `git checkout <branch>`, or `git switch` directly.** The raw plumbing commands listed below are documented for reference / when you need behavior gwt doesn't expose.
+- Do NOT use the `EnterWorktree` tool (it places worktrees under `.claude/worktrees/`, which is the wrong location for this layout).
 - Never edit files in the bare repo root. If the session starts in a bare repo root, create or enter a worktree first.
 - The worktree directory name must match the branch name exactly (branch `fix-auth-timeout` → directory `<repo>/fix-auth-timeout/`).
+
+**Working with `gwt`:**
+- `gwt` (no args) — list all worktrees with their branches and (if `gh` is available) linked PR numbers.
+- `gwt <branch>` — if the branch exists (locally or on origin), create or enter the worktree for it. If it doesn't exist, create a new branch off the default branch (origin/HEAD, usually `main`). Returns the worktree path on stdout; the fish wrapper additionally `cd`s into it.
+- `gwt <branch> <source-branch>` — create a new branch forked from `<source-branch>` (must already exist). Refuses if `<branch>` already exists. The hardlink step then sources from the `<source-branch>` worktree, which guarantees a Cargo.lock match.
+- `gwt prune` — remove worktrees with missing directories and worktrees whose tracked upstream branch was deleted on the remote. Branches that were never pushed are kept (no upstream).
+- Opt out of the hardlink step with `GWT_SKIP_LINK=1`.
+
+**Raw git plumbing (only when gwt doesn't suffice):**
 - To find the bare repo root from anywhere inside the repo:
   ```bash
   REPO_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)"
   REPO_ROOT="${REPO_ROOT%/.git}"
   ```
-- To create a new worktree (branch exists locally or on origin):
+- To create a worktree manually:
   ```bash
-  git worktree add "$REPO_ROOT/<branch>" <branch>
+  git worktree add "$REPO_ROOT/<branch>" <branch>             # branch exists
+  git worktree add -b <branch> "$REPO_ROOT/<branch>" main     # new branch off main
   ```
-- To create a new worktree on a brand-new branch off the default branch:
-  ```bash
-  git worktree add -b <branch> "$REPO_ROOT/<branch>" main
-  ```
-- To switch to an existing worktree, `cd "$REPO_ROOT/<branch>"`. Check `git worktree list` first if unsure what exists.
-- After creating or entering a worktree:
-  - Run `mise trust` from the worktree root. mise walks parent directories looking for `mise.toml`, `mise.local.toml`, `.mise.toml`, `.mise.local.toml`, and `.config/mise.toml`; any of them — including in the bare-repo root above the worktree — must be trusted before mise will load it. If a build or env-dependent command fails with "Config files in ... are not trusted", the fix is `mise trust` (re-run from the worktree).
-  - If a `.pre-commit-config.yaml` exists, ensure hooks are installed (see pre-commit instructions below).
+  After a manual `git worktree add`, you'll need to run `mise trust` yourself — that's exactly the kind of thing `gwt` automates.
 - Never use `git checkout` or `git switch` to change branches. Always create a new worktree for the target branch and `cd` into it.
+
+**After creating or entering a worktree (relevant whether you used `gwt` or raw git):**
+- mise: `gwt` already runs `mise trust` for you. If you went around it, run `mise trust` from the worktree root yourself. mise walks parent directories looking for `mise.toml`, `mise.local.toml`, `.mise.toml`, `.mise.local.toml`, and `.config/mise.toml`; any of them — including in the bare-repo root above the worktree — must be trusted before mise will load it. If a build or env-dependent command fails with "Config files in ... are not trusted", the fix is `mise trust` (re-run from the worktree).
+- If a `.pre-commit-config.yaml` exists, ensure hooks are installed (see pre-commit instructions below).
 
 ## Kubernetes / GitOps
 
