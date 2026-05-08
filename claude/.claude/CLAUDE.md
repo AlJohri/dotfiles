@@ -44,7 +44,6 @@ git config --bool core.bare 2>/dev/null   # "true" → bare; otherwise normal
 - `gwt <branch>` — if the branch exists (locally or on origin), create or enter the worktree for it. If it doesn't exist, create a new branch off the default branch (origin/HEAD, usually `main`). Prints the worktree path on stdout; the fish wrapper also `cd`s into it.
 - `gwt <branch> <source-branch>` — create a new branch forked from `<source-branch>` (must already exist). Refuses if `<branch>` already exists. The hardlink step sources from the `<source-branch>` worktree so Cargo.lock matches.
 - `gwt prune` — remove worktrees with missing directories and worktrees whose tracked upstream branch was deleted on the remote. Branches that were never pushed are kept.
-- `GWT_SKIP_LINK=1 gwt …` — skip the Rust dep-hardlink step.
 
 If you genuinely need something gwt doesn't expose (detached-HEAD worktree, worktree at a specific commit instead of a branch tip, etc.), surface it to me — don't reach for raw `git worktree` plumbing on your own; that's the situation where I want to decide rather than have you guess.
 
