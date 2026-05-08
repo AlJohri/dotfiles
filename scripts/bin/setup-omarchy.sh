@@ -76,6 +76,11 @@ if ! gh auth token &>/dev/null; then
     gh auth login
 fi
 
+if ! gh extension list | grep -q '^gh image'; then
+    echo "==> Installing gh-image extension..."
+    gh extension install drogers0/gh-image
+fi
+
 if [ ! -f "$HOME/.local/bin/mise" ]; then
     echo "==> Installing mise via curl (for self-update support)..."
     curl https://mise.run | sh

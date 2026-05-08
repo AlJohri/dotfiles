@@ -38,6 +38,11 @@ if ! gh auth token &>/dev/null; then
     gh auth login
 fi
 
+if ! gh extension list | grep -q '^gh image'; then
+    echo "==> Installing gh-image extension..."
+    gh extension install drogers0/gh-image
+fi
+
 echo "==> Installing mise tools..."
 mise trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
 GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
