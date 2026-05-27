@@ -117,6 +117,56 @@ SOURCE_BRANCH="${2:-}"
 REPO_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)"
 REPO_ROOT="${REPO_ROOT%/.git}"
 
+# GitHub `owner:branch` fork notation (as shown on PR pages): resolve to the
+# PR number, add a named remote for the fork owner (so push/pull work), fetch
+# the head ref, create a local branch tracking the fork remote, and rewrite
+# $BRANCH so the rest of the script operates on the local name.
+if [[ "$BRANCH" == *:* ]]; then
+  if [ -n "$SOURCE_BRANCH" ]; then
+    echo "Fork notation '$BRANCH' can't be combined with a source branch." >&2
+    exit 1
+  fi
+  if ! command -v gh &>/dev/null; then
+    echo "gh is required to resolve fork notation '$BRANCH'." >&2
+    exit 1
+  fi
+  FORK_OWNER="${BRANCH%%:*}"
+  FORK_HEAD="${BRANCH#*:}"
+  PR_NUM=$(gh pr list -H "$FORK_HEAD" --state all --json number,headRepositoryOwner \
+    -q ".[] | select(.headRepositoryOwner.login==\"$FORK_OWNER\") | .number" 2>/dev/null | head -1)
+  if [ -z "$PR_NUM" ] || [ "$PR_NUM" = "null" ]; then
+    echo "No PR found with head '$BRANCH'." >&2
+    exit 1
+  fi
+
+  # Add (or reuse) a named remote for the fork owner. Derive the URL by
+  # swapping origin's owner segment — preserves HTTPS vs SSH.
+  if ! git remote get-url "$FORK_OWNER" >/dev/null 2>&1; then
+    ORIGIN_URL=$(git remote get-url origin 2>/dev/null || true)
+    FORK_URL=""
+    if [[ "$ORIGIN_URL" =~ ^(https?://[^/]+/)[^/]+/(.+)$ ]]; then
+      FORK_URL="${BASH_REMATCH[1]}$FORK_OWNER/${BASH_REMATCH[2]}"
+    elif [[ "$ORIGIN_URL" =~ ^([^@]+@[^:]+:)[^/]+/(.+)$ ]]; then
+      FORK_URL="${BASH_REMATCH[1]}$FORK_OWNER/${BASH_REMATCH[2]}"
+    fi
+    if [ -z "$FORK_URL" ]; then
+      echo "Could not derive fork URL for '$FORK_OWNER' from origin '$ORIGIN_URL'." >&2
+      exit 1
+    fi
+    echo "Adding remote '$FORK_OWNER' -> $FORK_URL" >&2
+    git remote add "$FORK_OWNER" "$FORK_URL" >&2
+  fi
+
+  if git show-ref --verify --quiet "refs/heads/$FORK_HEAD"; then
+    echo "Local branch '$FORK_HEAD' already exists; using it as-is (not re-fetching from '$FORK_OWNER')." >&2
+  else
+    echo "Resolved '$BRANCH' to PR #$PR_NUM; fetching '$FORK_HEAD' from remote '$FORK_OWNER'." >&2
+    git fetch "$FORK_OWNER" "$FORK_HEAD" >&2
+    git branch --track "$FORK_HEAD" "refs/remotes/$FORK_OWNER/$FORK_HEAD" >&2
+  fi
+  BRANCH="$FORK_HEAD"
+fi
+
 # Trust the mise configs at and above $1 if any are present and untrusted.
 # Called from every code path that hands a worktree path back to the caller —
 # including pre-existing worktrees that never went through gwt's create flow.
@@ -212,18 +262,16 @@ trust_mise_configs "$WORKTREE_DIR"
 # Source-of-link selection (in priority order):
 #   1. The worktree of $BASE_BRANCH (the branch we forked off, or the branch
 #      itself if it already existed) — this guarantees a Cargo.lock match.
-#   2. Fallback: the worktree with the most-recently-modified target/debug,
-#      which is right when BASE_BRANCH itself isn't checked out anywhere.
-#      Cargo will detect any Cargo.lock divergence and rebuild the deltas
-#      itself, so this is best-effort but never wrong.
+#   2. Fallback: the worktree of the default branch (origin/HEAD). Cargo will
+#      detect any Cargo.lock divergence and rebuild the deltas itself, so this
+#      is best-effort but never wrong.
 #
 # Opt out entirely with GWT_SKIP_LINK=1.
 if [ -z "${GWT_SKIP_LINK:-}" ] \
     && [ -f "$WORKTREE_DIR/Cargo.toml" ] \
     && command -v cargo-share-registry-deps >/dev/null 2>&1; then
   base_src=""
-  fallback_src=""
-  fallback_mtime=0
+  default_src=""
   while IFS= read -r line; do
     case "$line" in
       "worktree "*)
@@ -239,18 +287,11 @@ if [ -z "${GWT_SKIP_LINK:-}" ] \
           wt=""
           continue
         fi
-        fp_dir="$wt/target/debug/.fingerprint"
-        if [ ! -d "$fp_dir" ]; then
-          wt=""
-          continue
-        fi
-        if [ "$wt_branch" = "$BASE_BRANCH" ]; then
-          base_src="$wt"
-        else
-          m=$(perl -e 'print((stat $ARGV[0])[9])' "$fp_dir" 2>/dev/null || echo 0)
-          if [ "$m" -gt "$fallback_mtime" ]; then
-            fallback_mtime="$m"
-            fallback_src="$wt"
+        if [ -d "$wt/target/debug/.fingerprint" ]; then
+          if [ "$wt_branch" = "$BASE_BRANCH" ]; then
+            base_src="$wt"
+          elif [ "$wt_branch" = "$DEFAULT_BRANCH" ]; then
+            default_src="$wt"
           fi
         fi
         wt=""
@@ -262,9 +303,9 @@ if [ -z "${GWT_SKIP_LINK:-}" ] \
   if [ -n "$base_src" ]; then
     src_wt="$base_src"
     echo "Linking registry deps from base branch '$BASE_BRANCH' worktree at $src_wt..." >&2
-  elif [ -n "$fallback_src" ]; then
-    src_wt="$fallback_src"
-    echo "Base branch '$BASE_BRANCH' has no built worktree; falling back to most-recently-built sibling at $src_wt..." >&2
+  elif [ -n "$default_src" ]; then
+    src_wt="$default_src"
+    echo "Base branch '$BASE_BRANCH' has no built worktree; falling back to default branch '$DEFAULT_BRANCH' worktree at $src_wt..." >&2
   fi
 
   if [ -n "$src_wt" ]; then

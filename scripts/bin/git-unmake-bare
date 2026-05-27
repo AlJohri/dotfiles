@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Convert a bare repo (with sibling worktree layout) back to a normal git repo.
+#
+# Starting layout:
+#   <repo>/.git/                  (bare, core.bare=true)
+#   <repo>/<default-branch>/      (worktree for default branch)
+#   <repo>/<other-branch>/        (additional worktrees, optional)
+#
+# Resulting layout:
+#   <repo>/.git/                  (normal, core.bare=false)
+#   <repo>/<working tree files>   (default branch checked out)
+#
+# Refuses to run if any worktree has uncommitted changes, untracked files, or
+# unpushed commits. Resolve those first (commit, push, or discard) before
+# re-running.
+
+# --- Locate the bare repo root --------------------------------------------
+
+COMMON_DIR_RAW="$(git rev-parse --git-common-dir 2>/dev/null)" || {
+  echo "Error: not inside a git repository." >&2
+  exit 1
+}
+COMMON_DIR="$(cd "$COMMON_DIR_RAW" && pwd)"
+
+# core.bare is read from the common dir
+IS_BARE="$(git --git-dir="$COMMON_DIR" config --bool core.bare 2>/dev/null || echo false)"
+if [ "$IS_BARE" != "true" ]; then
+  echo "Error: repo is not bare (core.bare != true)." >&2
+  exit 1
+fi
+
+# Repo root is the parent of the bare .git directory, or the common dir itself
+# if the bare dir was created without a .git/ wrapper (rare for this layout).
+if [ "$(basename "$COMMON_DIR")" = ".git" ]; then
+  REPO_ROOT="$(dirname "$COMMON_DIR")"
+else
+  echo "Error: bare git-dir '$COMMON_DIR' is not named .git; refusing to guess repo root." >&2
+  exit 1
+fi
+
+DEFAULT_BRANCH=$(git --git-dir="$COMMON_DIR" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+DEFAULT_WORKTREE="$REPO_ROOT/$DEFAULT_BRANCH"
+
+if [ ! -d "$DEFAULT_WORKTREE" ]; then
+  echo "Error: default-branch worktree not found at $DEFAULT_WORKTREE" >&2
+  exit 1
+fi
+
+# --- Verify all worktrees are clean and pushed ----------------------------
+
+# Collect worktree paths (skip the bare repo itself). Avoid `mapfile` —
+# macOS still ships bash 3.2.
+WORKTREES=()
+while IFS= read -r line; do
+  WORKTREES+=("$line")
+done < <(
+  git --git-dir="$COMMON_DIR" worktree list --porcelain \
+    | awk '/^worktree /{print substr($0, 10)}'
+)
+
+DIRTY_WORKTREES=()
+UNPUSHED_WORKTREES=()
+for wt in "${WORKTREES[@]}"; do
+  # Skip the bare repo "worktree" entry (its path equals REPO_ROOT and has no
+  # working files).
+  if [ "$wt" = "$REPO_ROOT" ]; then
+    continue
+  fi
+  if ! git -C "$wt" diff-index --quiet HEAD -- 2>/dev/null; then
+    DIRTY_WORKTREES+=("$wt (tracked changes)")
+  fi
+  if [ -n "$(git -C "$wt" ls-files --others --exclude-standard 2>/dev/null)" ]; then
+    DIRTY_WORKTREES+=("$wt (untracked files)")
+  fi
+  # Unpushed commits — only check if branch has an upstream.
+  if git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    ahead="$(git -C "$wt" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
+    if [ "$ahead" != "0" ]; then
+      UNPUSHED_WORKTREES+=("$wt ($ahead unpushed)")
+    fi
+  fi
+done
+
+if [ "${#DIRTY_WORKTREES[@]}" -gt 0 ] || [ "${#UNPUSHED_WORKTREES[@]}" -gt 0 ]; then
+  echo "Error: refusing to convert — some worktrees have uncommitted or unpushed work:" >&2
+  for w in "${DIRTY_WORKTREES[@]}"; do echo "  dirty:    $w" >&2; done
+  for w in "${UNPUSHED_WORKTREES[@]}"; do echo "  ahead:    $w" >&2; done
+  echo "Commit + push or discard these first, then re-run." >&2
+  exit 1
+fi
+
+# --- Confirm ---------------------------------------------------------------
+
+echo "This will:" >&2
+echo "  1. Remove all worktrees under $REPO_ROOT" >&2
+echo "  2. Promote the '$DEFAULT_BRANCH' worktree contents to the repo root" >&2
+echo "  3. Set core.bare = false" >&2
+echo >&2
+echo "Worktrees to remove:" >&2
+for wt in "${WORKTREES[@]}"; do
+  [ "$wt" = "$REPO_ROOT" ] && continue
+  echo "  - $wt" >&2
+done
+echo >&2
+read -rp "Continue? [y/N] " confirm
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+  echo "Aborted." >&2
+  exit 1
+fi
+
+# --- Remove non-default worktrees -----------------------------------------
+
+for wt in "${WORKTREES[@]}"; do
+  if [ "$wt" = "$REPO_ROOT" ] || [ "$wt" = "$DEFAULT_WORKTREE" ]; then
+    continue
+  fi
+  git --git-dir="$COMMON_DIR" worktree remove "$wt"
+  echo "Removed worktree: $wt" >&2
+done
+
+# --- Promote default worktree to be the repo's working tree ---------------
+
+# The default worktree's metadata lives in $COMMON_DIR/worktrees/<name>/.
+# We need its HEAD, index, and reflog to become the bare repo's HEAD/index/reflog.
+WT_META="$COMMON_DIR/worktrees/$DEFAULT_BRANCH"
+if [ ! -d "$WT_META" ]; then
+  # Older worktrees may be named differently; locate by matching gitdir.
+  WT_META=""
+  for dir in "$COMMON_DIR"/worktrees/*/; do
+    [ -d "$dir" ] || continue
+    if [ "$(cat "$dir/gitdir" 2>/dev/null)" = "$DEFAULT_WORKTREE/.git" ]; then
+      WT_META="${dir%/}"
+      break
+    fi
+  done
+fi
+if [ -z "$WT_META" ] || [ ! -d "$WT_META" ]; then
+  echo "Error: could not find worktree metadata for $DEFAULT_WORKTREE" >&2
+  exit 1
+fi
+
+# Move HEAD and index from the worktree metadata to the common dir.
+cp "$WT_META/HEAD" "$COMMON_DIR/HEAD"
+if [ -f "$WT_META/index" ]; then
+  cp "$WT_META/index" "$COMMON_DIR/index"
+fi
+# Reflog for HEAD, if present.
+if [ -f "$WT_META/logs/HEAD" ]; then
+  mkdir -p "$COMMON_DIR/logs"
+  cp "$WT_META/logs/HEAD" "$COMMON_DIR/logs/HEAD"
+fi
+
+# Drop the worktree's .git pointer file and move files up.
+rm -f "$DEFAULT_WORKTREE/.git"
+
+# Move everything (including dotfiles) from $DEFAULT_WORKTREE to $REPO_ROOT.
+# shopt -s dotglob lets * match dotfiles in bash.
+shopt -s dotglob nullglob
+for entry in "$DEFAULT_WORKTREE"/*; do
+  base="$(basename "$entry")"
+  if [ -e "$REPO_ROOT/$base" ]; then
+    echo "Error: $REPO_ROOT/$base already exists — refusing to overwrite." >&2
+    exit 1
+  fi
+  mv "$entry" "$REPO_ROOT/$base"
+done
+shopt -u dotglob nullglob
+rmdir "$DEFAULT_WORKTREE"
+
+# Remove all worktree metadata now that everything is collapsed back.
+rm -rf "$COMMON_DIR/worktrees"
+
+# --- Flip core.bare and verify --------------------------------------------
+
+git --git-dir="$COMMON_DIR" config core.bare false
+echo "Set core.bare = false" >&2
+
+# Refresh the index so stat info matches the just-moved files, then sanity
+# check that the working tree matches HEAD.
+cd "$REPO_ROOT"
+git update-index --refresh >/dev/null 2>&1 || true
+if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+  echo "Warning: working tree differs from HEAD after conversion. Inspect 'git status'." >&2
+fi
+
+echo >&2
+echo "Done. $REPO_ROOT is now a normal git repo on branch '$DEFAULT_BRANCH'." >&2
