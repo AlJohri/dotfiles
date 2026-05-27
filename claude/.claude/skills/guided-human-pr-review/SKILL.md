@@ -60,6 +60,29 @@ Some hunks may be trivially small (e.g. a single import line). In these cases, r
 
 ## Phase 4: Present the review plan
 
+### 4a. Write a dependency-map mermaid diagram
+
+Before rendering the prose plan, write a markdown file (e.g. `/tmp/pr-<NUM>-review-map.md`, or `/tmp/<branch>-review-map.md` if no PR) containing a top-down mermaid `flowchart TD` that groups the changed files into numbered layers matching the review order. Each layer = one `subgraph`; arrows show which layers depend on which. Goal: the reviewer can see at a glance how the pieces fit together and why the review order makes sense.
+
+Guidelines:
+- **Use one node per layer, with the file list inside the node's label** (via `<br/>`). Do NOT use `subgraph` blocks — Mermaid renderers (notably VS Code's) have multiple rendering bugs with subgraphs: title bars overlap nodes when titles wrap, `direction TB` is often ignored, orphan nodes inside subgraphs stack with huge gaps. One-node-per-layer sidesteps all of these.
+- Format each layer node with a bold header, a horizontal rule, then the file list:
+  ```
+  L1["<b>L1 · Protos</b><hr/>dense_index.proto +80 NEW<br/>planner.proto +87<br/>data_node.proto +43"]
+  L2["<b>L2 · Rust interface types</b><hr/>dense_index.rs + manifest.rs NEW<br/>planner.rs + SingleDense/Hybrid"]
+  L1 --> L2
+  ```
+- Number layers `L1`, `L2`, … in review order. Title text should be ultra-short ("L1 · Protos", not "L1 · Proto contracts (source of truth)").
+- Avoid parentheses in labels — use bare deltas like `+80 NEW` instead of `(+80) NEW`.
+- Use `NEW` to flag new files. Strip long path prefixes — the layer header gives the crate/area context.
+- Draw inter-layer arrows (`L1 --> L2`). For multi-layer dependencies (e.g. L5 depends on both L2 and L3), draw both arrows.
+- Use dotted arrows (`-.->`) for mechanical/workspace plumbing (Cargo.lock, build.rs registration, etc.). Put these on a separate top-level node like `CARGO`, not inside a layer node.
+- Follow the diagram with a short "Recommended review order" numbered list mirroring the layers. This is where the longer "why each layer matters" prose goes.
+
+Tell the user the file path so they can open it in a markdown renderer (Obsidian, GitHub preview, VS Code, etc.) while you continue with the prose plan in the terminal.
+
+### 4b. Render the review plan via glow
+
 Render the review plan via glow using the Bash tool:
 
 ```bash

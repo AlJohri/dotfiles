@@ -16,6 +16,8 @@
 - To include screenshots in PR descriptions, upload them with `gh image <path> --repo <owner/repo>`, which outputs a markdown image reference (`![name](url)`). Paste the output directly into the PR body.
 - If a `.pre-commit-config.yaml` exists, ensure hooks are installed (`pre-commit install`) before committing. If it fails with `core.hooksPath` error, unset it first (`git config --unset core.hooksPath`), then install — the hook goes to `.git/hooks/` which is already shared across worktrees. If installation still fails, fall back to `pre-commit run --all-files` explicitly. May need `mise trust` first in new worktrees.
 - Skip optional, long-running validation stages locally (e.g., pre-commit `--hook-stage manual`, `make ci-full`, `tox -e all`). These stages are opt-out by design — they're slow (network fetches, full-repo templating, cross-cluster renders) and meant to be skipped during iteration. The default validation is what CI runs on every commit and is sufficient. If you need to exercise a specific expensive hook, run it targeted at just the changed files.
+- For Rust projects, run tests via `cargo nextest run` (faster, isolated per-test processes), not `cargo test`. Snapshot updates: `INSTA_UPDATE=always cargo nextest run`. Doc-tests still need `cargo test --doc`.
+- Always pass `--draft` to `spr diff` (it publishes immediately with no dry-run; drafts limit blast radius — no auto-reviewers, CI often skipped).
 
 ## Bare Repos & Git Worktrees
 

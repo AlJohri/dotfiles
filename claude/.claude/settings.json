@@ -1,5 +1,4 @@
 {
-  "outputStyle": "Concise",
   "includeCoAuthoredBy": false,
   "permissions": {
     "allow": [
@@ -29,15 +28,25 @@
     "claude-md-management@claude-plugins-official": true,
     "playground@claude-plugins-official": false,
     "clangd-lsp@claude-plugins-official": false,
-    "skill-creator@claude-plugins-official": true
+    "skill-creator@claude-plugins-official": true,
+    "code-review@claude-code-plugins": true
   },
+  "extraKnownMarketplaces": {
+    "claude-code-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-code"
+      }
+    }
+  },
+  "outputStyle": "Concise",
   "effortLevel": "medium",
   "autoMemoryEnabled": false,
   "autoDreamEnabled": false,
   "skipDangerousModePermissionPrompt": true,
-  "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
   "verbose": true,
   "remoteControlAtStartup": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true
 }
