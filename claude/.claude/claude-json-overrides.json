@@ -1,5 +1,6 @@
 {
   "remoteControlAtStartup": true,
+  "remoteDialogSeen": true,
   "claudeInChromeDefaultEnabled": true,
   "verbose": true,
   "showSpinnerTree": true
