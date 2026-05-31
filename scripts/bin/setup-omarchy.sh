@@ -162,13 +162,6 @@ if [ ! -f "$HOME/.config/code-server/.env" ]; then
     echo "    Password saved to ~/.config/code-server/.env"
 fi
 
-if ! systemctl --user is-enabled code-server &>/dev/null; then
-    echo "==> Enabling code-server service..."
-    loginctl enable-linger "$USER"
-    systemctl --user daemon-reload
-    systemctl --user enable --now code-server
-fi
-
 if ! command -v tailscale &>/dev/null; then
     echo "==> Installing Tailscale (+ tsui, webapp, TUI entry)..."
     omarchy-install-tailscale
@@ -201,5 +194,14 @@ echo "==> Stowing dotfiles (review any incoming changes per file)..."
 # through the symlink in place, so this is idempotent and leaves the repo clean.
 echo "==> Setting Chrome as the default browser..."
 omarchy default browser chrome
+
+# Enable code-server now that its unit (code-server/.config/systemd/user/) has been
+# stowed above -- on a fresh machine the unit doesn't exist until stow runs.
+if ! systemctl --user is-enabled code-server &>/dev/null; then
+    echo "==> Enabling code-server service..."
+    loginctl enable-linger "$USER"
+    systemctl --user daemon-reload
+    systemctl --user enable --now code-server
+fi
 
 echo "==> Done! Restart your shell or run: exec fish"
