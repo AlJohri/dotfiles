@@ -67,15 +67,23 @@ if ! gh extension list | grep -q '^gh image'; then
     gh extension install drogers0/gh-image
 fi
 
-if [ ! -f "$HOME/.local/bin/mise" ]; then
+# omarchy-fish/omarchy-zsh pull in an older /usr/bin/mise as a dependency, which
+# wins on PATH. Use the curl-installed mise in ~/.local/bin explicitly so install
+# runs on the latest (self-updating) version, not the pacman one.
+MISE="$HOME/.local/bin/mise"
+if [ ! -x "$MISE" ]; then
     echo "==> Installing mise via curl (for self-update support)..."
     curl https://mise.run | sh
 fi
 
 echo "==> Installing mise tools..."
-mise trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
-GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
-eval "$(mise env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
+# MISE_EXPERIMENTAL=1: `experimental` is a global-only setting, so the experimental
+# backends in our config (conda:, zerobrew:) are NOT enabled by the project config
+# passed via -C at install time. The stowed global ~/.config/mise/config.toml sets
+# experimental=true for runtime; pass it via env here so the install itself works.
+"$MISE" trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
+GITHUB_TOKEN="$(gh auth token)" MISE_EXPERIMENTAL=1 "$MISE" install -C "$DOTFILES_DIR/mise/.config/mise"
+eval "$("$MISE" env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 
 # libappindicator-gtk3 is required for Dropbox's tray icon
 # aws-session-manager-plugin cannot be installed through mise:
