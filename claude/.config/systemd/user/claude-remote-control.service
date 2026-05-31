@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=exec
 WorkingDirectory=%h
-ExecStart=%h/.local/bin/claude remote-control
+ExecStart=/bin/sh -c 'exec %h/.local/bin/claude remote-control --permission-mode bypassPermissions --name "$(hostname)$(pwd | sed s:/:--:g)"'
 StandardOutput=journal
 StandardError=journal
 Restart=always
