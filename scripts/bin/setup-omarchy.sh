@@ -90,6 +90,15 @@ if ! gh api user/ssh_signing_keys --jq '.[].key' 2>/dev/null | grep -qF "$(awk '
     fi
 fi
 
+# Keep allowed_signers (gpg.ssh.allowedSignersFile) in sync so `git log --show-signature`
+# verifies locally: append this machine's signing key if it isn't already listed.
+ALLOWED_SIGNERS="$DOTFILES_DIR/git/.config/git/allowed_signers"
+key_field="$(awk '{print $1, $2}' "$SSH_SIGNING_KEY.pub")"
+if ! grep -qF "${key_field#* }" "$ALLOWED_SIGNERS" 2>/dev/null; then
+    echo "==> Adding this machine's key to git allowed_signers (commit the change to track it)..."
+    echo "$(git config -f "$DOTFILES_DIR/git/.config/git/config" --get user.email) $key_field" >>"$ALLOWED_SIGNERS"
+fi
+
 # omarchy-fish/omarchy-zsh pull in an older /usr/bin/mise as a dependency, which
 # wins on PATH. Use the curl-installed mise in ~/.local/bin explicitly so install
 # runs on the latest (self-updating) version, not the pacman one.
