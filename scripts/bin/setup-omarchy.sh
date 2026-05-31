@@ -205,6 +205,20 @@ if ! command -v tailscale &>/dev/null; then
     omarchy-install-tailscale
 fi
 
+# SSH: enable the daemon, but restrict reachability to the Tailscale interface
+# and RFC1918 LAN ranges. Omarchy ships ufw active with default-deny incoming,
+# so we add scoped allow rules rather than `ufw allow ssh` (which would open 22
+# to the whole world). `ufw allow` is idempotent (it skips a duplicate rule), as
+# is `systemctl enable --now`. Note: allowing all of RFC1918 means that on an
+# untrusted network (cafe/airport wifi) peers on that subnet can reach port 22 --
+# pubkey-only auth is the backstop there; remote access otherwise rides Tailscale.
+echo "==> Enabling SSH (Tailscale + LAN only)..."
+sudo systemctl enable --now sshd
+sudo ufw allow in on tailscale0 to any port 22 proto tcp comment 'ssh tailscale'
+for net in 192.168.0.0/16 10.0.0.0/8 172.16.0.0/12; do
+    sudo ufw allow from "$net" to any port 22 proto tcp comment 'ssh lan'
+done
+
 # `omarchy install browser chrome` installs google-chrome (AUR), creates the
 # /etc/opt/chrome/policies/managed policy dir, drops in ~/.config/chrome-flags.conf,
 # and wires up theme integration. Guarded on `command -v google-chrome-stable` so
@@ -261,6 +275,16 @@ if ! systemctl --user is-enabled code-server &>/dev/null; then
     loginctl enable-linger "$USER"
     systemctl --user daemon-reload
     systemctl --user enable --now code-server
+fi
+
+# Enable claude-remote-control now that its unit (claude/.config/systemd/user/) has
+# been stowed above. `is-enabled` reports "linked" for a stowed-but-not-enabled unit,
+# so guard on the literal "enabled" to avoid re-running once it's wired up.
+if [ "$(systemctl --user is-enabled claude-remote-control 2>/dev/null)" != "enabled" ]; then
+    echo "==> Enabling claude-remote-control service..."
+    loginctl enable-linger "$USER"
+    systemctl --user daemon-reload
+    systemctl --user enable --now claude-remote-control
 fi
 
 echo "==> Done! Restart your shell or run: exec fish"
