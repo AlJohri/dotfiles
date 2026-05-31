@@ -140,11 +140,6 @@ if command -v mise &> /dev/null; then
 fi
 
 alias claude="claude --allow-dangerously-skip-permissions"
-# Initialize cargo/rust
-if [[ -f "$HOME/.cargo/env" ]]; then
-    . "$HOME/.cargo/env"
-fi
-
 # Initialize starship prompt
 if command -v starship &> /dev/null; then
     eval "$(starship init bash)"

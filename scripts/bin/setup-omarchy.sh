@@ -44,7 +44,6 @@ sudo pacman -S --noconfirm --needed \
     sublime-text-4 \
     tree \
     visual-studio-code-bin \
-    zed \
     pandoc-cli \
     kitty \
     chafa \
@@ -112,6 +111,12 @@ PATH=/usr/bin:/usr/local/bin yay -S --noconfirm --needed \
 echo "==> Installing Steam + GPU lib32 drivers..."
 omarchy install gaming steam
 
+# Install Zed via omarchy (not the bare `zed` package) so it pulls in `omazed`
+# and runs `omazed setup`, wiring up live theming that follows the omarchy theme.
+# Note: it auto-launches the Zed GUI at the end.
+echo "==> Installing Zed (with omarchy live theming)..."
+omarchy install zed
+
 if [ -n "${SSH_CONNECTION:-}" ]; then
     echo "==> SSH session detected, skipping fingerprint setup (requires physical access)."
 else
@@ -124,7 +129,7 @@ else
         echo "==> Fingerprint already enrolled, skipping setup."
     else
         echo "==> Setting up fingerprint authentication..."
-        omarchy-setup-fingerprint
+        omarchy-setup-security-fingerprint
     fi
 fi
 

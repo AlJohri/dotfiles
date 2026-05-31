@@ -1,8 +1,8 @@
 # Changes require a restart to take effect.
 
-# Ensure Omarchy bins are in the path
+# Ensure Omarchy bins are in the path (and ~/.local/bin, per omarchy's default)
 export OMARCHY_PATH=$HOME/.local/share/omarchy
-export PATH=$OMARCHY_PATH/bin:$PATH
+export PATH=$OMARCHY_PATH/bin:$PATH:$HOME/.local/bin
 
 # Add ~/bin to shadow waybar with singleton wrapper (prevents duplicate instances)
 export PATH=$HOME/bin:$PATH
