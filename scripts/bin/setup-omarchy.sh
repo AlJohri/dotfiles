@@ -67,6 +67,29 @@ if ! gh extension list | grep -q '^gh image'; then
     gh extension install drogers0/gh-image
 fi
 
+# Generate an SSH key for signing git commits and register it with GitHub.
+# The stowed git config enables ssh commit signing (commit.gpgsign + gpg.format=ssh +
+# user.signingkey=~/.ssh/id_ed25519.pub), so commits fail on a fresh box without this.
+# Idempotent: generate only if missing; upload only if not already a GitHub signing key.
+SSH_SIGNING_KEY="$HOME/.ssh/id_ed25519"
+if [ ! -f "$SSH_SIGNING_KEY" ]; then
+    echo "==> Generating SSH signing key..."
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    ssh-keygen -t ed25519 -C "$(whoami)@$(hostname)" -f "$SSH_SIGNING_KEY" -N ""
+fi
+
+# Listing/adding signing keys needs the admin:ssh_signing_key scope, which
+# `gh auth login` doesn't grant by default.
+if ! gh api user/ssh_signing_keys --jq '.[].key' 2>/dev/null | grep -qF "$(awk '{print $2}' "$SSH_SIGNING_KEY.pub")"; then
+    echo "==> Registering SSH signing key with GitHub..."
+    if gh auth refresh -h github.com -s admin:ssh_signing_key; then
+        gh ssh-key add "$SSH_SIGNING_KEY.pub" --type signing --title "$(hostname) (omarchy)" \
+            || echo "    Add ~/.ssh/id_ed25519.pub manually: https://github.com/settings/ssh/new (Key type: Signing)"
+    else
+        echo "    Skipped (auth refresh declined). Add ~/.ssh/id_ed25519.pub manually later."
+    fi
+fi
+
 # omarchy-fish/omarchy-zsh pull in an older /usr/bin/mise as a dependency, which
 # wins on PATH. Use the curl-installed mise in ~/.local/bin explicitly so install
 # runs on the latest (self-updating) version, not the pacman one.
