@@ -115,15 +115,21 @@ PATH=/usr/bin:/usr/local/bin yay -S --noconfirm --needed \
 
 # Replaces the old AMD-only `lib32-vulkan-radeon` step: `omarchy install gaming
 # steam` installs steam and auto-detects the lib32 Vulkan/NVIDIA drivers for any
-# attached GPU (Intel/AMD/NVIDIA). Note: it auto-launches the Steam GUI at the end.
-echo "==> Installing Steam + GPU lib32 drivers..."
-omarchy install gaming steam
+# attached GPU (Intel/AMD/NVIDIA). It also auto-launches the Steam GUI at the end,
+# so only run it when steam isn't installed yet (keeps re-runs from popping the GUI).
+if ! pacman -Q steam &>/dev/null; then
+    echo "==> Installing Steam + GPU lib32 drivers..."
+    omarchy install gaming steam
+fi
 
-# Install Zed via omarchy (not the bare `zed` package) so it pulls in `omazed`
-# and runs `omazed setup`, wiring up live theming that follows the omarchy theme.
-# Note: it auto-launches the Zed GUI at the end.
-echo "==> Installing Zed (with omarchy live theming)..."
-omarchy install zed
+# Install Zed via omarchy (not the bare `zed` package) so it pulls in `omazed` and
+# runs `omazed setup`, wiring up live theming. Guard on zed+omazed being present so
+# re-runs don't (a) pop the Zed GUI and (b) re-run `omazed setup`, which clobbers
+# ~/.config/zed/settings.json when it lacks a "theme" key.
+if ! pacman -Q zed omazed &>/dev/null; then
+    echo "==> Installing Zed (with omarchy live theming)..."
+    omarchy install zed
+fi
 
 if [ -n "${SSH_CONNECTION:-}" ]; then
     echo "==> SSH session detected, skipping fingerprint setup (requires physical access)."
