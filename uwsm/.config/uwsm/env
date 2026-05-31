@@ -1,6 +1,6 @@
 # Changes require a restart to take effect.
 
-# Ensure Omarchy bins are in the path (and ~/.local/bin, per omarchy's default)
+# Ensure Omarchy bins are in the path
 export OMARCHY_PATH=$HOME/.local/share/omarchy
 export PATH=$OMARCHY_PATH/bin:$PATH:$HOME/.local/bin
 
@@ -13,4 +13,4 @@ source ~/.config/uwsm/default
 # Add mise shims to PATH for non-interactive processes (waybar, etc.)
 # Interactive shells run `mise activate` which removes shims and uses dynamic PATH
 # See: https://mise.jdx.dev/dev-tools/shims.html
-eval "$(mise activate --shims bash)"
+omarchy-cmd-present mise && eval "$(mise activate --shims bash)"
