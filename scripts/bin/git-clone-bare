@@ -10,11 +10,24 @@ set -euo pipefail
 # Additional worktrees are created as siblings via `gwt <branch>`.
 
 if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-  echo "Usage: git-clone-bare <url> [<dir>]" >&2
+  echo "Usage: git-clone-bare <url|owner/repo> [<dir>]" >&2
   exit 1
 fi
 
 URL="$1"
+
+# Expand GitHub shorthand (owner/repo) to a full clone URL. Only triggers on a
+# bare "owner/repo" — anything with a scheme, host, or extra path segments is
+# treated as a real URL. Honors gh's configured git_protocol when available
+# (so it matches `gh repo clone`), defaulting to ssh.
+if [[ "$URL" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+  PROTO="$(gh config get git_protocol 2>/dev/null || echo ssh)"
+  if [ "$PROTO" = "https" ]; then
+    URL="https://github.com/${URL%.git}.git"
+  else
+    URL="git@github.com:${URL%.git}.git"
+  fi
+fi
 if [ $# -eq 2 ]; then
   DIR="$2"
 else
