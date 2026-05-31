@@ -205,12 +205,16 @@ if ! command -v tailscale &>/dev/null; then
     omarchy-install-tailscale
 fi
 
-echo "==> Installing Google Chrome..."
 # `omarchy install browser chrome` installs google-chrome (AUR), creates the
 # /etc/opt/chrome/policies/managed policy dir, drops in ~/.config/chrome-flags.conf,
-# and wires up theme integration. The default-browser handoff happens after stow
+# and wires up theme integration. Guarded on `command -v google-chrome-stable` so
+# re-runs skip the yay/AUR invocation (sudo prompt + network check) instead of
+# re-running it every setup. The default-browser handoff happens after stow
 # (below), once ~/.config/mimeapps.list is our symlink.
-omarchy install browser chrome
+if ! command -v google-chrome-stable &>/dev/null; then
+    echo "==> Installing Google Chrome..."
+    omarchy install browser chrome
+fi
 
 echo "==> Configuring Slack to auto-hide menu bar..."
 slack_config="$HOME/.config/Slack/storage/root-state.json"
