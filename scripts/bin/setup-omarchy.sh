@@ -15,18 +15,6 @@ fi
 # github-cli is also installed via mise, but we need it here early so
 # `gh auth token` is available to provide GITHUB_TOKEN for mise install,
 # avoiding GitHub API rate limits.
-echo "==> Detecting GPU for 32-bit Vulkan driver..."
-gpu_info=$(lspci | grep -iE 'VGA|3D|Display')
-if echo "$gpu_info" | grep -qi 'AMD/ATI\|Radeon'; then
-    echo "    AMD GPU detected, installing lib32-vulkan-radeon..."
-    sudo pacman -S --noconfirm --needed lib32-vulkan-radeon
-else
-    echo "ERROR: Could not detect a supported GPU vendor." >&2
-    echo "  lspci output: $gpu_info" >&2
-    echo "  See https://wiki.archlinux.org/title/Vulkan#Installation for the correct lib32-vulkan-driver package." >&2
-    exit 1
-fi
-
 echo "==> Installing extra packages (not in omarchy-base)..."
 # bc: arbitrary-precision calculator language, also used by scripts that need shell arithmetic with decimals
 # rendering images: kitten icat image.png, chafa image.png
@@ -60,7 +48,6 @@ sudo pacman -S --noconfirm --needed \
     pandoc-cli \
     kitty \
     chafa \
-    steam \
     wine \
     fwupd \
     dmidecode
@@ -119,6 +106,12 @@ PATH=/usr/bin:/usr/local/bin yay -S --noconfirm --needed \
     libappindicator-gtk3 \
     proton-ge-custom
 
+# Replaces the old AMD-only `lib32-vulkan-radeon` step: `omarchy install gaming
+# steam` installs steam and auto-detects the lib32 Vulkan/NVIDIA drivers for any
+# attached GPU (Intel/AMD/NVIDIA). Note: it auto-launches the Steam GUI at the end.
+echo "==> Installing Steam + GPU lib32 drivers..."
+omarchy install gaming steam
+
 if [ -n "${SSH_CONNECTION:-}" ]; then
     echo "==> SSH session detected, skipping fingerprint setup (requires physical access)."
 else
@@ -168,8 +161,12 @@ if ! command -v tailscale &>/dev/null; then
     omarchy-install-tailscale
 fi
 
-echo "==> Installing and setting up Google Chrome..."
-"$DOTFILES_DIR/scripts/bin/setup-chrome.sh"
+echo "==> Installing Google Chrome..."
+# `omarchy install browser chrome` installs google-chrome (AUR), creates the
+# /etc/opt/chrome/policies/managed policy dir, drops in ~/.config/chrome-flags.conf,
+# and wires up theme integration. The default-browser handoff happens after stow
+# (below), once ~/.config/mimeapps.list is our symlink.
+omarchy install browser chrome
 
 echo "==> Configuring Slack to auto-hide menu bar..."
 slack_config="$HOME/.config/Slack/storage/root-state.json"
@@ -183,28 +180,13 @@ fi
 echo "==> Allowing direnv..."
 mise exec direnv -- direnv allow "$DOTFILES_DIR"
 
-echo "==> Stowing dotfiles..."
-make stow-omarchy
+echo "==> Stowing dotfiles (review any incoming changes per file)..."
+"$DOTFILES_DIR/scripts/bin/stow-review.sh"
 
-# --adopt pulls existing files into the repo, which on a fresh install means
-# omarchy's defaults overwrite our tracked files. Show what changed and let
-# the user decide whether to restore their versions.
-if ! git diff --quiet; then
-    echo ""
-    echo "==> stow --adopt imported the following changes from system defaults:"
-    echo "    (These are typically omarchy package defaults that differ from your dotfiles.)"
-    echo ""
-    git --no-pager diff --stat
-    echo ""
-    git --no-pager diff
-    echo ""
-    read -rp "==> Restore your dotfiles versions? (Y/n) " answer
-    if [[ "${answer:-Y}" =~ ^[Yy]$ ]]; then
-        git checkout .
-        echo "==> Restored dotfiles to your tracked versions."
-    else
-        echo "==> Keeping adopted changes."
-    fi
-fi
+# Now that ~/.config/mimeapps.list is our symlink (which already maps http/https
+# to google-chrome.desktop), register Chrome as the xdg default. xdg-mime writes
+# through the symlink in place, so this is idempotent and leaves the repo clean.
+echo "==> Setting Chrome as the default browser..."
+omarchy default browser chrome
 
 echo "==> Done! Restart your shell or run: exec fish"
