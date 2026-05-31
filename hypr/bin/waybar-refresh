@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# Refresh Waybar after a Hyprland reload.
+#
+# `hyprctl reload` disrupts Hyprland's IPC socket and leaves waybar in a broken
+# state, so ~/.config/hypr/autostart.conf runs this on every reload (`exec`).
+# It also runs once at startup, where the "only if already running" guard makes
+# it defer to omarchy's `exec-once = uwsm-app -- waybar` instead of racing it.
+#
+# History (see `git log` of waybar/bin/waybar): an earlier approach shadowed the
+# waybar binary with an flock singleton. That lock fd had no close-on-exec, so
+# waybar's long-lived custom modules (e.g. voxtype `status --follow`) inherited
+# it; when waybar was SIGKILLed those modules were orphaned but kept holding the
+# lock, and the next launch hit `flock -n` and exited silently -> no bar. This
+# replaces it:
+#
+#   - flock serializes concurrent reload-triggered restarts so two near-
+#     simultaneous reloads can't leave two waybars. The lock fd is closed in the
+#     relaunched waybar (9>&-) so neither it nor its modules can inherit/pin it.
+#   - `systemctl --user stop` tears down the whole waybar cgroup, reaping module
+#     subprocesses that reparent to systemd when waybar dies (orphans `pkill`
+#     can't see). `pkill` then catches a waybar too freshly spawned to be in a
+#     registered scope yet (the startup race window).
+
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/waybar-refresh.lock"
+flock -n 9 || exit 0                     # another refresh in flight -> skip
+
+pgrep -x waybar >/dev/null || exit 0     # not up yet -> let omarchy launch it
+
+systemctl --user stop 'app-Hyprland-waybar-*.scope' 2>/dev/null
+pkill -x waybar 2>/dev/null
+sleep 0.1                                # let any pkill'd straggler die first
+
+setsid uwsm-app -- waybar >/dev/null 2>&1 9>&- &

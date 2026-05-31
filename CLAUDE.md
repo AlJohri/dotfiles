@@ -28,9 +28,10 @@ Initialize submodules after cloning:
 git submodule update --init
 ```
 
-Restart waybar:
+Restart waybar (reaps the whole cgroup, so orphaned module subprocesses don't
+linger and pin anything; same thing `hyprctl reload` triggers via `waybar-refresh`):
 ```bash
-killall waybar; setsid uwsm-app -- waybar
+systemctl --user stop 'app-Hyprland-waybar-*.scope'; setsid uwsm-app -- waybar
 ```
 
 ## Package Groups
