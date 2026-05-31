@@ -233,6 +233,23 @@ echo "==> Stowing dotfiles (review any incoming changes per file)..."
 echo "==> Setting Chrome as the default browser..."
 omarchy default browser chrome
 
+# Same install+default handoff as the browser above, split into two steps.
+# omarchy-install-terminal installs the ghostty package and its desktop entry
+# (guarded on `command -v ghostty` so re-runs don't re-prompt for sudo). Then
+# `omarchy default terminal ghostty` -- run every time -- asserts ghostty as the
+# xdg-terminal-exec default by writing ~/.config/xdg-terminals.list, which is now
+# our symlink (already listing com.mitchellh.ghostty.desktop): the write passes
+# through it in place, idempotently and leaving the repo clean. The unconditional
+# second step also heals the default after an omarchy update migration rewrites
+# the list (omarchy's own default went alacritty -> ghostty in v3.2, then back to
+# alacritty in 2026).
+if ! command -v ghostty &>/dev/null; then
+    echo "==> Installing ghostty..."
+    omarchy-install-terminal ghostty
+fi
+echo "==> Setting ghostty as the default terminal..."
+omarchy default terminal ghostty
+
 # Enable code-server now that its unit (code-server/.config/systemd/user/) has been
 # stowed above -- on a fresh machine the unit doesn't exist until stow runs.
 if ! systemctl --user is-enabled code-server &>/dev/null; then
