@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Red Alert 3 Community Patch v1.12.8 -- install / enable / disable / status, for Linux
+# (Steam + Proton). Standalone and self-contained: it does its own Steam + RA3 discovery
+# and shares nothing with setup-ra3-online.sh.
+#
+# Usage:
+#   ra3-community-patch install   # download + verify + extract the maps, then enable
+#   ra3-community-patch enable    # chain the patch into the active SkuDef
+#   ra3-community-patch disable   # restore the stock SkuDef (maps stay on disk)
+#   ra3-community-patch status    # report installed / enabled state
+#   ra3-community-patch           # same as status
+#
+# WINE-FREE, contrary to long-held belief. The patch's GUI installer is an NSIS exe whose
+# payload is a nested LZMA archive at $OUTDIR/.installcache/temp.7z holding the .big maps --
+# 7z extracts it statically. (Two dead ends, ruled out: the maps are NOT locked behind the
+# Nsis7z runtime plugin -- 7z reads them fine; and `wine installer /S [/D=...]` deploys
+# NOTHING -- the file copy is gated behind a wizard page that silent mode skips.) Enable and
+# disable are a pure SkuDef swap -- the installer never has to run.
+#
+# The patch is incompatible with Steam's v1.13 Workshop. A Steam update that rewrites
+# RA3_english_1.13.SkuDef silently disables the patch -- re-run `enable` to restore it.
+
+APPID=17480
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/ra3-online"
+
+PATCH_MODDB_FILE_ID=306433
+PATCH_MODDB_SLUG="red-alert-3-community-patch-v1128"
+PATCH_EXE="RA3CommunityPatchSetup_v1.12.8.exe"
+PATCH_EXE_SIZE=680078873                                  # bytes (moddb-published)
+PATCH_EXE_MD5="03decd6ddd484ca26e3e003135246ca4"          # moddb-published
+# The 9 .big maps the GUI installer's default component set deploys (temp.7z holds 12 --
+# the other 3 are Chinese locale + a standalone Misc.big the default install omits). This
+# list is also the exact body of CommunityPatch/RA3_.SkuDef, in this order.
+PATCH_BIGS=(
+    Patch1.12.8_Misc_WinterScouts.big
+    Patch1.12.8_Maps_Community2Player.big
+    Patch1.12.8_Maps_Community4Player.big
+    Patch1.12.8_Maps_Community6Player.big
+    Patch1.12.8_Maps_Official2Player.big
+    Patch1.12.8_Maps_Official3Player.big
+    Patch1.12.8_Maps_Official4Player.big
+    Patch1.12.8_Maps_Official5Player.big
+    Patch1.12.8_Maps_Official6Player.big
+)
+
+note() { printf '==> %s\n' "$*"; }
+warn() { printf '    %s\n' "$*" >&2; }
+die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+# --- locate the Steam root and the RA3 install (own copy; deliberately not shared) -------
+STEAM_ROOT=""
+for r in "$HOME/.local/share/Steam" "$HOME/.steam/steam" "$HOME/.steam/root"; do
+    if [ -f "$r/config/config.vdf" ]; then STEAM_ROOT="$r"; break; fi
+done
+[ -n "$STEAM_ROOT" ] || die "Steam not found (no config/config.vdf). Install + launch Steam once first."
+
+# Games can live in extra library folders; check the root plus any in libraryfolders.vdf.
+mapfile -t LIB_PATHS < <(
+    printf '%s\n' "$STEAM_ROOT"
+    lf="$STEAM_ROOT/steamapps/libraryfolders.vdf"
+    [ -f "$lf" ] && grep -oP '"path"\s*"\K[^"]+' "$lf"
+)
+RA3_DIR=""
+for lib in "${LIB_PATHS[@]}"; do
+    cand="$lib/steamapps/common/Command and Conquer Red Alert 3"
+    if [ -d "$cand" ]; then RA3_DIR="$cand"; break; fi
+done
+[ -n "$RA3_DIR" ] || die "RA3 not installed. Buy + install 'Command & Conquer Red Alert 3' in Steam first."
+
+patch_dir="$RA3_DIR/CommunityPatch"
+patch_skudef="$RA3_DIR/RA3_english_1.13.SkuDef"
+patch_backup="$RA3_DIR/BACKUP_RA3_english_1.13.SkuDef"
+
+patch_enabled()      { grep -qi 'CommunityPatch' "$patch_skudef" 2>/dev/null; }
+patch_maps_present() {
+    local m
+    for m in "${PATCH_BIGS[@]}"; do [ -f "$patch_dir/$m" ] || return 1; done
+    return 0
+}
+
+# --- subcommands -------------------------------------------------------------------------
+
+cmd_install() {
+    if patch_maps_present; then
+        note "Maps already present -- skipping download/extract."
+    else
+        command -v 7z >/dev/null 2>&1 || die "7z not found. Install it: sudo pacman -S --needed 7zip"
+        mkdir -p "$CACHE_DIR"
+        local installer="$CACHE_DIR/$PATCH_EXE"
+        # acquire the installer: use a cached copy of the right size, else fetch from moddb.
+        if [ ! -f "$installer" ] || [ "$(stat -c%s "$installer" 2>/dev/null || echo 0)" != "$PATCH_EXE_SIZE" ]; then
+            note "Downloading installer from moddb (~650MB)..."
+            local ua='Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0'
+            local ref="https://www.moddb.com/downloads/$PATCH_MODDB_SLUG"
+            local start="https://www.moddb.com/downloads/start/$PATCH_MODDB_FILE_ID"
+            # moddb gates the file behind a per-load mirror page; resolve a fresh mirror
+            # href, then -L through its 302 to the signed CDN URL.
+            local mirror
+            mirror="$(curl -fsSL -A "$ua" -e "$ref" "$start" \
+                      | grep -oE "/downloads/mirror/$PATCH_MODDB_FILE_ID/[0-9]+/[0-9a-f]+" | head -1)"
+            [ -n "$mirror" ] || die "could not resolve a moddb mirror (page layout changed?). Download $PATCH_EXE to $CACHE_DIR/ by hand."
+            # --retry + -C - (resume): these mirrors routinely drop long transfers mid-stream.
+            curl -fL -A "$ua" -e "$start" --retry 5 --retry-delay 3 -C - --max-time 1200 \
+                 "https://www.moddb.com${mirror}" -o "$installer" \
+                || die "download failed; re-run to resume, or fetch $PATCH_EXE to $CACHE_DIR/ by hand."
+        fi
+        # verify size + md5 before trusting the payload (a truncated download is the common
+        # failure -- a half file would otherwise extract to a corrupt/partial map set).
+        local got_size got_md5
+        got_size="$(stat -c%s "$installer")"
+        [ "$got_size" = "$PATCH_EXE_SIZE" ] || die "installer size $got_size != $PATCH_EXE_SIZE; delete $installer and re-run."
+        got_md5="$(md5sum "$installer" | cut -d' ' -f1)"
+        [ "$got_md5" = "$PATCH_EXE_MD5" ] || die "installer md5 $got_md5 != $PATCH_EXE_MD5; delete $installer and re-run."
+        note "Installer verified (size + md5)."
+
+        note "Extracting maps (~4.5GB; the inner archive is solid LZMA, takes a minute)..."
+        local tmp7z; tmp7z="$(mktemp -d)"; trap 'rm -rf "$tmp7z"' RETURN
+        # stage 1: pull the inner temp.7z out of the NSIS exe; stage 2: extract just the
+        # maps our default-component SkuDef references (temp.7z also holds 3 we don't ship).
+        7z e -y -o"$tmp7z" "$installer" '$OUTDIR/.installcache/temp.7z' >/dev/null \
+            || die "could not extract inner temp.7z (installer layout changed?)."
+        mkdir -p "$patch_dir"
+        7z x -y -o"$patch_dir" "$tmp7z/temp.7z" "${PATCH_BIGS[@]}" >/dev/null \
+            || die "could not extract maps from temp.7z."
+
+        # the GUI installer normally drops itself in as ManageCommunityPatch.exe (its on/off
+        # GUI); replicate so the in-game/wine toggle still works for anyone who prefers it.
+        cp "$installer" "$patch_dir/ManageCommunityPatch.exe"
+        # CommunityPatch/RA3_.SkuDef: one add-big per deployed map (the installer generates
+        # this at runtime; PATCH_BIGS is already in the installer's order). CRLF to match.
+        : >"$patch_dir/RA3_.SkuDef"
+        for m in "${PATCH_BIGS[@]}"; do printf 'add-big %s\r\n' "$m" >>"$patch_dir/RA3_.SkuDef"; done
+        note "Maps deployed to CommunityPatch/."
+    fi
+    cmd_enable
+}
+
+cmd_enable() {
+    patch_maps_present || die "maps not installed -- run 'ra3-community-patch install' first."
+    if patch_enabled; then
+        note "Already enabled."
+        return
+    fi
+    [ -f "$patch_backup" ] || cp "$patch_skudef" "$patch_backup"
+    # backslashes are literal SAGE path separators; CRLF to match the stock SkuDefs.
+    # (printf: '\\' -> one backslash, '\r\n' -> CRLF.)
+    printf 'set-exe Data\\RA3_1.12.game\r\nadd-config CommunityPatch\\RA3_.SkuDef\r\nadd-config RA3_english_1.12.SkuDef\r\n' >"$patch_skudef"
+    note "Enabled (RA3_english_1.13.SkuDef now chains the patch)."
+}
+
+cmd_disable() {
+    if ! patch_enabled; then
+        note "Already disabled (patch not chained in the active SkuDef)."
+        return
+    fi
+    [ -f "$patch_backup" ] || die "no BACKUP_RA3_english_1.13.SkuDef to restore from; cannot safely disable."
+    cp "$patch_backup" "$patch_skudef"
+    note "Disabled (stock SkuDef restored; maps left on disk)."
+}
+
+cmd_status() {
+    printf 'RA3:     %s\n' "$RA3_DIR"
+    if patch_maps_present; then
+        printf 'maps:    installed (%d/%d in CommunityPatch/)\n' "${#PATCH_BIGS[@]}" "${#PATCH_BIGS[@]}"
+    else
+        local n=0 m
+        for m in "${PATCH_BIGS[@]}"; do [ -f "$patch_dir/$m" ] && n=$((n+1)); done
+        printf 'maps:    NOT installed (%d/%d present)\n' "$n" "${#PATCH_BIGS[@]}"
+    fi
+    patch_enabled && printf 'enabled: YES (active SkuDef chains the patch)\n' \
+                  || printf 'enabled: no\n'
+}
+
+case "${1:-status}" in
+    install) cmd_install ;;
+    enable)  cmd_enable ;;
+    disable) cmd_disable ;;
+    status)  cmd_status ;;
+    -h|--help) sed -n '4,21p' "$0" ;;
+    *) die "unknown command: $1 (install | enable | disable | status)" ;;
+esac

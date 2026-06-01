@@ -8,9 +8,15 @@ set -euo pipefail
 # Usage: ./setup-ra3-online.sh
 #
 # What this automates (all idempotent, safe to re-run):
-#   1. Drops the Tacitus dsound.dll next to every RA3 executable.
-#   2. Forces GE-Proton for the RA3 appid (config.vdf CompatToolMapping).
-#   3. Sets the dsound launch override for the RA3 appid (localconfig.vdf LaunchOptions).
+#   1.  Drops the Tacitus dsound.dll into the RA3 Data/ dir.
+#   1b. Enables Tacitus VerboseLog (game-side network logging for desync hunting).
+#   1c. Installs native MSVC 2005/2008 runtimes via protontricks -- THE online desync fix
+#       (Wine's post-5.15 musl libm diverges from Windows' CRT and breaks lockstep sync).
+#   2.  Forces GE-Proton for the RA3 appid (config.vdf CompatToolMapping).
+#   3.  Sets the dsound launch override for the RA3 appid (localconfig.vdf LaunchOptions).
+#
+# Optional extras (separate tool): the Community Patch v1.12.8 (extra maps + balance) is
+# installed/toggled by the standalone `ra3-community-patch` script -- not done here.
 #
 # Why no wine / registry / symlink / installer (cf. the usual cnc-online.net guide):
 #   "Tacitus" is not really an installed program -- for RA3 it is a single dsound.dll
@@ -38,6 +44,13 @@ CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/ra3-online"
 note() { printf '==> %s\n' "$*"; }
 warn() { printf '    %s\n' "$*" >&2; }
 die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+for a in "$@"; do
+    case "$a" in
+        -h|--help) sed -n '4,28p' "$0"; exit 0 ;;
+        *) die "unknown argument: $a (this script takes no options)" ;;
+    esac
+done
 
 # --- locate the Steam root and the RA3 install -------------------------------------------
 
@@ -323,57 +336,6 @@ if not found:
     print("    Set it by hand: RA3 -> Properties -> Launch Options ->", opts, file=sys.stderr)
 PY
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FUTURE AUTOMATION NOTES — Community Patch (so a later session can resume cleanly)
-# ─────────────────────────────────────────────────────────────────────────────
-# The Community Patch install is currently MANUAL (instructions printed at the end).
-# Everything learned while trying to automate it, so we can pick up where we left off:
-#
-# 1. WHY IT RESISTS SCRIPTING:
-#    - Installer RA3CommunityPatchSetup_v1.12.8.exe (~680MB, moddb id 306433) uses the
-#      Nsis7z runtime plugin. The ~4.5GB of .big map data is compressed inside and only
-#      unpacks when the installer RUNS -- it can't be statically extracted (unlike the
-#      Tacitus dsound.dll, a plain file we pull with `7z e`).
-#    - Plain `/S` (NSIS silent) deploys NOTHING: the file copy sits behind the custom
-#      "Choose Install Location" wizard page, which /S skips.
-#    - GE-Proton's bundled wine CRASHES on this installer (null-ptr fault). Only SYSTEM
-#      wine (pacman `wine` + `wine-mono`) runs it successfully.
-#
-# 2. HEADLESS ATTEMPT — INCONCLUSIVE, RESUME HERE:
-#    `wine RA3CommunityPatchSetup_v1.12.8.exe /S /D=<native_gamedir>` — NSIS's /D sets
-#    the install dir explicitly and MIGHT bypass the wizard-page gate that makes bare /S
-#    a no-op. Was being tested but interrupted before confirming files deploy. Rules:
-#    /D must be the LAST arg, unquoted, and a NATIVE path (not Z:\...). Verify success by
-#    checking <gamedir>/CommunityPatch/*.big exists afterward. If it works, the whole
-#    patch install becomes scriptable (download + this one command).
-#
-# 3. WHAT A SUCCESSFUL INSTALL PRODUCES (to replicate by caching the payload once):
-#    - <gamedir>/CommunityPatch/ : 9x Patch1.12.8_*.big maps, ManageCommunityPatch.exe
-#      (the on/off toggle), RA3_.SkuDef (lists the .big via add-big lines), Patch Notes PDF.
-#    - Backs up RA3_english_1.13.SkuDef -> BACKUP_RA3_english_1.13.SkuDef.
-#    - Rewrites RA3_english_1.13.SkuDef to:
-#          set-exe Data\RA3_1.12.game
-#          add-config CommunityPatch\RA3_.SkuDef
-#          add-config RA3_english_1.12.SkuDef
-#
-# 4. ENABLE / DISABLE = a SkuDef file swap (no need to run ManageCommunityPatch.exe):
-#      enable : cp <patched RA3_english_1.13.SkuDef> RA3_english_1.13.SkuDef
-#      disable: cp BACKUP_RA3_english_1.13.SkuDef    RA3_english_1.13.SkuDef
-#    The .big files staying on disk while disabled is harmless.
-#
-# 5. GOTCHA — STALE WINESERVERS BREAK THE GAME LAUNCH:
-#    After running SYSTEM wine (e.g. the patch installer), leftover wineserver processes
-#    make GE-Proton fail to launch RA3 with:
-#       err:fsync:fsync_init Failed to open fsync shared memory file; make sure no stale
-#       wineserver instances are running without WINEFSYNC
-#    Symptom: Steam shows STOP but no game window; it dies instantly. FIX: kill the stale
-#    wineservers by PID (`pgrep wineserver`, then `kill -9 <pid>` -- do NOT `pkill -f
-#    wineserver`, it self-matches the shell), then the game launches normally.
-# ─────────────────────────────────────────────────────────────────────────────
-
-# Windows-style path for the wine install dialog (Z: maps to /, backslash separators).
-RA3_WINPATH="Z:${RA3_DIR//\//\\}"
-
 cat <<EOF
 
 ==> Done. Launch RA3 from Steam, go to Multiplayer -> Online, and log in with your
@@ -381,35 +343,7 @@ cat <<EOF
 
     Re-run this script after any RA3 update (Steam updates can overwrite dsound.dll).
 
---------------------------------------------------------------------------------
-OPTIONAL: Red Alert 3 Community Patch v1.12.8 (extra maps + balance changes)
---------------------------------------------------------------------------------
-Not automated -- its GUI installer crashes under Proton/GE-Proton's wine, and the
-~4.5GB of map data only unpacks when the installer's wizard runs (it's compressed
-inside the .exe via an NSIS runtime plugin, so it can't be extracted headlessly).
-Install it by hand once with SYSTEM wine:
-
-  1. sudo pacman -S --needed wine wine-mono       # wine-mono: installer's config tool needs .NET
-  2. Download "RA3CommunityPatchSetup_v1.12.8.exe" from:
-       https://www.moddb.com/mods/red-alert-3-community-patch/downloads
-  3. wine ~/Downloads/RA3CommunityPatchSetup_v1.12.8.exe
-       - If a wine-mono prompt still appears, Cancel it (step 1 covers it).
-       - On "Choose Install Location", point it at your RA3 game dir:
-           $RA3_WINPATH
-       - Pick components, Install, Finish.
-  4. IMPORTANT after install: running system wine leaves stale wineserver processes
-     that make RA3 fail to launch under Proton (it dies instantly, no window). Clear
-     them before playing:
-           for p in \$(pgrep wineserver); do kill -9 "\$p"; done
-     (Use PIDs like this -- 'pkill -f wineserver' would kill your own shell.)
-
-  What it does (FYI): creates CommunityPatch/ in the game dir (9 *.big map files +
-  ManageCommunityPatch.exe + RA3_.SkuDef), backs up RA3_english_1.13.SkuDef to
-  BACKUP_RA3_english_1.13.SkuDef, and rewrites RA3_english_1.13.SkuDef to chain in
-  the patch maps. Toggle on/off by swapping that SkuDef (see FUTURE AUTOMATION NOTES
-  in this script's source) or by running ManageCommunityPatch.exe via wine.
-
-  Note: the patch is incompatible with Steam's v1.13 Workshop. A Steam update that
-  rewrites RA3_english_1.13.SkuDef will silently disable the patch -- re-enable by
-  swapping the SkuDef back (or re-run ManageCommunityPatch.exe).
+    Optional: add the Community Patch v1.12.8 (extra maps + balance) with the standalone
+    tool:  ra3-community-patch install   (~650MB download, ~4.5GB on disk; wine-free).
+    Toggle it later with:  ra3-community-patch disable | enable
 EOF
