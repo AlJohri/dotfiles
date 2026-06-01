@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Capture and summarize RA3 + Tacitus network traffic.
+#
+# Usage:
+#   ra3-monitor                       # 180s capture on default-route iface
+#   ra3-monitor 60                    # 60s capture
+#   ra3-monitor 180 --peer 1.2.3.4    # also count packets to/from a peer
+#   ra3-monitor --peer 1.2.3.4        # default duration, with peer
+#
+# Needs sudo (re-execs itself if run unprivileged).
+#
+# Filters out the loud non-game UDP noise (Steam datagram on 27012, SSDP/1900,
+# mDNS/5353, LLMNR/5355, Dropbox sync/17500, DNS/53, Calico vxlan/4789).
+#
+# Output:
+#   /tmp/ra3-monitor.pcap   raw capture (open in Wireshark)
+#   /tmp/ra3-monitor.txt    text dump
+#   stdout                  summary tables
+
+set -u
+
+DURATION=180
+PEER=""
+while (( $# )); do
+  case "$1" in
+    --peer) PEER="$2"; shift 2 ;;
+    -h|--help)
+      sed -n '2,12p' "$0" | sed 's/^# *//'
+      exit 0 ;;
+    *) DURATION="$1"; shift ;;
+  esac
+done
+
+if [[ $EUID -ne 0 ]]; then
+  exec sudo -E "$0" "$DURATION" ${PEER:+--peer "$PEER"}
+fi
+
+TACITUS_IP="${TACITUS_IP:-195.60.166.61}"  # galaxy.cosmic.global; override with TACITUS_IP=... if it moves
+PCAP=/tmp/ra3-monitor.pcap
+TXT=/tmp/ra3-monitor.txt
+IFACE=$(ip route show default 2>/dev/null | awk '{print $5; exit}')
+[[ -z "$IFACE" ]] && { echo "no default route — bailing"; exit 1; }
+
+# Exclude loud non-game ports.
+FILTER='(tcp or udp) and not port 53 and not port 27012 and not port 1900 and not port 5353 and not port 5355 and not port 17500 and not port 4789'
+
+echo "iface:    $IFACE"
+echo "duration: ${DURATION}s"
+echo "filter:   $FILTER"
+[[ -n "$PEER" ]] && echo "peer:     $PEER"
+echo
+echo ">>> Reproduce the issue NOW (e.g. click Start Game in lobby)."
+echo ">>> Capture ends in ${DURATION}s; Ctrl+C to stop early."
+echo
+
+timeout "$DURATION" tcpdump -i "$IFACE" -n -w "$PCAP" "$FILTER" 2>/dev/null &
+PID1=$!
+timeout "$DURATION" tcpdump -i "$IFACE" -n -tt "$FILTER" 2>/dev/null > "$TXT" &
+PID2=$!
+trap 'kill $PID1 $PID2 2>/dev/null' INT
+wait $PID1 $PID2 2>/dev/null
+
+echo
+echo "=== capture: $(wc -l < "$TXT") lines ==="
+
+if [[ -n "$PEER" ]]; then
+  echo
+  echo "=== traffic involving peer $PEER ==="
+  COUNT=$(grep -c "$PEER" "$TXT" || true)
+  echo "total packets: $COUNT"
+  if (( COUNT > 0 )); then
+    echo "direction breakdown:"
+    grep "$PEER" "$TXT" | awk -v p="$PEER" '{ if ($3 ~ p) print "  from-peer"; else print "  to-peer  " }' | sort | uniq -c
+    echo "first 10:"
+    grep "$PEER" "$TXT" | head -10 | sed 's/^/  /'
+  fi
+fi
+
+echo
+echo "=== Tacitus master ($TACITUS_IP) traffic by port ==="
+grep "$TACITUS_IP" "$TXT" | grep -oE "$TACITUS_IP\.[0-9]+" | sort | uniq -c | sort -rn
+
+echo
+echo "=== top remote endpoints (proto-port aggregated) ==="
+awk '/IP / {print $3" -> "$5}' "$TXT" \
+  | sed -E 's/(\.[0-9]+) -> /  -> /; s/\.[0-9]+$//' \
+  | sort | uniq -c | sort -rn | head -15
+
+echo
+echo "=== unique non-LAN/non-Tacitus public peers (likely P2P) ==="
+awk '/IP / {print $3, $5}' "$TXT" | tr ' ' '\n' \
+  | grep -E '^[0-9]+(\.[0-9]+){3}\.' | sed -E 's/\.[0-9]+$//' | sort -u \
+  | grep -vE '^(192\.168\.|10\.|127\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|224\.|239\.|255\.|185\.17\.144\.|162\.254\.|140\.82\.|34\.|3\.|54\.|18\.|160\.79\.|162\.125\.)'
+
+echo
+echo "files: $PCAP  $TXT"
