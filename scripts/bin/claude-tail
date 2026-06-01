@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+"""Live-tail Claude Code session transcripts as they stream.
+
+Claude Code records every session as an append-only JSONL transcript under
+~/.claude/projects/<encoded-cwd>/<session-id>.jsonl, writing a line on every
+user message, assistant message, and tool call. This tails ALL matching
+sessions at once and interleaves them as they happen, automatically attaching
+to new session files that appear mid-run (which `tail -F <glob>` cannot do).
+
+Why this exists: the `claude remote-control` systemd service starts a fresh
+session (= a fresh JSONL) per connection, all under one project dir, so no
+single-file tailer can follow "all remote-control activity". This watches the
+whole directory.
+
+Examples:
+  claude-tail                       # tail every project's live sessions (text only)
+  claude-tail -home-aljohri         # only the remote-control project dir (exact match)
+  claude-tail '*dotfiles*' --tools  # dotfiles sessions, include tool calls
+  claude-tail --thinking --tools    # show everything as it streams
+  claude-tail --backfill            # also dump existing file contents first
+
+Project filters are fnmatch globs tested against the project DIR name (the
+encoded cwd, e.g. "-home-aljohri"). Default is "*" (all projects).
+"""
+
+from __future__ import annotations
+
+import argparse
+import fnmatch
+import json
+import os
+import sys
+import time
+from datetime import datetime
+
+DEFAULT_ROOT = os.path.expanduser("~/.claude/projects")
+
+COLORS = {
+    "user": "\033[36m",       # cyan
+    "assistant": "\033[32m",  # green
+    "thinking": "\033[2;37m", # dim grey
+    "tool_use": "\033[33m",   # yellow
+    "tool_result": "\033[2;34m",  # dim blue
+    "system": "\033[2;35m",   # dim magenta
+    "meta": "\033[2;37m",     # dim grey for headers
+}
+RESET = "\033[0m"
+
+
+def supports_color(no_color: bool) -> bool:
+    return not no_color and sys.stdout.isatty() and os.environ.get("TERM") != "dumb"
+
+
+class Painter:
+    def __init__(self, enabled: bool):
+        self.enabled = enabled
+
+    def __call__(self, key: str, text: str) -> str:
+        if not self.enabled:
+            return text
+        return f"{COLORS.get(key, '')}{text}{RESET}"
+
+
+def short_id(stem: str) -> str:
+    return stem[:8]
+
+
+def blocks_to_events(content, role: str):
+    """Yield (kind, text) tuples from a message's content (str or block list)."""
+    if isinstance(content, str):
+        if content.strip():
+            yield (role, content)
+        return
+    if not isinstance(content, list):
+        return
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        btype = block.get("type")
+        if btype == "text":
+            text = block.get("text", "")
+            if text.strip():
+                yield (role, text)
+        elif btype == "thinking":
+            yield ("thinking", block.get("thinking", ""))
+        elif btype == "tool_use":
+            name = block.get("name", "?")
+            inp = block.get("input", {})
+            try:
+                rendered = json.dumps(inp, ensure_ascii=False)
+            except (TypeError, ValueError):
+                rendered = str(inp)
+            yield ("tool_use", f"{name}({rendered})")
+        elif btype == "tool_result":
+            inner = block.get("content", "")
+            if isinstance(inner, list):
+                parts = []
+                for c in inner:
+                    if isinstance(c, dict) and c.get("type") == "text":
+                        parts.append(c.get("text", ""))
+                    else:
+                        parts.append(str(c))
+                inner = "\n".join(parts)
+            yield ("tool_result", str(inner))
+
+
+def parse_line(raw: str):
+    """Parse one JSONL line into a list of (kind, text) events, or []."""
+    try:
+        obj = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return []
+    if not isinstance(obj, dict):
+        return []
+    ltype = obj.get("type")
+    if ltype in ("summary", "file-history-snapshot"):
+        return []
+    if ltype == "system":
+        text = obj.get("content") or obj.get("message", "")
+        return [("system", str(text))] if text else []
+
+    msg = obj.get("message")
+    if not isinstance(msg, dict):
+        return []
+    role = msg.get("role") or ltype or "?"
+    return list(blocks_to_events(msg.get("content"), role))
+
+
+def fmt_event(kind, text, label, painter, max_chars):
+    ts = datetime.now().strftime("%H:%M:%S")
+    text = text.rstrip("\n")
+    if max_chars and len(text) > max_chars:
+        text = text[:max_chars] + f"… (+{len(text) - max_chars} chars)"
+    header = painter("meta", f"{ts} {label}") + " " + painter(kind, kind.upper())
+    # indent continuation lines under the header for readability
+    lines = text.split("\n")
+    body = lines[0]
+    if len(lines) > 1:
+        indent = "    "
+        body = body + "\n" + "\n".join(indent + ln for ln in lines[1:])
+    return f"{header}  {painter(kind, body)}"
+
+
+def discover(root, patterns):
+    """Return {filepath: project_dirname} for matching project dirs."""
+    found = {}
+    try:
+        entries = os.scandir(root)
+    except FileNotFoundError:
+        return found
+    for proj in entries:
+        if not proj.is_dir():
+            continue
+        if not any(fnmatch.fnmatch(proj.name, pat) for pat in patterns):
+            continue
+        try:
+            for f in os.scandir(proj.path):
+                if f.is_file() and f.name.endswith(".jsonl"):
+                    found[f.path] = proj.name
+        except FileNotFoundError:
+            continue
+    return found
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Live-tail Claude Code session transcripts as they stream.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    ap.add_argument("project", nargs="*", default=["*"],
+                    help="fnmatch glob(s) on project dir name (default: all)")
+    ap.add_argument("--root", default=DEFAULT_ROOT,
+                    help=f"projects root (default: {DEFAULT_ROOT})")
+    ap.add_argument("--tools", action="store_true",
+                    help="include tool_use and tool_result events")
+    ap.add_argument("--thinking", action="store_true",
+                    help="include assistant thinking blocks")
+    ap.add_argument("--system", action="store_true",
+                    help="include system events")
+    ap.add_argument("--backfill", action="store_true",
+                    help="also print existing file contents from the start")
+    ap.add_argument("--max-chars", type=int, default=1500,
+                    help="truncate each event body (0 = unlimited; default 1500)")
+    ap.add_argument("--interval", type=float, default=1.0,
+                    help="poll interval seconds (default 1.0)")
+    ap.add_argument("--no-color", action="store_true", help="disable color")
+    args = ap.parse_args()
+
+    patterns = args.project or ["*"]
+    painter = Painter(supports_color(args.no_color))
+
+    show = {"user", "assistant"}
+    if args.thinking:
+        show.add("thinking")
+    if args.tools:
+        show |= {"tool_use", "tool_result"}
+    if args.system:
+        show.add("system")
+
+    # offsets[path] = byte offset already consumed; remainder[path] = partial line bytes
+    offsets: dict[str, int] = {}
+    remainder: dict[str, bytes] = {}
+    labels: dict[str, str] = {}
+    first_pass = True  # files present at startup are baselined to EOF (skip history)
+
+    print(painter("meta",
+          f"# claude-tail watching {args.root} [{', '.join(patterns)}] "
+          f"— Ctrl-C to stop"), flush=True)
+
+    try:
+        while True:
+            files = discover(args.root, patterns)
+            for path, proj in files.items():
+                try:
+                    size = os.path.getsize(path)
+                except FileNotFoundError:
+                    continue
+
+                if path not in offsets:
+                    labels[path] = f"{proj}/{short_id(os.path.basename(path)[:-6])}"
+                    remainder[path] = b""
+                    # Skip history only for files already present at startup. A
+                    # session born mid-run (e.g. a new remote-control connection)
+                    # streams from the top so we don't miss its opening turns.
+                    skip_history = first_pass and not args.backfill
+                    offsets[path] = size if skip_history else 0
+                    if skip_history:
+                        continue  # established baseline; wait for new writes
+
+                if size < offsets[path]:  # truncated/replaced
+                    offsets[path] = 0
+                    remainder[path] = b""
+                if size == offsets[path]:
+                    continue
+
+                try:
+                    with open(path, "rb") as fh:
+                        fh.seek(offsets[path])
+                        chunk = remainder[path] + fh.read()
+                except FileNotFoundError:
+                    continue
+
+                *complete, rem = chunk.split(b"\n")
+                # advance offset by complete-line bytes only; keep partial line
+                consumed = len(chunk) - len(rem) - len(remainder[path])
+                offsets[path] += max(consumed, 0)
+                remainder[path] = rem
+
+                for raw in complete:
+                    if not raw.strip():
+                        continue
+                    for kind, text in parse_line(raw.decode("utf-8", "replace")):
+                        if kind not in show or not text.strip():
+                            continue
+                        print(fmt_event(kind, text, labels[path],
+                                        painter, args.max_chars), flush=True)
+
+            first_pass = False
+            time.sleep(args.interval)
+    except KeyboardInterrupt:
+        print(painter("meta", "\n# stopped"), flush=True)
+
+
+if __name__ == "__main__":
+    main()
