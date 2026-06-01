@@ -117,6 +117,107 @@ else
     note "Placed dsound.dll in: Data/"
 fi
 
+# --- 1b. enable Tacitus VerboseLog --------------------------------------------------------
+# Tacitus only logs its GameSpy/P2P networking (peer punch, connection state, relay
+# decisions) to Data/Tacitus.log when [DEBUG] VerboseLog = true; otherwise the log holds
+# just the startup banner. We default it on so the NEXT failure (desync, dropped peer) has
+# a useful log to read -- it's the best game-side network instrumentation we have. The edit
+# is idempotent and line-wise so any other Tacitus settings (and comments) are preserved.
+TACITUS_INI="$RA3_DIR/Data/Tacitus.ini"
+PYTHON="$(command -v python3 || command -v python || true)"
+[ -n "$PYTHON" ] || die "python not found (needed to edit Tacitus.ini)."
+verbose_was="$(TACITUS_INI="$TACITUS_INI" "$PYTHON" - <<'PY'
+import os, re
+p = os.environ["TACITUS_INI"]
+lines = open(p, encoding="utf-8", errors="replace").read().splitlines() if os.path.isfile(p) else []
+
+def cur():
+    for l in lines:
+        if re.match(r"(?i)^\s*VerboseLog\s*=", l):
+            return "true" if re.search(r"(?i)=\s*true\s*$", l) else "false"
+    return "missing"
+
+before = cur()
+if before == "true":
+    print("true"); raise SystemExit  # already on, leave file untouched
+
+# set existing key to true, else inject under (or create) a [DEBUG] section
+out, replaced, in_debug, injected = [], False, False, False
+for l in lines:
+    if re.match(r"(?i)^\s*VerboseLog\s*=", l):
+        out.append("VerboseLog = true"); replaced = True; continue
+    if re.match(r"^\s*\[", l):
+        if in_debug and not injected:
+            out.append("VerboseLog = true"); injected = True
+        in_debug = bool(re.match(r"(?i)^\s*\[DEBUG\]\s*$", l))
+    out.append(l)
+if in_debug and not injected and not replaced:
+    out.append("VerboseLog = true"); injected = True
+if not replaced and not injected:
+    if out and out[-1].strip():
+        out.append("")
+    out += ["[DEBUG]", "VerboseLog = true"]
+open(p, "w", encoding="utf-8").write("\n".join(out) + "\n")
+print(before)
+PY
+)"
+case "$verbose_was" in
+    true)    note "Tacitus VerboseLog already enabled." ;;
+    missing) note "Tacitus VerboseLog enabled (created Tacitus.ini)." ;;
+    *)       note "Tacitus VerboseLog enabled (was: $verbose_was)." ;;
+esac
+
+# --- 1c. install native MSVC 2005/2008 runtimes (fixes cross-platform desync) -------------
+# THE desync fix. RA3 (a 2008, MSVC-2005-built game) calls its CRT's math functions
+# (sin/cos/atan2/sqrt/pow) every simulation frame. Since Wine 5.15, Wine's builtin msvcr80/
+# msvcr90 use a musl-based libm whose last-bit results differ from Microsoft's CRT. RA3 runs
+# a deterministic lockstep sim: every client must compute byte-identical state from identical
+# inputs, so those last-bit deltas accumulate until a state-checksum mismatch -> "out of sync"
+# vs Windows opponents (typically within ~15 min). Installing the NATIVE Microsoft VC80/VC90
+# runtimes (and overriding to native,builtin) makes the game's math match Windows again.
+# VERIFIED here (2026-06-01): after this fix, two clean online games incl. a rematch vs the
+# exact opponent that desynced every prior game. Full evidence chain + sources in the gist:
+#   https://gist.github.com/AlJohri/e05190ffe6e0bc495a39cf2ab0df04b3
+#
+# protontricks resolves the prefix + Proton from Steam's config; it does NOT need Steam
+# closed, so we do this before the config-edit section (which does). Idempotent: skip if
+# winetricks.log already records both verbs. Non-fatal if protontricks is absent -- the rest
+# of the setup is still useful; we just print the manual command.
+COMPATDATA="${RA3_DIR%/common/*}/compatdata/$APPID"
+WINETRICKS_LOG="$COMPATDATA/pfx/winetricks.log"
+VCRUN_VERBS=(vcrun2005 vcrun2008)
+
+vcrun_installed() {
+    [ -f "$WINETRICKS_LOG" ] || return 1
+    local v
+    for v in "${VCRUN_VERBS[@]}"; do
+        grep -qxF "$v" "$WINETRICKS_LOG" || return 1
+    done
+    return 0
+}
+
+if vcrun_installed; then
+    note "Native MSVC 2005/2008 runtimes already installed (desync fix in place)."
+elif ! command -v protontricks >/dev/null 2>&1; then
+    warn "protontricks not found -- skipping the MSVC runtime (desync) fix."
+    warn "Install it (omarchy: 'yay -S protontricks'), then run:  protontricks $APPID ${VCRUN_VERBS[*]}"
+elif [ ! -d "$COMPATDATA/pfx" ]; then
+    warn "No Proton prefix yet for appid $APPID (launch RA3 from Steam once to create it),"
+    warn "then re-run this script -- it will install the MSVC runtime (desync) fix."
+else
+    note "Installing native MSVC 2005/2008 runtimes (desync fix) via protontricks..."
+    # --no-bwrap: GE-Proton's new-wow64 prefix trips protontricks' bubblewrap sandbox; the
+    # bare wine call works. Native MS DLLs land as side-by-side assemblies in the prefix's
+    # winsxs/ (that's where the game's VC80.CRT manifest resolves them), with native,builtin
+    # overrides for any direct loads.
+    if protontricks --no-bwrap "$APPID" "${VCRUN_VERBS[@]}" >/dev/null 2>&1 && vcrun_installed; then
+        note "MSVC 2005/2008 runtimes installed."
+    else
+        warn "protontricks run did not record both verbs; re-run manually if desyncs persist:"
+        warn "    protontricks $APPID ${VCRUN_VERBS[*]}"
+    fi
+fi
+
 # --- 2 + 3. Steam config edits (compat tool + launch options) ----------------------------
 # These edit config.vdf / localconfig.vdf, which Steam rewrites from memory on exit -- so
 # Steam MUST be closed or the changes get clobbered. We shut it down (gracefully) first.
