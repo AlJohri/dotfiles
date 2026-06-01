@@ -1,0 +1,431 @@
+#!/usr/bin/env python3
+"""Full-game session monitor for Red Alert 3 + C&C:Online (Tacitus) desync hunting.
+
+Where `ra3-monitor` takes a fixed-length network snapshot, this runs for an
+ENTIRE online match and layers four correlated streams into one timestamped
+session dir, so a desync can be located across all of them at once:
+
+  net.pcap        full packet capture (tcpdump; needs CAP_NET_RAW — see below)
+  connections.log ss snapshots of RA3's TCP control-plane + UDP P2P sockets
+  proc.log        RA3 process CPU%/threads/RSS samples (frame-hitch signal)
+  tacitus.log     a copy of Data/Tacitus.log as it streams (enable VerboseLog!)
+  events.log      ONE timeline merging raw samples from all streams (incl. the
+                  "Last Replay.RA3Replay" size timeline: command/frame progression)
+  meta.txt        session facts; SUMMARY.txt written on stop
+
+This tool only CAPTURES -- it records raw samples and leaves interpretation to a
+downstream step, so no data is lost to a heuristic deciding what's "notable" at
+capture time. Why these streams pin a desync (a deterministic-lockstep divergence,
+NOT a dropped connection): the replay recorder writes one chunk per command frame,
+so a growth stall while the game is still alive marks the freeze/desync instant;
+ss shows the UDP peer association dropping or its queues backing up at the same
+moment; Tacitus verbose logs the disconnect/relay decision; and the pcap has the
+per-packet truth (loss, reordering, a late command). Reading them against the one
+clock in events.log is the downstream analysis.
+
+Capture privilege: tcpdump needs CAP_NET_RAW. Grant it once (reusable, no sudo
+at run time):  sudo setcap cap_net_raw,cap_net_admin+eip "$(command -v tcpdump)"
+If tcpdump can't capture, the pcap stream is skipped and the rest still run.
+
+Usage:
+  ra3-watch                 # watch until Ctrl-C (or SIGTERM), full game
+  ra3-watch --name desync3  # label the session dir
+  ra3-watch --wait          # wait for RA3 to launch before starting
+  ra3-watch stop            # SIGTERM a running instance (graceful finalize)
+Stop with Ctrl-C, `ra3-watch stop`, or `kill <pid>` — it copies the final replay
++ Tacitus.log and writes SUMMARY.txt. Never `kill -9`: that skips finalization.
+Sessions live under ~/.cache/ra3-online/monitor/<stamp>/.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import threading
+import time
+from datetime import datetime, timezone
+
+HOME = os.path.expanduser("~")
+TACITUS_IP = os.environ.get("TACITUS_IP", "195.60.166.61")
+# Same non-game noise exclusion as ra3-monitor.
+PCAP_FILTER = ("(tcp or udp) and not port 53 and not port 27012 and not port 1900 "
+               "and not port 5353 and not port 5355 and not port 17500 and not port 4789")
+GAME_RE = re.compile(r"RA3_[0-9.]+\.game|ra3ep1\.exe", re.I)
+TACITUS_FLAG_RE = re.compile(
+    r"desync|out of sync|mismatch|disconnect|drop|time.?out|error|fail|punch|relay|nat", re.I)
+CLK_TCK = os.sysconf("SC_CLK_TCK")
+PAGE = os.sysconf("SC_PAGE_SIZE")
+
+
+def now() -> str:
+    return datetime.now().strftime("%H:%M:%S.%f")[:-3]
+
+
+def steam_root() -> str:
+    for r in (f"{HOME}/.local/share/Steam", f"{HOME}/.steam/steam", f"{HOME}/.steam/root"):
+        if os.path.isfile(f"{r}/config/config.vdf"):
+            return r
+    sys.exit("Steam not found.")
+
+
+def resolve_paths():
+    root = steam_root()
+    ra3 = None
+    libs = [root]
+    lf = f"{root}/steamapps/libraryfolders.vdf"
+    if os.path.isfile(lf):
+        libs += re.findall(r'"path"\s*"([^"]+)"', open(lf, encoding="utf-8", errors="replace").read())
+    for lib in libs:
+        cand = f"{lib}/steamapps/common/Command and Conquer Red Alert 3"
+        if os.path.isdir(cand):
+            ra3 = cand
+            break
+    pfx = f"{root}/steamapps/compatdata/17480/pfx"
+    tacitus_log = f"{ra3}/Data/Tacitus.log" if ra3 else None
+    replay = (f"{pfx}/drive_c/users/steamuser/Documents/Red Alert 3/"
+              "Replays/Last Replay.RA3Replay")
+    return ra3, tacitus_log, replay
+
+
+def default_iface() -> str | None:
+    try:
+        out = subprocess.check_output(["ip", "route", "show", "default"], text=True)
+        return out.split()[4] if out.split() else None
+    except Exception:
+        return None
+
+
+def find_pid() -> int | None:
+    try:
+        out = subprocess.check_output(["pgrep", "-af", r"RA3_[0-9.]+\.game"], text=True)
+    except subprocess.CalledProcessError:
+        return None
+    for line in out.splitlines():
+        pid, _, cmd = line.partition(" ")
+        if GAME_RE.search(cmd):
+            return int(pid)
+    return None
+
+
+class Monitor:
+    def __init__(self, sess: str, iface: str | None, tacitus_log: str | None, replay: str):
+        self.sess = sess
+        self.iface = iface
+        self.tacitus_src = tacitus_log
+        self.replay = replay
+        self.stop = threading.Event()
+        self.pid: int | None = None
+        self._evt_lock = threading.Lock()
+        self.events_f = open(f"{sess}/events.log", "a", buffering=1)
+        self.tcpdump: subprocess.Popen | None = None
+        # summary accumulators
+        self.peers: set[str] = set()
+        self.replay_max = 0
+        self.tacitus_flags: list[str] = []
+        self.conn_drops: list[str] = []
+
+    def event(self, kind: str, msg: str):
+        line = f"[{now()}] {kind:<8} {msg}"
+        with self._evt_lock:
+            self.events_f.write(line + "\n")
+        print(line, flush=True)
+
+    # --- streams -----------------------------------------------------------
+    def run_pcap(self):
+        if not self.iface:
+            self.event("pcap", "no default iface — pcap skipped")
+            return
+        path = f"{self.sess}/net.pcap"
+        try:
+            self.tcpdump = subprocess.Popen(
+                ["tcpdump", "-i", self.iface, "-n", "-U", "-s", "0", "-w", path, PCAP_FILTER],
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        except FileNotFoundError:
+            self.event("pcap", "tcpdump not installed — pcap skipped")
+            return
+        time.sleep(0.6)
+        if self.tcpdump.poll() is not None:
+            err = (self.tcpdump.stderr.read() or "").strip().splitlines()
+            hint = err[-1] if err else "unknown error"
+            self.event("pcap", f"tcpdump failed ({hint}) — grant caps: "
+                               "sudo setcap cap_net_raw,cap_net_admin+eip $(command -v tcpdump)")
+            return
+        self.event("pcap", f"capturing on {self.iface} -> net.pcap")
+        self.stop.wait()
+        self.tcpdump.send_signal(signal.SIGINT)
+        try:
+            self.tcpdump.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.tcpdump.kill()
+
+    def run_conn(self):
+        f = open(f"{self.sess}/connections.log", "a", buffering=1)
+        prev: set[tuple] = set()
+        prev_master = 0
+        while not self.stop.is_set():
+            if self.pid:
+                try:
+                    out = subprocess.check_output(["ss", "-tunap"], text=True,
+                                                  stderr=subprocess.DEVNULL)
+                except Exception:
+                    out = ""
+                rows = [l for l in out.splitlines() if f"pid={self.pid}," in l or f"pid={self.pid})" in l]
+                f.write(f"--- {now()} ---\n" + "\n".join(rows) + "\n")
+                cur: set[tuple] = set()
+                master = 0
+                for l in rows:
+                    parts = l.split()
+                    if len(parts) < 6:
+                        continue
+                    proto, recvq, sendq, local, peer = parts[0], parts[1], parts[2], parts[4], parts[5]
+                    cur.add((proto, local, peer))
+                    if peer.startswith(TACITUS_IP):
+                        master += 1
+                    elif proto == "udp" and not peer.startswith("0.0.0.0") and ":" in peer:
+                        ip = peer.rsplit(":", 1)[0]
+                        if peer not in self.peers:
+                            self.peers.add(peer)
+                            self.event("peer", f"UDP P2P peer associated: {peer}")
+                    try:
+                        if int(recvq) > 4096 or int(sendq) > 4096:
+                            self.event("queue", f"socket backlog rq={recvq} sq={sendq} {local} -> {peer}")
+                    except ValueError:
+                        pass
+                opened = cur - prev
+                closed = prev - cur
+                for proto, local, peer in opened:
+                    self.event("sock+", f"{proto} {local} -> {peer}")
+                for proto, local, peer in closed:
+                    self.event("sock-", f"{proto} {local} -> {peer}")
+                    if peer.startswith(TACITUS_IP):
+                        msg = f"control-plane TCP to master closed: {peer}"
+                        self.conn_drops.append(msg)
+                        self.event("master", msg)
+                prev = cur
+                if prev_master and master == 0:
+                    self.event("master", "ALL control-plane connections to Tacitus master gone")
+                prev_master = master
+            self.stop.wait(2)
+        f.close()
+
+    def run_proc(self):
+        f = open(f"{self.sess}/proc.log", "a", buffering=1)
+        f.write("# time cpu% threads rss_mb\n")
+        last = None
+        while not self.stop.is_set():
+            if self.pid:
+                try:
+                    with open(f"/proc/{self.pid}/stat") as sf:
+                        fields = sf.read().split()
+                    utime, stime = int(fields[13]), int(fields[14])
+                    threads, rss_pages = int(fields[19]), int(fields[23])
+                    total = utime + stime
+                    t = time.monotonic()
+                    cpu = 0.0
+                    if last:
+                        dt = t - last[1]
+                        if dt > 0:
+                            cpu = (total - last[0]) / CLK_TCK / dt * 100
+                    last = (total, t)
+                    rss_mb = rss_pages * PAGE / 1048576
+                    f.write(f"{now()} {cpu:6.1f} {threads:4d} {rss_mb:8.1f}\n")
+                except (FileNotFoundError, ProcessLookupError, IndexError):
+                    pass
+            self.stop.wait(2)
+        f.close()
+
+    def run_replay(self):
+        # Record the raw replay-size timeline: one event per observed size change, with the
+        # delta since the last sample. No interpretation here -- a growth stall (possible
+        # freeze/desync/endgame) is read off this timeline downstream, correlated against the
+        # proc CPU and P2P traffic. Keeping it raw means we never discard a sample to a
+        # heuristic whose poll cadence (1s) races the recorder's block-flush cadence.
+        last_size = -1
+        while not self.stop.is_set():
+            try:
+                size = os.path.getsize(self.replay)
+            except OSError:
+                size = -1
+            if size >= 0 and size != last_size:
+                if last_size < 0:
+                    self.event("replay", f"size={size}")
+                else:
+                    self.event("replay", f"size={size} delta={size - last_size:+d}")
+                last_size = size
+                self.replay_max = max(self.replay_max, size)
+            self.stop.wait(1)
+
+    def run_tacitus(self):
+        if not self.tacitus_src:
+            return
+        dst = open(f"{self.sess}/tacitus.log", "a", buffering=1)
+        f = None
+        inode = None
+        pos = 0
+        while not self.stop.is_set():
+            try:
+                st = os.stat(self.tacitus_src)
+                if f is None or st.st_ino != inode:
+                    if f:
+                        f.close()
+                    f = open(self.tacitus_src, "r", errors="replace")
+                    inode = st.st_ino
+                    f.seek(0 if pos == 0 else pos)
+                chunk = f.read()
+                if chunk:
+                    dst.write(chunk)
+                    pos = f.tell()
+                    for line in chunk.splitlines():
+                        if TACITUS_FLAG_RE.search(line):
+                            self.tacitus_flags.append(line.strip())
+                            self.event("tacitus", line.strip()[:200])
+            except FileNotFoundError:
+                pass
+            self.stop.wait(1)
+        if f:
+            f.close()
+        dst.close()
+
+    # --- lifecycle ---------------------------------------------------------
+    def wait_for_pid(self, wait: bool):
+        self.pid = find_pid()
+        if self.pid:
+            self.event("pid", f"RA3 game process: {self.pid}")
+            return
+        if not wait:
+            self.event("pid", "RA3 not running yet — will attach when it appears")
+        while not self.stop.is_set() and not self.pid:
+            self.stop.wait(1)
+            self.pid = find_pid()
+            if self.pid:
+                self.event("pid", f"RA3 game process attached: {self.pid}")
+
+    def pid_watch(self):
+        while not self.stop.is_set():
+            if self.pid and find_pid() is None:
+                self.event("pid", f"RA3 process {self.pid} exited")
+                self.pid = None
+            elif not self.pid:
+                self.pid = find_pid()
+                if self.pid:
+                    self.event("pid", f"RA3 game process attached: {self.pid}")
+            self.stop.wait(2)
+
+    def finish(self):
+        # snapshot final artifacts
+        for src, name in ((self.replay, "Last Replay.RA3Replay"),
+                          (self.tacitus_src, "Tacitus.log")):
+            try:
+                if src and os.path.isfile(src):
+                    shutil.copy2(src, f"{self.sess}/final-{name}")
+            except OSError as e:
+                self.event("save", f"could not copy {name}: {e}")
+        with open(f"{self.sess}/SUMMARY.txt", "w") as s:
+            s.write(f"RA3 watch session: {os.path.basename(self.sess)}\n")
+            s.write(f"ended: {datetime.now(timezone.utc).isoformat()}\n\n")
+            s.write(f"UDP P2P peers seen ({len(self.peers)}):\n")
+            for p in sorted(self.peers):
+                s.write(f"  {p}\n")
+            s.write(f"\nreplay max size: {self.replay_max} bytes\n")
+            s.write(f"\ncontrol-plane drops ({len(self.conn_drops)}):\n")
+            for x in self.conn_drops:
+                s.write(f"  {x}\n")
+            s.write(f"\nTacitus flagged lines ({len(self.tacitus_flags)}):\n")
+            for x in self.tacitus_flags[-50:]:
+                s.write(f"  {x}\n")
+        self.events_f.close()
+
+
+def stop_running() -> int:
+    """SIGTERM any other ra3-watch instance(s) so they finalize gracefully."""
+    me = os.getpid()
+    killed = []
+    for entry in os.scandir("/proc"):
+        if not entry.name.isdigit():
+            continue
+        pid = int(entry.name)
+        if pid == me:
+            continue
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                argv = f.read().split(b"\x00")
+        except OSError:
+            continue
+        if any(b"ra3-watch" in a for a in argv) and not any(a == b"stop" for a in argv):
+            try:
+                os.kill(pid, signal.SIGTERM)
+                killed.append(pid)
+            except OSError:
+                pass
+    if killed:
+        print(f"sent SIGTERM to ra3-watch: {', '.join(map(str, killed))} "
+              "(finalizing session — SUMMARY.txt will be written)")
+    else:
+        print("no running ra3-watch instance found")
+    return 0 if killed else 1
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "stop":
+        sys.exit(stop_running())
+    ap = argparse.ArgumentParser(description="Full-game RA3/Tacitus desync monitor")
+    ap.add_argument("--name", default="", help="label for the session dir")
+    ap.add_argument("--wait", action="store_true", help="block until RA3 is running before starting")
+    args = ap.parse_args()
+
+    ra3, tacitus_log, replay = resolve_paths()
+    iface = default_iface()
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    if args.name:
+        stamp += "-" + re.sub(r"[^\w.-]", "_", args.name)
+    sess = os.path.join(HOME, ".cache", "ra3-online", "monitor", stamp)
+    os.makedirs(sess, exist_ok=True)
+
+    with open(f"{sess}/meta.txt", "w") as m:
+        m.write(f"started: {datetime.now(timezone.utc).isoformat()}\n")
+        m.write(f"iface: {iface}\nra3_dir: {ra3}\n")
+        m.write(f"tacitus_log: {tacitus_log}\nreplay: {replay}\n")
+        m.write(f"tacitus_ini_verbose: "
+                f"{_verbose_state(ra3)}\n")
+        m.write(f"pcap_filter: {PCAP_FILTER}\n")
+
+    mon = Monitor(sess, iface, tacitus_log, replay)
+    mon.event("start", f"session dir: {sess}")
+    if _verbose_state(ra3) != "true":
+        mon.event("warn", "Tacitus VerboseLog is NOT true — tacitus.log will be sparse")
+
+    def handle(_sig, _frm):
+        mon.event("stop", "signal received — finishing up")
+        mon.stop.set()
+    signal.signal(signal.SIGINT, handle)
+    signal.signal(signal.SIGTERM, handle)
+
+    mon.wait_for_pid(args.wait)
+    threads = [threading.Thread(target=t, daemon=True) for t in
+               (mon.run_pcap, mon.run_conn, mon.run_proc, mon.run_replay,
+                mon.run_tacitus, mon.pid_watch)]
+    for t in threads:
+        t.start()
+    mon.stop.wait()
+    for t in threads:
+        t.join(timeout=6)
+    mon.finish()
+    print(f"\nsession saved: {sess}")
+    print(f"  open net.pcap in Wireshark; read SUMMARY.txt and events.log first.")
+
+
+def _verbose_state(ra3: str | None) -> str:
+    ini = f"{ra3}/Data/Tacitus.ini" if ra3 else None
+    if ini and os.path.isfile(ini):
+        txt = open(ini, errors="replace").read()
+        return "true" if re.search(r"(?im)^\s*VerboseLog\s*=\s*true", txt) else "false"
+    return "missing"
+
+
+if __name__ == "__main__":
+    main()
