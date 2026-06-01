@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+# Pre-flight diagnostic for Red Alert 3 + C&C Online (Tacitus) on Linux.
+#
+# Diagnostic only — does not modify anything. Run before launching the game
+# (and especially before reporting "connection problem detected" issues).
+#
+# Lessons baked in (from a long debug session):
+#   - VPN active (NordVPN, WireGuard, Mullvad, etc) breaks P2P UDP punch.
+#   - Stale `/etc/hosts` mapping `<hostname>` to a wrong LAN IP poisons
+#     RA3's `gethostbyname(hostname)` lookup, which it uses for its own
+#     advertised LAN IP.
+#   - Multiple default routes (eno1 + wlan0) confuse adapter selection.
+#   - Docker bridges + Calico/kind veths inflate `getent ahostsv4` and may
+#     leak into RA3's adapter enumeration.
+#   - Options.ini `GameSpyIPAddress` should equal current LAN IP of the
+#     active interface; `FirewallPortOverride = 0` matches a working peer.
+#   - Tacitus.log only logs networking when `[DEBUG] VerboseLog = true`
+#     in `Data/Tacitus.ini`.
+#   - Router UPnP off → no automatic inbound port → P2P punch may still
+#     work via NAT keepalives, but is fragile.
+
+set -u
+
+RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'; BOLD=$'\033[1m'; RESET=$'\033[0m'
+
+ok()    { printf '  %sOK%s    %s\n'   "$GREEN"  "$RESET" "$*"; }
+warn()  { printf '  %sWARN%s  %s\n'   "$YELLOW" "$RESET" "$*"; WARN_COUNT=$((WARN_COUNT+1)); }
+fail()  { printf '  %sFAIL%s  %s\n'   "$RED"    "$RESET" "$*"; FAIL_COUNT=$((FAIL_COUNT+1)); }
+info()  { printf '  %sinfo%s  %s\n'   "$BLUE"   "$RESET" "$*"; }
+section() { printf '\n%s== %s ==%s\n' "$BOLD" "$*" "$RESET"; }
+
+WARN_COUNT=0
+FAIL_COUNT=0
+
+TACITUS_IP="${TACITUS_IP:-195.60.166.61}"  # galaxy.cosmic.global; override with TACITUS_IP=... if it moves
+RA3_DIR_DEFAULT="$HOME/.local/share/Steam/steamapps/common/Command and Conquer Red Alert 3"
+PFX_DEFAULT="$HOME/.local/share/Steam/steamapps/compatdata/17480/pfx"
+
+# ---- VPN ----
+section "VPN"
+VPN_HITS=$(pgrep -af 'tailscaled|wg-quick|wireguard|openvpn|mullvad|nordvpn|nordlynx|proton-vpn|expressvpn' 2>/dev/null | grep -v "$(basename "$0")" || true)
+VPN_IFACES=$(ip -br link 2>/dev/null | awk '/UP|UNKNOWN/ {print $1}' | grep -E '^(tun|tap|wg|nord|mullvad|proton|tailscale)' || true)
+if [[ -z "$VPN_HITS" && -z "$VPN_IFACES" ]]; then
+  ok "no VPN process or tunnel interface detected"
+else
+  fail "VPN active — P2P UDP punch will not work behind NAT-only VPN exits"
+  [[ -n "$VPN_IFACES" ]] && info "tunnel interfaces: $(echo "$VPN_IFACES" | tr '\n' ' ')"
+  [[ -n "$VPN_HITS" ]]  && info "processes: $(echo "$VPN_HITS" | awk '{print $2}' | xargs -n1 basename | sort -u | tr '\n' ' ')"
+  info "fix: disconnect the VPN (e.g. 'nordvpn disconnect', 'wg-quick down ...') before launching RA3"
+fi
+
+# ---- default routes ----
+section "Default route"
+mapfile -t DEFAULTS < <(ip route show default 2>/dev/null)
+case "${#DEFAULTS[@]}" in
+  0) fail "no default route — no internet" ;;
+  1) ok "single default route: ${DEFAULTS[0]}" ;;
+  *)
+    warn "${#DEFAULTS[@]} default routes — RA3 may pick the wrong adapter"
+    for r in "${DEFAULTS[@]}"; do info "$r"; done
+    info "fix: disconnect the unused interface (ethernet OR wifi, not both)"
+    ;;
+esac
+
+# ---- pick primary IPv4 address from default-route iface ----
+PRIMARY_IFACE=$(ip route show default 2>/dev/null | awk '{print $5; exit}')
+PRIMARY_IP=$(ip -4 addr show dev "$PRIMARY_IFACE" 2>/dev/null | awk '/inet / {print $2; exit}' | cut -d/ -f1)
+if [[ -n "$PRIMARY_IP" ]]; then
+  info "primary iface: $PRIMARY_IFACE ($PRIMARY_IP)"
+fi
+
+# ---- /etc/hosts ----
+section "/etc/hosts"
+HOSTNAME_NOW=$(hostname)
+BAD_HOST_LINE=$(grep -E "[[:space:]]+${HOSTNAME_NOW}([[:space:]]|$)" /etc/hosts 2>/dev/null \
+                | grep -vE "^[[:space:]]*(127\\.|::1|#)" || true)
+if [[ -z "$BAD_HOST_LINE" ]]; then
+  ok "no stale '$HOSTNAME_NOW' mapping in /etc/hosts"
+else
+  fail "/etc/hosts maps '$HOSTNAME_NOW' to a non-loopback IP — RA3 will read this as its LAN IP"
+  echo "$BAD_HOST_LINE" | while IFS= read -r l; do info "  $l"; done
+  info "fix: 'sudo sed -i \"/[[:space:]]${HOSTNAME_NOW}\$/d\" /etc/hosts' (after reviewing)"
+fi
+
+# ---- hostname IPv4 resolution ----
+section "Hostname IPv4 resolution"
+mapfile -t RESOLVED < <(getent ahostsv4 "$HOSTNAME_NOW" 2>/dev/null | awk '/STREAM/ {print $1}')
+if [[ "${#RESOLVED[@]}" -eq 0 ]]; then
+  fail "'$HOSTNAME_NOW' does not resolve to any IPv4 address"
+else
+  FIRST="${RESOLVED[0]}"
+  if [[ -n "$PRIMARY_IP" && "$FIRST" == "$PRIMARY_IP" ]]; then
+    ok "first IPv4 = primary iface IP ($FIRST) — RA3 will see this"
+  else
+    warn "first IPv4 ($FIRST) does not match primary iface IP ($PRIMARY_IP)"
+  fi
+  if [[ "${#RESOLVED[@]}" -gt 1 ]]; then
+    EXTRAS=$(printf '%s ' "${RESOLVED[@]:1}")
+    warn "extra IPs returned: ${EXTRAS}— from docker/calico/vpn ifaces; can leak into RA3 adapter enumeration"
+    info "fix: bring stray interfaces down ('sudo ip link set <iface> down') and stop docker/kind"
+  fi
+fi
+
+# ---- container/kubernetes pollution ----
+section "Container/k8s interfaces"
+STRAY=$(ip -br link show 2>/dev/null | awk '/UP|UNKNOWN/ {print $1}' \
+        | grep -E '^(docker|br-|cali|vxlan\.calico|veth)' || true)
+if [[ -z "$STRAY" ]]; then
+  ok "no docker/calico/veth interfaces up"
+else
+  warn "stray container interfaces are up:"
+  echo "$STRAY" | while IFS= read -r i; do info "  $i"; done
+  if systemctl is-active --quiet docker 2>/dev/null; then
+    info "docker.service is active — 'sudo systemctl stop docker.socket docker containerd' before playing"
+  fi
+fi
+
+# ---- firewall ----
+section "Firewall"
+ACTIVE_FW=""
+for svc in ufw firewalld iptables nftables; do
+  if systemctl is-active --quiet "$svc" 2>/dev/null; then
+    ACTIVE_FW="$ACTIVE_FW $svc"
+  fi
+done
+if [[ -z "$ACTIVE_FW" ]]; then
+  ok "no host firewall service active"
+else
+  warn "host firewall(s) active:$ACTIVE_FW"
+  info "review rules; default-drop on INPUT will block inbound P2P punches"
+fi
+
+# ---- public IP / CGNAT ----
+section "Public IP"
+PUB_IP=$(curl -s -m 5 https://api.ipify.org 2>/dev/null || echo "")
+if [[ -z "$PUB_IP" ]]; then
+  warn "could not determine public IP (no internet?)"
+else
+  info "public IPv4: $PUB_IP"
+  if [[ "$PUB_IP" =~ ^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\. ]]; then
+    fail "public IP is in CGNAT range (100.64.0.0/10) — your ISP blocks inbound; matchmaking will struggle"
+  else
+    ok "public IP not in CGNAT range"
+  fi
+fi
+
+# ---- router UPnP ----
+section "Router UPnP"
+GW=$(ip route show default 2>/dev/null | awk '{print $3; exit}')
+if [[ -z "$GW" ]]; then
+  warn "no gateway found, skipping UPnP probe"
+else
+  REPLY=$({
+    exec 3<>/dev/udp/239.255.255.250/1900 2>/dev/null || exit 1
+    printf 'M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: "ssdp:discover"\r\nMX: 2\r\nST: upnp:rootdevice\r\n\r\n' >&3
+    timeout 2 cat <&3 2>/dev/null
+  } 2>/dev/null || true)
+  if [[ -z "$REPLY" ]]; then
+    warn "no SSDP/UPnP responses — router probably has UPnP disabled"
+    info "fix (optional): enable UPnP on the router OR forward UDP/8088 to your LAN IP"
+  else
+    ok "UPnP responder(s) replied to SSDP"
+  fi
+fi
+
+# ---- Tacitus reachability ----
+section "Tacitus master ($TACITUS_IP)"
+if ping -c 1 -W 2 "$TACITUS_IP" >/dev/null 2>&1; then
+  ok "ICMP reachable"
+else
+  info "ICMP to $TACITUS_IP filtered (this host blocks ping by default; not a problem)"
+fi
+for port in 6667 28910 29900 18840; do
+  if timeout 3 bash -c "exec 9<>/dev/tcp/$TACITUS_IP/$port" 2>/dev/null; then
+    ok "tcp/$port reachable"
+  else
+    fail "tcp/$port unreachable — Tacitus services down or blocked"
+  fi
+done
+
+# ---- RA3 install + Options.ini ----
+section "RA3 install + Options.ini"
+RA3_DIR="$RA3_DIR_DEFAULT"
+[[ -d "$RA3_DIR" ]] || RA3_DIR=$(find "$HOME/.local/share/Steam/steamapps/common" -maxdepth 1 \
+                                  -iname 'Command and Conquer Red Alert 3' -type d 2>/dev/null | head -1)
+if [[ -z "$RA3_DIR" || ! -d "$RA3_DIR" ]]; then
+  fail "RA3 install directory not found"
+else
+  ok "RA3 dir: $RA3_DIR"
+  if [[ -f "$RA3_DIR/Data/dsound.dll" ]]; then
+    ok "Tacitus shim (dsound.dll) present"
+  else
+    warn "Tacitus shim (dsound.dll) missing in Data/ — re-run Tacitus installer"
+  fi
+fi
+
+PROFILES_DIR="$PFX_DEFAULT/drive_c/users/steamuser/AppData/Roaming/Red Alert 3/Profiles"
+ACTIVE_PROFILE=$(ls -1d "$PROFILES_DIR"/*/ 2>/dev/null | head -1)
+if [[ -z "$ACTIVE_PROFILE" ]]; then
+  warn "no RA3 profile found at $PROFILES_DIR (game has not run yet?)"
+else
+  OPT="${ACTIVE_PROFILE}Options.ini"
+  if [[ ! -f "$OPT" ]]; then
+    warn "Options.ini missing in $ACTIVE_PROFILE"
+  else
+    info "profile: $ACTIVE_PROFILE"
+    if [[ ! -w "$OPT" ]]; then
+      warn "Options.ini is read-only — game can't write back, may be using stale values"
+      info "fix: 'chmod u+w \"$OPT\"'"
+    fi
+    GS_IP=$(awk -F'= *' '/^GameSpyIPAddress/ {print $2; exit}' "$OPT" | tr -d '[:space:]')
+    FW_PORT=$(awk -F'= *' '/^FirewallPortOverride/ {print $2; exit}' "$OPT" | tr -d '[:space:]')
+    info "GameSpyIPAddress = ${GS_IP:-<unset>}"
+    info "FirewallPortOverride = ${FW_PORT:-<unset>}"
+    if [[ -n "$GS_IP" && -n "$PRIMARY_IP" ]]; then
+      if [[ "$GS_IP" == "$PRIMARY_IP" ]]; then
+        ok "GameSpyIPAddress matches primary iface IP"
+      else
+        fail "GameSpyIPAddress ($GS_IP) does NOT match primary iface IP ($PRIMARY_IP)"
+        info "fix: edit '$OPT' and set 'GameSpyIPAddress = $PRIMARY_IP'"
+      fi
+    fi
+    if [[ -n "$FW_PORT" && "$FW_PORT" != "0" ]]; then
+      warn "FirewallPortOverride = $FW_PORT (peer that works uses 0)"
+      info "fix: set 'FirewallPortOverride = 0' in '$OPT'"
+    fi
+  fi
+fi
+
+# ---- Tacitus.ini (verbose log) ----
+section "Tacitus.ini (verbose logging)"
+TACITUS_INI="$RA3_DIR/Data/Tacitus.ini"
+if [[ -f "$TACITUS_INI" ]] && grep -qiE '^\s*VerboseLog\s*=\s*true' "$TACITUS_INI"; then
+  ok "VerboseLog = true (helpful for debugging next failure)"
+else
+  warn "VerboseLog not enabled — next failure will have a sparse Tacitus.log"
+  info "fix: add to '$TACITUS_INI':"
+  info "    [DEBUG]"
+  info "    VerboseLog = true"
+fi
+
+# ---- summary ----
+section "Summary"
+printf '  warnings: %d\n  failures: %d\n' "$WARN_COUNT" "$FAIL_COUNT"
+if [[ "$FAIL_COUNT" -eq 0 && "$WARN_COUNT" -eq 0 ]]; then
+  printf '  %sall checks passed — launch RA3 and have fun.%s\n' "$GREEN" "$RESET"
+elif [[ "$FAIL_COUNT" -eq 0 ]]; then
+  printf '  %sno blockers — game should work; review warnings.%s\n' "$YELLOW" "$RESET"
+else
+  printf '  %sblockers found — fix failures before launching RA3.%s\n' "$RED" "$RESET"
+fi
+
+exit "$FAIL_COUNT"
