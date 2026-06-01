@@ -21,6 +21,7 @@ echo "==> Installing extra packages (not in omarchy-base)..."
 sudo pacman -S --noconfirm --needed \
     bc \
     stow \
+    7zip \
     make \
     most \
     moreutils \
@@ -48,6 +49,7 @@ sudo pacman -S --noconfirm --needed \
     kitty \
     chafa \
     wine \
+    wine-mono \
     fwupd \
     dmidecode
 
@@ -143,7 +145,8 @@ PATH=/usr/bin:/usr/local/bin yay -S --noconfirm --needed \
     dropbox-cli \
     nautilus-dropbox \
     libappindicator-gtk3 \
-    proton-ge-custom
+    proton-ge-custom \
+    protontricks
 
 # Replaces the old AMD-only `lib32-vulkan-radeon` step: `omarchy install gaming
 # steam` installs steam and auto-detects the lib32 Vulkan/NVIDIA drivers for any
