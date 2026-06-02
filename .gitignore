@@ -1,4 +1,5 @@
 code-server/.config/code-server/.env
 __pycache__
 .claude/scheduled_tasks.lock
-
+# Regenerated on every theme switch by omazed.
+zed/.config/zed/themes/omazed.json
