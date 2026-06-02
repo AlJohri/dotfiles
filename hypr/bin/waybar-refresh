@@ -31,4 +31,10 @@ systemctl --user stop 'app-Hyprland-waybar-*.scope' 2>/dev/null
 pkill -x waybar 2>/dev/null
 sleep 0.1                                # let any pkill'd straggler die first
 
-setsid uwsm-app -- waybar >/dev/null 2>&1 9>&- &
+# Log to a file instead of /dev/null so a failed relaunch leaves a trace.
+# fds inherited at exec carry through uwsm-app -> the --scope -> waybar, so this
+# captures waybar's stdout/stderr even though scopes don't route to the journal.
+log="${XDG_STATE_HOME:-$HOME/.local/state}/waybar/refresh.log"
+mkdir -p "$(dirname "$log")"
+printf '\n=== %s waybar-refresh relaunch ===\n' "$(date '+%F %T')" >>"$log"
+setsid uwsm-app -- waybar >>"$log" 2>&1 9>&- &

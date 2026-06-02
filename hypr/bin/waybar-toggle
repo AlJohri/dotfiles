@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+# Logging replacement for omarchy-toggle-waybar (SUPER+SHIFT+SPACE).
+#
+# omarchy-toggle-waybar flips the `waybar-off` flag then hides/shows the bar,
+# launching it to /dev/null. That made an accidental keypress indistinguishable
+# from a crash: the bar vanished with no trace (same /dev/null blind spot fixed
+# in waybar-refresh). This records every toggle in waybar's refresh.log and
+# routes the show-path launch through the log too, so "why did the bar vanish"
+# is always answerable from one file.
+
+log="${XDG_STATE_HOME:-$HOME/.local/state}/waybar/refresh.log"
+mkdir -p "$(dirname "$log")"
+
+omarchy-toggle waybar-off                 # flip the flag (omarchy's state of record)
+
+if pgrep -x waybar >/dev/null; then
+  printf '\n=== %s SUPER+SHIFT+SPACE -> hide waybar ===\n' "$(date '+%F %T')" >>"$log"
+  pkill -x waybar
+else
+  printf '\n=== %s SUPER+SHIFT+SPACE -> show waybar ===\n' "$(date '+%F %T')" >>"$log"
+  setsid uwsm-app -- waybar >>"$log" 2>&1 &
+fi
