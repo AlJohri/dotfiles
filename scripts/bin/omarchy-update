@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Wrapper around omarchy-update that strips mise paths so AUR rebuilds in
+# `omarchy-update-aur-pkgs` don't pick up mise's toolchain shims (notably `ld`),
+# which would break source-built packages linking against system glibc/glib.
+# Same workaround as the yay invocation in scripts/bin/setup-omarchy.sh.
+
+set -euo pipefail
+
+clean_path=$(echo "$PATH" | tr ':' '\n' | grep -v '/mise/' | paste -sd:)
+exec env PATH="$clean_path" /home/aljohri/.local/share/omarchy/bin/omarchy-update "$@"
