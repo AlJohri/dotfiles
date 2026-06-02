@@ -18,6 +18,10 @@
 - Skip optional, long-running validation stages locally (e.g., pre-commit `--hook-stage manual`, `make ci-full`, `tox -e all`). These stages are opt-out by design — they're slow (network fetches, full-repo templating, cross-cluster renders) and meant to be skipped during iteration. The default validation is what CI runs on every commit and is sufficient. If you need to exercise a specific expensive hook, run it targeted at just the changed files.
 - For Rust projects, run tests via `cargo nextest run` (faster, isolated per-test processes), not `cargo test`. Snapshot updates: `INSTA_UPDATE=always cargo nextest run`. Doc-tests still need `cargo test --doc`.
 - Always pass `--draft` to `spr diff` (it publishes immediately with no dry-run; drafts limit blast radius — no auto-reviewers, CI often skipped).
+- spr stacks (`spacedentist/spr`, the vetted tool): each commit = one PR; identity is the `Pull Request:` trailer spr stamps on first `spr diff`.
+  - Edit a published stack with **fixup + autosquash**, never `git commit --amend -m` — `-m` drops the trailer and spr orphans/duplicates the PR. (`--amend --no-edit` keeps it.)
+  - `spr land` won't merge a **draft** PR (GitHub blocks merging drafts) — promote it to ready first (UI button, or `gh pr ready`).
+  - Dropping a commit leaves a **zombie open PR**; close it with `spr close`.
 
 ## Bare Repos & Git Worktrees
 
