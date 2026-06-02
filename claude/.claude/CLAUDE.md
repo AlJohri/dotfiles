@@ -24,6 +24,7 @@
   - Dropping a commit leaves a **zombie open PR**; close it with `spr close`.
   - When a commit changed, `spr diff` opens `$EDITOR` for the update message and dies in a non-TTY (`IO error: not a terminal`) — always pass `-m "…"` when updating.
   - `spr diff` only operates on **HEAD** (one PR). To update the whole stack — e.g. after a rebase that re-SHAs every commit — use `spr diff --all`.
+  - `--update-message` (push a changed commit *message* to its PR body) is **also HEAD-only**. To sync the message of a **non-HEAD** commit (e.g. you reworded a commit in the middle of the stack), pair it with `--all`: `spr diff --all --update-message --draft -m "…"`. Plain `spr diff --update-message` silently skips middle commits.
 
 ## Bare Repos & Git Worktrees
 
