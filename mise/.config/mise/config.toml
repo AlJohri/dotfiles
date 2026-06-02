@@ -122,6 +122,8 @@ mermaid-ascii = "latest"
 "npm:@mermaid-js/mermaid-cli" = "latest"
 sccache = "0.15.0"
 "cargo:spr" = "latest"
+yarn = "latest"
+"cargo:https://github.com/mipmip/mip.rs" = "latest"
 
 [plugins]
 # Pinned to AlJohri fork's dev branch (fix-prefix-path-mismatch +

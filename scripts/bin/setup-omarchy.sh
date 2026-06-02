@@ -18,6 +18,7 @@ fi
 echo "==> Installing extra packages (not in omarchy-base)..."
 # bc: arbitrary-precision calculator language, also used by scripts that need shell arithmetic with decimals
 # rendering images: kitten icat image.png, chafa image.png
+# webkitgtk-6.0: GTK4 web engine required to build/run mip.rs (markdown instant preview)
 sudo pacman -S --noconfirm --needed \
     bc \
     stow \
@@ -48,6 +49,7 @@ sudo pacman -S --noconfirm --needed \
     pandoc-cli \
     kitty \
     chafa \
+    webkitgtk-6.0 \
     wine \
     wine-mono \
     fwupd \
