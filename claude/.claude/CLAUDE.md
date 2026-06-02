@@ -23,6 +23,7 @@
   - `spr land` won't merge a **draft** PR (GitHub blocks merging drafts) — promote it to ready first (UI button, or `gh pr ready`).
   - Dropping a commit leaves a **zombie open PR**; close it with `spr close`.
   - When a commit changed, `spr diff` opens `$EDITOR` for the update message and dies in a non-TTY (`IO error: not a terminal`) — always pass `-m "…"` when updating.
+  - `spr diff` only operates on **HEAD** (one PR). To update the whole stack — e.g. after a rebase that re-SHAs every commit — use `spr diff --all`.
 
 ## Bare Repos & Git Worktrees
 
