@@ -1,25 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Bring down a PR's head branch as a worktree in the bare-repo + worktrees
-# layout.
+# Bring down a GitHub branch (from a /tree/<branch> URL) as a worktree in the
+# bare-repo + worktrees layout.
 #
 #   - If the repo is already cloned under $DEV_ROOT (default ~/Development),
-#     add the PR branch as a worktree there via `gwt` — using fork notation
-#     when the PR head owner differs from the existing clone's origin owner.
-#   - Otherwise, do a fresh bare clone of the head repo into $DEV_ROOT, then
-#     add the worktree.
+#     add the branch as a worktree there via `gwt` — using fork notation when
+#     the branch's owner differs from the existing clone's origin owner.
+#   - Otherwise, do a fresh bare clone into $DEV_ROOT, then add the worktree.
 
 if [ $# -ne 1 ]; then
-  echo "Usage: gh-pr-clone <pr-url>" >&2
+  echo "Usage: gh-checkout-branch <tree-url>" >&2
+  echo "  e.g. https://github.com/<owner>/<repo>/tree/<branch>" >&2
   exit 1
 fi
 
-PR_URL="$1"
+URL="$1"
 
-read -r OWNER REPO BRANCH < <(gh pr view "$PR_URL" \
-  --json headRefName,headRepository,headRepositoryOwner \
-  --jq '"\(.headRepositoryOwner.login) \(.headRepository.name) \(.headRefName)"')
+if [[ "$URL" =~ ^https://github\.com/([^/]+)/([^/]+)/tree/(.+)$ ]]; then
+  OWNER="${BASH_REMATCH[1]}"
+  REPO="${BASH_REMATCH[2]}"
+  BRANCH="${BASH_REMATCH[3]}"
+else
+  echo "Not a github tree URL: $URL" >&2
+  echo "  expected https://github.com/<owner>/<repo>/tree/<branch>" >&2
+  exit 1
+fi
 
 # Extract the owner segment from a github remote URL (ssh or https form).
 remote_owner() {
@@ -47,5 +53,5 @@ else
 fi
 
 echo >&2
-echo "Worktree for PR branch '$BRANCH': $WT" >&2
+echo "Worktree for '$BRANCH': $WT" >&2
 echo "$WT"

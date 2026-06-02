@@ -126,17 +126,15 @@ if [[ "$BRANCH" == *:* ]]; then
     echo "Fork notation '$BRANCH' can't be combined with a source branch." >&2
     exit 1
   fi
-  if ! command -v gh &>/dev/null; then
-    echo "gh is required to resolve fork notation '$BRANCH'." >&2
-    exit 1
-  fi
   FORK_OWNER="${BRANCH%%:*}"
   FORK_HEAD="${BRANCH#*:}"
-  PR_NUM=$(gh pr list -H "$FORK_HEAD" --state all --json number,headRepositoryOwner \
-    -q ".[] | select(.headRepositoryOwner.login==\"$FORK_OWNER\") | .number" 2>/dev/null | head -1)
-  if [ -z "$PR_NUM" ] || [ "$PR_NUM" = "null" ]; then
-    echo "No PR found with head '$BRANCH'." >&2
-    exit 1
+  # Best-effort: note the PR number if one exists (for logging only). A fork
+  # branch with no PR is still fetchable directly from the fork remote, so a
+  # missing PR is not an error.
+  PR_NUM=""
+  if command -v gh &>/dev/null; then
+    PR_NUM=$(gh pr list -H "$FORK_HEAD" --state all --json number,headRepositoryOwner \
+      -q ".[] | select(.headRepositoryOwner.login==\"$FORK_OWNER\") | .number" 2>/dev/null | head -1)
   fi
 
   # Add (or reuse) a named remote for the fork owner. Derive the URL by
@@ -160,7 +158,11 @@ if [[ "$BRANCH" == *:* ]]; then
   if git show-ref --verify --quiet "refs/heads/$FORK_HEAD"; then
     echo "Local branch '$FORK_HEAD' already exists; using it as-is (not re-fetching from '$FORK_OWNER')." >&2
   else
-    echo "Resolved '$BRANCH' to PR #$PR_NUM; fetching '$FORK_HEAD' from remote '$FORK_OWNER'." >&2
+    if [ -n "$PR_NUM" ] && [ "$PR_NUM" != "null" ]; then
+      echo "Resolved '$BRANCH' to PR #$PR_NUM; fetching '$FORK_HEAD' from remote '$FORK_OWNER'." >&2
+    else
+      echo "Fetching '$FORK_HEAD' from remote '$FORK_OWNER' (no open PR found)." >&2
+    fi
     git fetch "$FORK_OWNER" "$FORK_HEAD" >&2
     git branch --track "$FORK_HEAD" "refs/remotes/$FORK_OWNER/$FORK_HEAD" >&2
   fi

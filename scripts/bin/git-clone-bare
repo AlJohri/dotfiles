@@ -75,3 +75,7 @@ fi
 echo >&2
 echo "Cloned into $(pwd)" >&2
 echo "Default-branch worktree: $(pwd)/$DEFAULT_BRANCH" >&2
+
+# Emit the bare-repo root on stdout so callers can capture it (everything else
+# above goes to stderr). Lets wrapper scripts cd in and run `gwt <branch>`.
+echo "$(pwd)"
