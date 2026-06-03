@@ -13,7 +13,7 @@ spr (`spacedentist/spr`, the vetted tool) turns a line of commits on local
 questions in `~/.cargo/registry/src/index.crates.io-*/spr-*/` (`src/commands/`).
 
 Always pass `--draft` to `spr diff` (publishes immediately, no dry-run;
-drafts limit blast radius — no auto-reviewers, CI often skipped).
+drafts limit blast radius — no auto-reviewers).
 
 ## Mental model
 

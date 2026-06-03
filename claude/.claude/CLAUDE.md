@@ -18,7 +18,7 @@
 - Skip optional, long-running validation stages locally (e.g., pre-commit `--hook-stage manual`, `make ci-full`, `tox -e all`). These stages are opt-out by design — they're slow (network fetches, full-repo templating, cross-cluster renders) and meant to be skipped during iteration. The default validation is what CI runs on every commit and is sufficient. If you need to exercise a specific expensive hook, run it targeted at just the changed files.
 - For Rust projects, run tests via `cargo nextest run` (faster, isolated per-test processes), not `cargo test`. Snapshot updates: `INSTA_UPDATE=always cargo nextest run`. Doc-tests still need `cargo test --doc`.
 - **spr stacks** (`spacedentist/spr`): for any spr operation — `spr diff`/`--all`, editing a published stack, restacking, landing, reconciling after a merge — **use the `spr` skill** (full workflow + mechanics live there). A few rules worth keeping in mind even before it loads:
-  - Always pass `--draft` to `spr diff` (limits blast radius — no auto-reviewers, CI often skipped).
+  - Always pass `--draft` to `spr diff` (limits blast radius — no auto-reviewers).
   - **Never `git commit --amend -m` on a published commit** — `-m` drops the `Pull Request:` trailer and spr orphans/duplicates the PR. Edit via fixup + autosquash (`--amend --no-edit` also keeps the trailer).
   - **Never `spr land` as a repo admin / bypass actor** — it delegates to GitHub's merge API and merges **past branch protection** (red CI, unresolved threads), with no flag to opt out. Merge via the GitHub UI instead. (Per-repo CLAUDE.md may forbid `spr land` outright — check it.)
 
