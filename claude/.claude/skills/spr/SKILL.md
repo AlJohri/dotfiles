@@ -1,6 +1,6 @@
 ---
 name: spr
-description: Stacked-PR workflow with spr (spacedentist/spr) — where each commit is one PR. Use for ANY spr operation: spr diff / spr diff --all, editing a published stack (fixup+autosquash to preserve the "Pull Request:" trailer), syncing commit messages, rebasing/restacking onto main, landing PRs, and reconciling after a merge. Covers why NOT to spr land as a repo admin (it bypasses branch protection) and the GitHub-UI merge + reconcile loop, plus manual auth setup and common gotchas.
+description: 'Stacked-PR workflow with spr (spacedentist/spr) — where each commit is one PR. Use for ANY spr operation: spr diff / spr diff --all, editing a published stack (fixup+autosquash to preserve the "Pull Request:" trailer), syncing commit messages, rebasing/restacking onto main, landing PRs, and reconciling after a merge. Covers why NOT to spr land as a repo admin (it bypasses branch protection) and the GitHub-UI merge + reconcile loop, plus manual auth setup and common gotchas.'
 user_invocable: true
 ---
 
