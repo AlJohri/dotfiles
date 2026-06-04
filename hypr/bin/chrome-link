@@ -1,0 +1,28 @@
+#!/bin/bash
+# Open a URL in Chrome, preferring the current Hyprland workspace.
+#
+# Used as the default http/https handler (see google-chrome-link.desktop).
+# Behavior:
+#   - If a Chrome window already lives on the ACTIVE workspace, focus it and
+#     open the URL as a new tab in that window (reuse, no workspace jump).
+#   - Otherwise open a brand-new Chrome window, which Hyprland places on the
+#     active workspace.
+# This avoids the default `chrome %U`, which raises whichever existing window
+# was last focused (often on another workspace) and drags focus there.
+
+CHROME=/usr/bin/google-chrome-stable
+
+active_ws=$(hyprctl activeworkspace -j | jq -r '.id')
+
+# Address of a Chrome window on the active workspace, if any.
+addr=$(hyprctl clients -j | jq -r --argjson ws "$active_ws" '
+    .[] | select(.class | test("chrome"; "i")) | select(.workspace.id == $ws) | .address' | head -1)
+
+if [ -n "$addr" ]; then
+    # Reuse the window on this workspace: focus it so Chrome targets it, then
+    # open the URL (default = new tab in the focused window).
+    hyprctl dispatch focuswindow "address:$addr" >/dev/null
+    exec "$CHROME" "$@"
+else
+    exec "$CHROME" --new-window "$@"
+fi

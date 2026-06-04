@@ -1,18 +1,14 @@
 # Link handler for Chrome.
 #
 # Used only as the default app for http/https/etc. scheme handlers (see
-# ~/.config/mimeapps.list). Unlike the normal google-chrome.desktop launcher,
-# this forces --new-window so clicked links open a fresh window on the
-# CURRENTLY focused workspace instead of raising the existing Chrome window
-# (which lives on whatever workspace it was opened on, dragging focus there).
-#
-# Hyprland places new windows on the active workspace, so the link lands in
-# the current space.
+# ~/.config/mimeapps.list). Delegates to the chrome-link wrapper, which reuses
+# a Chrome window already on the active workspace (opening a new tab) or opens
+# a new window there if none — so links never drag focus to another workspace.
 
 [Desktop Entry]
 Name=Google Chrome (link handler)
 StartupWMClass=Google-chrome
-Exec=/usr/bin/google-chrome-stable --new-window %U
+Exec=chrome-link %U
 Icon=google-chrome
 Type=Application
 NoDisplay=true
