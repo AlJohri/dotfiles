@@ -63,7 +63,19 @@ git submodule update --init
 
 if ! gh auth token &>/dev/null; then
     echo "==> Logging into GitHub (mise installs binaries from GitHub in bulk and will get 403 rate-limited without a token)..."
-    gh auth login
+    # Request admin:ssh_signing_key upfront so the signing-key registration step
+    # below can list/add keys without a separate device-code prompt later.
+    # BROWSER=echo: print the device-flow URL instead of launching Chrome, which
+    # would otherwise spew its startup stderr (TF Lite, GCM, mojo) into this terminal.
+    BROWSER=echo gh auth login -s admin:ssh_signing_key
+fi
+
+# Ensure the signing-key scope is present even if `gh auth login` was run
+# previously without -s (e.g. on machines set up before this change).
+if ! gh auth status 2>&1 | grep -q 'admin:ssh_signing_key'; then
+    echo "==> Adding admin:ssh_signing_key scope to gh token..."
+    BROWSER=echo gh auth refresh -h github.com -s admin:ssh_signing_key \
+        || echo "    Skipped. Add ~/.ssh/id_ed25519.pub manually later: https://github.com/settings/ssh/new"
 fi
 
 if ! gh extension list | grep -q '^gh image'; then
@@ -82,16 +94,12 @@ if [ ! -f "$SSH_SIGNING_KEY" ]; then
     ssh-keygen -t ed25519 -C "$(whoami)@$(hostname)" -f "$SSH_SIGNING_KEY" -N ""
 fi
 
-# Listing/adding signing keys needs the admin:ssh_signing_key scope, which
-# `gh auth login` doesn't grant by default.
+# Scope was requested at `gh auth login` time above, so listing here works
+# without a per-run device-code prompt.
 if ! gh api user/ssh_signing_keys --jq '.[].key' 2>/dev/null | grep -qF "$(awk '{print $2}' "$SSH_SIGNING_KEY.pub")"; then
     echo "==> Registering SSH signing key with GitHub..."
-    if gh auth refresh -h github.com -s admin:ssh_signing_key; then
-        gh ssh-key add "$SSH_SIGNING_KEY.pub" --type signing --title "$(hostname) (omarchy)" \
-            || echo "    Add ~/.ssh/id_ed25519.pub manually: https://github.com/settings/ssh/new (Key type: Signing)"
-    else
-        echo "    Skipped (auth refresh declined). Add ~/.ssh/id_ed25519.pub manually later."
-    fi
+    gh ssh-key add "$SSH_SIGNING_KEY.pub" --type signing --title "$(hostname) (omarchy)" \
+        || echo "    Add ~/.ssh/id_ed25519.pub manually: https://github.com/settings/ssh/new (Key type: Signing)"
 fi
 
 # Keep allowed_signers (gpg.ssh.allowedSignersFile) in sync so `git log --show-signature`
@@ -219,6 +227,10 @@ fi
 # pubkey-only auth is the backstop there; remote access otherwise rides Tailscale.
 echo "==> Enabling SSH (Tailscale + LAN only)..."
 sudo systemctl enable --now sshd
+# Ensure ufw is up before adding rules. Omarchy historically shipped ufw active,
+# but on some installs it isn't -- `ufw allow` then fails with "ERROR: problem
+# running" because the iptables backend isn't initialized.
+sudo systemctl enable --now ufw
 sudo ufw allow in on tailscale0 to any port 22 proto tcp comment 'ssh tailscale'
 for net in 192.168.0.0/16 10.0.0.0/8 172.16.0.0/12; do
     sudo ufw allow from "$net" to any port 22 proto tcp comment 'ssh lan'
