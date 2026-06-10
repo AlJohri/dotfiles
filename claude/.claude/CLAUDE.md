@@ -2,7 +2,9 @@
 
 ## Workflow
 
-- Always create pull requests as **drafts** (`gh pr create --draft`).
+- **Two tiers for review. Do not open PRs without following these rules.**
+  - **Push** (`git push`): when the user says "push" / "push it" / "push the commit/branch", run `git push` and reply with both the commit URL (`/commit/<sha>`) and the compare URL (`/compare/<base>...<branch>`). No PR record, no notifications — browser-only personal review.
+  - **Open a Draft PR**: only run `gh pr create --draft` / `spr diff --draft` when the user explicitly asks ("open a PR", "create a PR", "spr diff", "ship it"). **Always pass `--draft`** — never create a non-draft PR. The point of the tiering is to let the user self-review before anything becomes visible to others.
 - Always start from a clean state before making changes. Investigate and fix pre-existing issues first so it's easy to distinguish new problems from pre-existing ones.
 - Tackle problems head on — don't silently work around them. If an approach fails, investigate why and fix the root cause. Never silently switch to a workaround — always ask the user first if a workaround is acceptable and explain what you'd do differently.
 - When writing PR descriptions, always base them on the **diff against the default branch** (usually `main`), not on intermediate commit messages. The description should describe the net effect of all changes, not retell the story of how you got there.
