@@ -6,7 +6,6 @@ awscli = { version = "latest", symlink_bins = "true" }
 bat = "latest"
 colima = "latest"
 "conda:pv" = { version = "1.6.6", os = ["linux"] }
-"zerobrew:pv" = { version = "latest", os = ["macos"] }
 delta = "latest"
 direnv = "latest"
 "aqua:docker/cli" = "latest"
@@ -66,7 +65,6 @@ yamllint = "latest"
 kubeconform = "latest"
 stylua = "latest"
 "github:lunarmodules/luacheck" = { version = "latest", os = ["linux"], platforms = '{ linux-x64 = { asset_pattern = "luacheck" } }' }
-"zerobrew:luacheck" = { version = "latest", os = ["macos"] }
 cloudflared = "latest"
 "github:hickford/git-credential-oauth" = "0.17.2"
 "cargo:forgejo-cli" = "0.5.0"
@@ -91,7 +89,6 @@ kafkactl = "latest"
 "asdf:mise-plugins/mise-kafka" = "apache-4.1.1"
 "github:swsnr/mdcat" = { version = "latest", os = ["linux"] }
 "cargo:mdcat" = { version = "latest", os = ["macos"] }
-"github:lucasgelfond/zerobrew" = { version = "latest", os = ["macos"] }
 s5cmd = "latest"
 "aqua:rui314/mold" = { version = "latest", os = ["linux"] }
 loki-logcli = "3.6.7"
@@ -124,12 +121,6 @@ sccache = "0.15.0"
 "cargo:spr" = "latest"
 yarn = "latest"
 "cargo:https://github.com/mipmip/mip.rs" = "latest"
-
-[plugins]
-# Pinned to AlJohri fork's dev branch (fix-prefix-path-mismatch +
-# skip-list-versions-fetch). Until kennyg/mise-zerobrew#2 lands and we
-# sort out a proper caching fix for BackendListVersions upstream.
-zerobrew = "https://github.com/AlJohri/mise-zerobrew.git#dev"
 
 [settings]
 experimental = true

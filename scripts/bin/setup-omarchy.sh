@@ -122,7 +122,7 @@ fi
 
 echo "==> Installing mise tools..."
 # MISE_EXPERIMENTAL=1: `experimental` is a global-only setting, so the experimental
-# backends in our config (conda:, zerobrew:) are NOT enabled by the project config
+# backends in our config (conda:) are NOT enabled by the project config
 # passed via -C at install time. The stowed global ~/.config/mise/config.toml sets
 # experimental=true for runtime; pass it via env here so the install itself works.
 "$MISE" trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
