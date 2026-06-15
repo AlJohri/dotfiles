@@ -5,6 +5,7 @@
 	br = branch
 	ci = commit
 	st = status
+	dt = difftool -d --no-symlinks   # All changed files in one Zed multi-diff (--no-symlinks: editors don't deref the worktree symlinks -d creates)
 [init]
 	defaultBranch = main
 [pull]
@@ -15,6 +16,12 @@
 	algorithm = histogram    # Clearer diffs on moved/edited lines
 	colorMoved = plain       # Highlight moved blocks in diffs
 	mnemonicPrefix = true    # More intuitive refs in diff output
+	tool = zed               # Editor used by `git difftool` (inline `git diff` still uses delta, below)
+[difftool]
+	prompt = false           # Don't ask "launch zed? [Y/n]" before each diff
+[difftool "zed"]
+	cmd = zed --wait --diff \"$LOCAL\" \"$REMOTE\"
+	trustExitCode = true
 [commit]
 	verbose = true           # Include diff comment in commit message template
 	gpgsign = true
