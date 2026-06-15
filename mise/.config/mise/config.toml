@@ -120,7 +120,7 @@ mermaid-ascii = "latest"
 sccache = "0.15.0"
 "cargo:spr" = "latest"
 yarn = "latest"
-"cargo:https://github.com/mipmip/mip.rs" = "latest"
+"cargo:https://github.com/mipmip/mip.rs" = { version = "latest", os = ["linux"] }
 
 [settings]
 experimental = true
