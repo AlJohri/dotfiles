@@ -94,7 +94,12 @@ if [ "$1" = "prune" ]; then
         fi
         if ! git show-ref --verify --quiet "refs/remotes/$upstream"; then
           echo "Removing worktree '$wt_path' (branch '$branch_name' tracked '$upstream' which is no longer on remote)" >&2
-          git worktree remove "$wt_path" >&2
+          if ! git worktree remove "$wt_path" 2>/dev/null; then
+            echo "  ! skipped: '$wt_path' has uncommitted or untracked files:" >&2
+            git -C "$wt_path" status --short 2>/dev/null | sed 's/^/      /' >&2
+            echo "    Remove manually if you don't need them:" >&2
+            echo "      git worktree remove --force '$wt_path'" >&2
+          fi
         fi
         ;;
     esac
@@ -116,6 +121,50 @@ BRANCH="$1"
 SOURCE_BRANCH="${2:-}"
 REPO_ROOT="$(git rev-parse --path-format=absolute --git-common-dir)"
 REPO_ROOT="${REPO_ROOT%/.git}"
+
+# GitHub PR URL (as copied from the browser): resolve it to the PR's head
+# branch and rewrite $BRANCH so the rest of the script checks that branch out.
+# Scoped to the current repo only — a URL pointing at a different owner/repo
+# than origin is rejected rather than silently fetched.
+if [[ "$BRANCH" =~ ^https?://[^/]+/([^/]+)/([^/]+)/pull/([0-9]+)/?$ ]]; then
+  if [ -n "$SOURCE_BRANCH" ]; then
+    echo "PR URL '$BRANCH' can't be combined with a source branch." >&2
+    exit 1
+  fi
+  URL_OWNER="${BASH_REMATCH[1]}"
+  URL_REPO="${BASH_REMATCH[2]}"
+  PR_NUM="${BASH_REMATCH[3]}"
+  if ! command -v gh &>/dev/null; then
+    echo "Resolving a PR URL requires the 'gh' CLI, which isn't installed." >&2
+    exit 1
+  fi
+  # Confirm the URL points at the current repo (origin), not some other repo.
+  ORIGIN_NWO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || true)
+  if [ -z "$ORIGIN_NWO" ]; then
+    echo "Could not determine the current repo via gh; are you inside a GitHub repo?" >&2
+    exit 1
+  fi
+  if [ "$URL_OWNER/$URL_REPO" != "$ORIGIN_NWO" ]; then
+    echo "PR URL points at '$URL_OWNER/$URL_REPO' but this repo is '$ORIGIN_NWO'. Only the current repo is supported." >&2
+    exit 1
+  fi
+  PR_INFO=$(gh pr view "$PR_NUM" --json headRefName,headRepositoryOwner \
+    -q '.headRefName + "\t" + .headRepositoryOwner.login' 2>/dev/null || true)
+  if [ -z "$PR_INFO" ]; then
+    echo "Could not resolve PR #$PR_NUM in '$ORIGIN_NWO'." >&2
+    exit 1
+  fi
+  PR_HEAD="${PR_INFO%%$'\t'*}"
+  PR_HEAD_OWNER="${PR_INFO#*$'\t'}"
+  if [ "$PR_HEAD_OWNER" != "$URL_OWNER" ]; then
+    # PR opened from a fork — hand off to the owner:branch fork path below.
+    echo "Resolved $BRANCH to PR #$PR_NUM (fork '$PR_HEAD_OWNER:$PR_HEAD')." >&2
+    BRANCH="$PR_HEAD_OWNER:$PR_HEAD"
+  else
+    echo "Resolved $BRANCH to PR #$PR_NUM (head branch '$PR_HEAD')." >&2
+    BRANCH="$PR_HEAD"
+  fi
+fi
 
 # GitHub `owner:branch` fork notation (as shown on PR pages): resolve to the
 # PR number, add a named remote for the fork owner (so push/pull work), fetch
