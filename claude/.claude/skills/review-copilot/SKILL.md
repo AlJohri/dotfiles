@@ -16,6 +16,7 @@ Review and address unresolved Copilot code review comments on a GitHub PR.
 ## Phase 1: Fetch unresolved review threads
 
 - Accept an optional argument: a PR number (e.g. `123`), a PR URL (e.g. `https://github.com/owner/repo/pull/123`), or no argument. When no argument is provided, detect the PR from the current branch with `gh pr view --json number -q .number`.
+- **spr stacks:** if branch detection finds no PR, the repo may be using spr (one commit = one PR, published to synthetic `spr/<user>/...` head branches that never match your local branch). Resolve the PR from the commit's `Pull Request:` trailer instead: `git log -1 --format='%(trailers:key=Pull Request,valueonly)' | grep -oE '[0-9]+$'` (or, for a stack, `git log --reverse --format='%(trailers:key=Pull Request,valueonly)' origin/main..HEAD` and ask which commit's PR to review). If still ambiguous, ask the user for the PR number. See the `spr` skill for full mechanics.
 - Extract the repo owner and name from `gh repo view --json owner,name`.
 - Use `gh api graphql` to fetch **all** review threads, paginating with cursors until `hasNextPage` is false. **Note:** GitHub's GraphQL API does not support server-side filtering by `isResolved` — all threads must be fetched and filtered client-side via `jq`. Use this query:
 
@@ -153,6 +154,13 @@ Collect user decisions for all comments before proceeding to fixes.
 2. Stage the specific changed files by name (do NOT use `git add -A` or `git add .`).
 3. Create a single commit with a descriptive message summarizing the changes. If the user prefers, split into one commit per logical group.
 4. Push the commit(s) to the current branch.
+
+> **spr stacks:** the fix belongs to the specific commit that *is* the PR, so do
+> NOT add a new commit + plain `git push`. Instead `git commit --fixup=<sha>`
+> (the SHA of the PR's commit, from the `Pull Request:` trailer), autosquash with
+> `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash origin/main`, then
+> republish the whole stack with `spr diff --all --draft -m "address review"`.
+> Never `--amend -m` (drops the trailer → orphaned PR). See the `spr` skill.
 
 ## Phase 4: Respond and resolve
 
