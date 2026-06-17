@@ -65,7 +65,7 @@ fi
 
 # Create the default-branch worktree as a sibling of .git/.
 git worktree add "$DEFAULT_BRANCH" "$DEFAULT_BRANCH" >&2
-git -C "$DEFAULT_BRANCH" branch --set-upstream-to="origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH" 2>/dev/null || true
+git -C "$DEFAULT_BRANCH" branch --set-upstream-to="origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH" >&2 2>/dev/null || true
 
 # Trust mise config if present.
 if [ -f "$DEFAULT_BRANCH/mise.toml" ] || [ -f "$DEFAULT_BRANCH/.mise.toml" ]; then
