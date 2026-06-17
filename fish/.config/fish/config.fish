@@ -16,3 +16,9 @@ alias k='kubectl'
 
 # Add ~/.pulumi/bin to PATH
 fish_add_path -g $HOME/.pulumi/bin
+
+# gog (gogcli) keyring env
+set -gx GOG_KEYRING_BACKEND file
+if test -r "$HOME/.config/gogcli/keyring-password"
+    set -gx GOG_KEYRING_PASSWORD (cat "$HOME/.config/gogcli/keyring-password")
+end

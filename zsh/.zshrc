@@ -7,3 +7,6 @@ if command -v fish &> /dev/null; then
     exec fish -l
   fi
 fi
+
+# gog (gogcli) keyring env
+[ -r "$HOME/.config/gogcli/env.sh" ] && . "$HOME/.config/gogcli/env.sh"

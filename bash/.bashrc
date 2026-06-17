@@ -147,3 +147,6 @@ fi
 
 # opencode
 export PATH=/home/aljohri/.opencode/bin:$PATH
+
+# gog (gogcli) keyring env
+[ -r "$HOME/.config/gogcli/env.sh" ] && . "$HOME/.config/gogcli/env.sh"
