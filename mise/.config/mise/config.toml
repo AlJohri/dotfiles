@@ -122,6 +122,7 @@ sccache = "0.15.0"
 yarn = "latest"
 "cargo:https://github.com/mipmip/mip.rs" = { version = "latest", os = ["linux"] }
 "github:openclaw/gogcli" = "latest"
+k3d = "5.9.0"
 
 [settings]
 experimental = true
