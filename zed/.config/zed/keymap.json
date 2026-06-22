@@ -1,0 +1,11 @@
+[
+  {
+    // Branch diff vs the default branch, in the live workspace (full LSP).
+    // Global (no context) so it fires regardless of which pane has focus —
+    // a "Workspace" context did not match reliably. The `zed-branch-diff`
+    // launcher synthesizes this chord into the freshly-opened window.
+    "bindings": {
+      "ctrl-alt-d": "git::BranchDiff"
+    }
+  }
+]

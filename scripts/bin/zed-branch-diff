@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+#
+# Open a path (default: cwd) in Zed and trigger the native `git: branch diff`
+# view — your branch vs the repo's default branch, rendered in the LIVE
+# workspace so rust-analyzer/LSP, go-to-definition and cmd-click all work
+# (unlike `git difftool`, which hands the editor detached file copies).
+#
+# Zed has no CLI flag to run an action on launch, so we open the window and
+# synthesize the keybinding bound to `git::BranchDiff` in keymap.json:
+#   { "bindings": { "ctrl-alt-d": "git::BranchDiff" } }   (global context)
+#
+# Requires Hyprland (hyprctl) + wtype. wtype delivers to the focused window;
+# hyprctl `sendshortcut` was unreliable for Zed, so we focus + wtype instead.
+set -euo pipefail
+
+target=${1:-.}
+chord_mods=(ctrl alt)
+chord_key=d
+
+zed_addrs() {
+    hyprctl clients -j \
+        | python3 -c 'import json,sys; [print(c["address"]) for c in json.load(sys.stdin) if c["class"]=="dev.zed.Zed"]'
+}
+
+before=$(zed_addrs | sort)
+zed "$target"
+
+# Wait for the newly-opened Zed window (cli_default_open_behavior=new_window
+# always spawns one). Fall back to the sole window if Zed reused an existing one.
+addr=""
+for _ in $(seq 1 100); do
+    new=$(comm -13 <(printf '%s\n' "$before") <(zed_addrs | sort) || true)
+    addr=$(printf '%s\n' "$new" | grep -v '^$' | head -1 || true)
+    [ -n "$addr" ] && break
+    sleep 0.1
+done
+[ -z "$addr" ] && addr=$(zed_addrs | head -1)
+[ -z "$addr" ] && { echo "zed-branch-diff: no Zed window appeared" >&2; exit 1; }
+
+# Let the project + git repo finish loading so BranchDiff has a repo to diff.
+sleep 1.5
+hyprctl dispatch focuswindow "address:$addr" >/dev/null
+sleep 0.3
+
+# Build the wtype chord: hold mods, tap key, release mods.
+args=()
+for m in "${chord_mods[@]}"; do args+=(-M "$m"); done
+args+=(-k "$chord_key")
+for m in "${chord_mods[@]}"; do args+=(-m "$m"); done
+wtype "${args[@]}"

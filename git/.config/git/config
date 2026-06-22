@@ -6,6 +6,7 @@
 	ci = commit
 	st = status
 	dt = difftool -d --no-symlinks   # All changed files in one Zed multi-diff (--no-symlinks: editors don't deref the worktree symlinks -d creates)
+	bd = "!zed-branch-diff"          # Native Zed `git: branch diff` (branch vs default branch) in the live workspace — LSP/go-to-def work, unlike `dt`
 [init]
 	defaultBranch = main
 [pull]
