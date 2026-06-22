@@ -98,18 +98,7 @@ cmake = "latest"
 cargo-binstall = "latest"
 "cargo:cargo-chef" = "latest"
 "github:nidor1998/s7cmd" = "latest"
-# Pinned to fork until https://github.com/kunobi-ninja/kache PR merges.
-# `combined-fixes` merges two feature branches:
-#   1. fix/normalize-target-dir-paths — workspace target dir normalised in
-#      cache keys + remap-path-prefix; stable cache keys across worktrees.
-#   2. fix/codesign-verify-before-resign — only re-codesign on cache restore
-#      when `codesign --verify` fails. ld64-emitted ad-hoc signatures survive
-#      hardlinking; unconditional re-signing was non-deterministic and broke
-#      proc-macro / dylib content stability across cold→warm rebuilds.
-# Switch back to upstream by commenting this line and uncommenting the
-# github: line below.
-"cargo:https://github.com/AlJohri/kache" = { version = "branch:combined-fixes", crate = "kache" }
-# "github:kunobi-ninja/kache" = "latest"
+"github:kunobi-ninja/kache" = "0.6.0"
 hyperfine = "latest"
 protobuf = "latest"
 "github:nextest-rs/nextest" = { version = "latest", version_prefix = "cargo-nextest-", platforms = '{ linux-x64 = { asset_pattern = "cargo-nextest-*-x86_64-unknown-linux-gnu.tar.gz" }, linux-arm64 = { asset_pattern = "cargo-nextest-*-aarch64-unknown-linux-gnu.tar.gz" }, macos-arm64 = { asset_pattern = "cargo-nextest-*-universal-apple-darwin.tar.gz" }, macos-x64 = { asset_pattern = "cargo-nextest-*-universal-apple-darwin.tar.gz" } }' }
@@ -128,6 +117,7 @@ k3d = "5.9.0"
 experimental = true
 log_level = "warn"
 ignored_config_paths = []
+not_found_auto_install = false
 
 [settings.github]
 use_git_credentials = true
