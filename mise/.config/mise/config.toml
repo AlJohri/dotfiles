@@ -112,7 +112,7 @@ cargo-binstall = "latest"
 # "github:kunobi-ninja/kache" = "latest"
 hyperfine = "latest"
 protobuf = "latest"
-"github:nextest-rs/nextest" = "latest"
+"github:nextest-rs/nextest" = { version = "latest", version_prefix = "cargo-nextest-", platforms = '{ linux-x64 = { asset_pattern = "cargo-nextest-*-x86_64-unknown-linux-gnu.tar.gz" }, linux-arm64 = { asset_pattern = "cargo-nextest-*-aarch64-unknown-linux-gnu.tar.gz" }, macos-arm64 = { asset_pattern = "cargo-nextest-*-universal-apple-darwin.tar.gz" }, macos-x64 = { asset_pattern = "cargo-nextest-*-universal-apple-darwin.tar.gz" } }' }
 buf = "latest"
 markdownlint-cli2 = "latest"
 mermaid-ascii = "latest"
