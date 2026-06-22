@@ -2,7 +2,7 @@
 
 # Package groups
 CORE = nvim tmux git fish mise delta claude-history zsh
-DESKTOP = bash scripts alacritty ghostty xdg zed applications code-server
+DESKTOP = bash alacritty ghostty xdg zed applications code-server
 MACOS = yabai skhd
 WAYLAND = hypr waybar uwsm omarchy wireplumber elephant imv makima wiremix
 
@@ -20,14 +20,14 @@ portable:
 	./scripts/bin/setup-portable.sh
 
 # Stow only (no deps).
-# claude and starship are part of core but use --no-folding so ~/.claude/skills/
-# and ~/bin stay real directories. starship is the only core package with a bin/,
-# so without --no-folding stow folds ~/bin into a symlink to starship/bin, and
-# anything later added to ~/bin (or stowing the scripts package) lands inside the
-# starship package. claude keeps room for externally-managed skills.
+# claude, starship, and scripts are core but use --no-folding so ~/.claude/skills/
+# and ~/bin stay real directories. starship and scripts both ship a bin/; without
+# --no-folding, a core-only (portable) install would fold ~/bin into a symlink to a
+# single package's bin, and anything later added to ~/bin would land inside that
+# package. claude keeps room for externally-managed skills.
 stow-core:
 	stow --adopt -t ~ $(CORE)
-	stow --adopt --no-folding -t ~ claude starship
+	stow --adopt --no-folding -t ~ claude starship scripts
 
 stow-omarchy: stow-core
 	stow --adopt -t ~ $(DESKTOP) $(WAYLAND)
