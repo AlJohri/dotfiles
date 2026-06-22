@@ -35,12 +35,50 @@ git submodule update --init
 
 if ! gh auth token &>/dev/null; then
     echo "==> Logging into GitHub (mise installs binaries from GitHub in bulk and will get 403 rate-limited without a token)..."
-    gh auth login
+    # Request admin:ssh_signing_key upfront so the signing-key registration step
+    # below can list/add keys without a separate device-code prompt later.
+    gh auth login -s admin:ssh_signing_key
+fi
+
+# Ensure the signing-key scope is present even if `gh auth login` was run
+# previously without -s (e.g. on machines set up before this change).
+if ! gh auth status 2>&1 | grep -q 'admin:ssh_signing_key'; then
+    echo "==> Adding admin:ssh_signing_key scope to gh token..."
+    gh auth refresh -h github.com -s admin:ssh_signing_key \
+        || echo "    Skipped. Add ~/.ssh/id_ed25519.pub manually later: https://github.com/settings/ssh/new"
 fi
 
 if ! gh extension list | grep -q '^gh image'; then
     echo "==> Installing gh-image extension..."
     gh extension install drogers0/gh-image
+fi
+
+# Generate an SSH key for signing git commits and register it with GitHub.
+# The stowed git config enables ssh commit signing (commit.gpgsign + gpg.format=ssh +
+# user.signingkey=~/.ssh/id_ed25519.pub), so commits fail on a fresh box without this.
+# Idempotent: generate only if missing; upload only if not already a GitHub signing key.
+SSH_SIGNING_KEY="$HOME/.ssh/id_ed25519"
+if [ ! -f "$SSH_SIGNING_KEY" ]; then
+    echo "==> Generating SSH signing key..."
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    ssh-keygen -t ed25519 -C "$(whoami)@$(hostname)" -f "$SSH_SIGNING_KEY" -N ""
+fi
+
+# Scope was requested at `gh auth login` time above, so listing here works
+# without a per-run device-code prompt.
+if ! gh api user/ssh_signing_keys --jq '.[].key' 2>/dev/null | grep -qF "$(awk '{print $2}' "$SSH_SIGNING_KEY.pub")"; then
+    echo "==> Registering SSH signing key with GitHub..."
+    gh ssh-key add "$SSH_SIGNING_KEY.pub" --type signing --title "$(hostname) (macos)" \
+        || echo "    Add ~/.ssh/id_ed25519.pub manually: https://github.com/settings/ssh/new (Key type: Signing)"
+fi
+
+# Keep allowed_signers (gpg.ssh.allowedSignersFile) in sync so `git log --show-signature`
+# verifies locally: append this machine's signing key if it isn't already listed.
+ALLOWED_SIGNERS="$DOTFILES_DIR/git/.config/git/allowed_signers"
+key_field="$(awk '{print $1, $2}' "$SSH_SIGNING_KEY.pub")"
+if ! grep -qF "${key_field#* }" "$ALLOWED_SIGNERS" 2>/dev/null; then
+    echo "==> Adding this machine's key to git allowed_signers (commit the change to track it)..."
+    echo "$(git config -f "$DOTFILES_DIR/git/.config/git/config" --get user.email) $key_field" >>"$ALLOWED_SIGNERS"
 fi
 
 echo "==> Installing mise tools..."
