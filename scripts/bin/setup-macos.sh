@@ -3,8 +3,10 @@ set -euo pipefail
 
 # Setup script for macOS
 
-# macOS doesn't have readlink -f, use Python instead
-REAL_SCRIPT="$(python3 -c "import os; print(os.path.realpath('${BASH_SOURCE[0]}'))")"
+# realpath is native on both macOS (/bin/realpath) and Linux (coreutils); unlike
+# python3, it doesn't require Xcode Command Line Tools, which aren't present on a
+# pristine Mac when this runs (before Homebrew/CLT are installed below).
+REAL_SCRIPT="$(realpath "${BASH_SOURCE[0]}")"
 DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
 cd "$DOTFILES_DIR"
 

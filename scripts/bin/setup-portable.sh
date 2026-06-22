@@ -4,8 +4,8 @@ set -euo pipefail
 # Minimal setup script for SSH/remote machines
 # Installs only essential tools for portable dotfiles
 
-# Linux has readlink -f; macOS doesn't, so fall back to Python.
-REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || python3 -c "import os; print(os.path.realpath('${BASH_SOURCE[0]}'))")"
+# realpath is native on both macOS (/bin/realpath) and Linux (coreutils).
+REAL_SCRIPT="$(realpath "${BASH_SOURCE[0]}")"
 DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
 cd "$DOTFILES_DIR"
 
