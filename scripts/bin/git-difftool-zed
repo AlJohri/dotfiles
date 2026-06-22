@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# Zed difftool wrapper for `git difftool` (our `git dt` = `difftool -d`).
+#
+# Works around a Zed CLI bug: `zed --diff <a> <b>` adopts the *process cwd* as
+# the opened window's project. git runs the difftool cmd with cwd = repo root,
+# so `zed --diff` opens the repo as a project and shows that (file tree + empty
+# editor) as the active view, instead of the diff it also loaded. Launching from
+# a neutral, non-repo cwd avoids it. Reproducible with zed alone — git only sets
+# cwd:
+#   cd ~/repo && zed --diff /tmp/a /tmp/b   # shows the project, NOT the diff
+#   cd /tmp   && zed --diff /tmp/a /tmp/b   # shows the diff (correct)
+# Related upstream: zed-industries/zed#55833 (warm-instance `--diff` resets the
+# project root to /) and #10154 (no diff when launched from a subfolder). This
+# exact cold-start cwd-adoption case isn't filed yet.
+#
+# Second reason to copy: `git difftool` deletes its /tmp/git-difftool.XXX temp
+# dirs the moment this cmd returns. We copy both sides to a persistent dir and
+# background Zed, so teardown can't race us.
+#
+# Usage (git config difftool."zed".cmd):
+#   git-difftool-zed "$LOCAL" "$REMOTE"
+set -euo pipefail
+
+local_path=$1
+remote_path=$2
+
+base="${XDG_CACHE_HOME:-$HOME/.cache}/zed-difftool"
+mkdir -p "$base"
+
+# Prune sessions older than a day so copies don't accumulate.
+find "$base" -mindepth 1 -maxdepth 1 -type d -mtime +1 -exec rm -rf {} + 2>/dev/null || true
+
+session=$(mktemp -d "$base/XXXXXXXX")
+before="$session/before"
+after="$session/after"
+mkdir -p "$before" "$after"
+
+if [ -d "$local_path" ]; then
+    # Dir-diff (`git difftool -d`): copy each tree's contents.
+    cp -a "$local_path/." "$before/"
+    cp -a "$remote_path/." "$after/"
+else
+    # Single-file diff: preserve the basename so Zed picks syntax highlighting.
+    name=$(basename "$remote_path")
+    cp -a "$local_path" "$before/$name"
+    cp -a "$remote_path" "$after/$name"
+fi
+
+# cd to the session dir (not a repo) so Zed's adopted-cwd project is the diff
+# itself; background so git can reclaim its temp dirs. See header.
+cd "$session"
+zed --diff "$before" "$after" >/dev/null 2>&1 &
+disown

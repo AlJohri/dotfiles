@@ -20,7 +20,8 @@
 [difftool]
 	prompt = false           # Don't ask "launch zed? [Y/n]" before each diff
 [difftool "zed"]
-	cmd = zed --wait --diff \"$LOCAL\" \"$REMOTE\"
+	# Wrapper, not `zed --diff` directly — see git-difftool-zed for why.
+	cmd = git-difftool-zed \"$LOCAL\" \"$REMOTE\"
 	trustExitCode = true
 [commit]
 	verbose = true           # Include diff comment in commit message template
