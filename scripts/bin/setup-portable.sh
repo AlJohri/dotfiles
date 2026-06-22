@@ -41,8 +41,11 @@ if ! command -v mise &> /dev/null; then
 fi
 
 echo "==> Installing Starship..."
+# Install to ~/.local/bin (already on PATH) like mise above. The default target
+# is /usr/local/bin, which needs sudo on Apple Silicon and breaks unattended runs
+# (no tty for the password prompt).
 if ! command -v starship &> /dev/null; then
-    curl -sS https://starship.rs/install.sh | sh -s -- -y
+    curl -sS https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"
 fi
 
 echo "==> Initializing git submodules..."

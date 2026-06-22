@@ -1,8 +1,8 @@
 .PHONY: omarchy ubuntu macos portable stow-core stow-omarchy stow-ubuntu stow-macos stow-portable
 
 # Package groups
-CORE = nvim tmux git fish starship mise delta claude-history
-DESKTOP = bash zsh scripts alacritty ghostty xdg zed applications code-server
+CORE = nvim tmux git fish starship mise delta claude-history zsh
+DESKTOP = bash scripts alacritty ghostty xdg zed applications code-server
 MACOS = yabai skhd
 WAYLAND = hypr waybar uwsm omarchy wireplumber elephant imv makima wiremix
 
