@@ -4,6 +4,11 @@ set -euo pipefail
 # Minimal setup script for SSH/remote machines
 # Installs only essential tools for portable dotfiles
 
+# Linux has readlink -f; macOS doesn't, so fall back to Python.
+REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || python3 -c "import os; print(os.path.realpath('${BASH_SOURCE[0]}'))")"
+DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
+cd "$DOTFILES_DIR"
+
 echo "==> Detecting package manager..."
 if command -v apt &> /dev/null; then
     PKG_MANAGER="apt"
@@ -36,7 +41,11 @@ else
 fi
 
 echo "==> Installing mise..."
-if ! command -v mise &> /dev/null; then
+# Use the explicit ~/.local/bin/mise path rather than `command -v mise`: on a
+# fresh box ~/.local/bin may not be on PATH yet, and on some distros an older
+# packaged mise could win on PATH.
+MISE="$HOME/.local/bin/mise"
+if [ ! -x "$MISE" ]; then
     curl https://mise.jdx.dev/install.sh | sh
 fi
 
@@ -48,10 +57,19 @@ if ! command -v starship &> /dev/null; then
     curl -sS https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"
 fi
 
+echo "==> Installing mise tools..."
+# MISE_EXPERIMENTAL=1: `experimental` is a global-only setting, so the experimental
+# backends in our config aren't enabled by the project config passed via -C at
+# install time. The stowed global config sets experimental=true for runtime; pass
+# it via env here so the install itself works.
+# GITHUB_TOKEN avoids GitHub 403 rate-limits when mise pulls binaries in bulk; only
+# pass it if gh is installed and authed (gh isn't part of the portable package set).
+GITHUB_TOKEN="$(command -v gh &>/dev/null && gh auth token 2>/dev/null || true)"
+"$MISE" trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
+MISE_EXPERIMENTAL=1 GITHUB_TOKEN="$GITHUB_TOKEN" "$MISE" install -C "$DOTFILES_DIR/mise/.config/mise"
+eval "$("$MISE" env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
+
 echo "==> Initializing git submodules..."
-REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || python3 -c "import os; print(os.path.realpath('${BASH_SOURCE[0]}'))")"
-DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
-cd "$DOTFILES_DIR"
 git submodule update --init
 
 echo "==> Stowing dotfiles..."
