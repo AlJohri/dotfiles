@@ -1,0 +1,81 @@
+#!/bin/bash
+# Shadow /usr/bin/obsidian (the pacman-owned Electron wrapper) so that the
+# official Obsidian CLI is reachable as plain `obsidian <subcommand>`, matching
+# the macOS experience.
+#
+# Why this exists: Omarchy populates ~/.config/obsidian/user-flags.conf with
+# `-disable-gpu` and `--enable-wayland-ime` (needed for the GUI on Wayland), and
+# the Arch wrapper splices those flags in *before* "$@". For a GUI launch that's
+# fine, but for a CLI subcommand it means the app sees `-disable-gpu` as the
+# command and errors `Command "-disable-gpu" not found`. So:
+#   - subcommand  -> call Electron directly, no GUI flags (headless CLI)
+#   - no args / URL / file / GUI -> delegate to the real wrapper (keeps flags)
+#
+# Requires ~/bin (or ~/.local/bin) to precede /usr/bin on PATH. See worklog
+# 2026-06-21-obsidian-cli-omarchy for the full investigation.
+
+case "$1" in
+  ""|obsidian://*|/*|./*|*.md|*.canvas|*.base)
+    # GUI launch, deep link, or file open: hand off to the packaged wrapper so
+    # user-flags.conf still applies (single source of truth, survives upgrades).
+    exec /usr/bin/obsidian "$@"
+    ;;
+  *)
+    # CLI subcommand (sync:status, tabs, --help, ...): run the app binary
+    # directly with no injected GUI flags. Resolve the electron version from the
+    # real wrapper so an electron bump (electron39 -> electron40) needs no edit.
+    real_exec=$(grep -oE 'electron[0-9]+' /usr/bin/obsidian | head -1)
+    real_exec=${real_exec:-electron39}
+
+    # The CLI is a thin client: it connects to the running app over a Unix
+    # socket, relays the response to stdout, then exits. The app produces that
+    # response ASYNCHRONOUSLY, and the client only reliably waits-for + flushes
+    # it when it has a CONTROLLING TERMINAL. So when stdout is a TTY (interactive
+    # use) it works; when stdout is a pipe/file (scripts, $(...), | grep) the
+    # client exits before the data lands -> intermittently EMPTY output with
+    # exit 0. This bit sync:status, sync:history, and base:query (the documented
+    # "silently returns empty, retry" gotcha is THIS race).
+    #
+    # Fix: when stdout is not a terminal, run the subcommand under a PTY so the
+    # child gets a controlling terminal (setsid + TIOCSCTTY) and stdout is a tty.
+    # Only stdout is redirected to the PTY, so stderr (Electron/GPU noise) stays
+    # separate; the PTY's NL->CRNL translation is stripped back out. Falls back
+    # to a direct exec if python3 is missing or stdout is already a terminal
+    # (the latter also keeps interactive TUI subcommands working natively).
+    if [ -t 1 ] || ! command -v python3 >/dev/null 2>&1; then
+      exec "$real_exec" /usr/lib/obsidian/app.asar "$@"
+    fi
+
+    PYSRC='import os, pty, sys
+argv = sys.argv[1:]
+parent_fd, child_fd = pty.openpty()
+pid = os.fork()
+if pid == 0:
+    os.setsid()
+    try:
+        import fcntl, termios
+        fcntl.ioctl(child_fd, termios.TIOCSCTTY, 0)
+    except Exception:
+        pass
+    os.close(parent_fd)
+    os.dup2(child_fd, 1)
+    if child_fd > 2:
+        os.close(child_fd)
+    os.execvp(argv[0], argv)
+    os._exit(127)
+os.close(child_fd)
+out = sys.stdout.buffer
+while True:
+    try:
+        data = os.read(parent_fd, 65536)
+    except OSError:
+        break
+    if not data:
+        break
+    out.write(data.replace(b"\r\n", b"\n").replace(b"\r", b""))
+    out.flush()
+_, status = os.waitpid(pid, 0)
+sys.exit(os.waitstatus_to_exitcode(status))'
+    exec python3 -c "$PYSRC" "$real_exec" /usr/lib/obsidian/app.asar "$@"
+    ;;
+esac
