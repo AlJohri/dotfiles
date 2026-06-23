@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Print (or open) the GitHub compare URL for the current branch vs the repo's
+# default branch: https://github.com/<owner>/<repo>/compare/<default>...<branch>
+set -euo pipefail
+
+open=false
+branch=""
+for arg in "$@"; do
+  case "$arg" in
+    -o|--open) open=true ;;
+    -*) echo "usage: gh-compare [--open] [branch]" >&2; exit 2 ;;
+    *) branch="$arg" ;;
+  esac
+done
+
+[ -n "$branch" ] || branch=$(git symbolic-ref --short HEAD 2>/dev/null) || {
+  echo "gh-compare: not on a branch (detached HEAD?)" >&2; exit 1
+}
+
+read -r owner repo default < <(
+  gh repo view --json owner,name,defaultBranchRef \
+    --jq '[.owner.login, .name, .defaultBranchRef.name] | @tsv' | tr '\t' ' '
+)
+
+if [ "$branch" = "$default" ]; then
+  echo "gh-compare: '$branch' is the default branch — nothing to compare" >&2
+  exit 1
+fi
+
+url="https://github.com/$owner/$repo/compare/$default...$branch"
+echo "$url"
+$open && command -v xdg-open >/dev/null && xdg-open "$url" >/dev/null 2>&1 || true
