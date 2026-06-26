@@ -21,6 +21,7 @@ echo "==> Installing extra packages (not in omarchy-base)..."
 # webkitgtk-6.0: GTK4 web engine required to build/run mip.rs (markdown instant preview)
 sudo pacman -S --noconfirm --needed \
     bc \
+    bind-tools \
     stow \
     7zip \
     make \
