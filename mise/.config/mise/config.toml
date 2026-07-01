@@ -112,6 +112,9 @@ yarn = "latest"
 "cargo:https://github.com/mipmip/mip.rs" = { version = "latest", os = ["linux"] }
 "github:openclaw/gogcli" = "latest"
 k3d = "5.9.0"
+vercel = { version = "54.15.1", allow_builds = ["esbuild"] }
+stripe = "1.42.15"
+rclone = "1.74.3"
 
 [settings]
 experimental = true
