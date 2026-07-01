@@ -32,7 +32,8 @@
     "playground@claude-plugins-official": false,
     "clangd-lsp@claude-plugins-official": false,
     "skill-creator@claude-plugins-official": true,
-    "code-review@claude-code-plugins": true
+    "code-review@claude-code-plugins": true,
+    "vercel@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "claude-code-plugins": {
