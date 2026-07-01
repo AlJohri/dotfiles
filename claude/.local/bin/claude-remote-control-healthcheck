@@ -1,0 +1,46 @@
+#!/bin/sh
+# Health watchdog for claude-remote-control.service.
+#
+# The daemon can wedge in an internal reconnect loop after a routine network
+# transient (e.g. a Wi-Fi/path change): the process stays alive — so the unit's
+# `Restart=always` never fires — but it holds no control-plane websocket, so the
+# mobile app can't create new sessions. systemd sees a healthy process and does
+# nothing, and the binary exposes no sd_notify/watchdog hook.
+#
+# We detect the wedge by connectivity, not liveness: a healthy daemon's MainPID
+# holds >=1 established :443 connection to the backend; a wedged one holds none.
+# To ride out momentary reconnects we only restart after THRESHOLD consecutive
+# misses (timer interval * THRESHOLD ~= time-to-recover).
+set -eu
+
+UNIT=claude-remote-control.service
+THRESHOLD=2
+STATE_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/claude-rc-watchdog"
+STATE="$STATE_DIR/fail_count"
+mkdir -p "$STATE_DIR"
+
+# Only supervise a running unit; if it exited, systemd's Restart=always owns it.
+[ "$(systemctl --user is-active "$UNIT" 2>/dev/null || true)" = active ] || { rm -f "$STATE"; exit 0; }
+
+pid=$(systemctl --user show -p MainPID --value "$UNIT" 2>/dev/null || echo 0)
+[ -n "$pid" ] && [ "$pid" != 0 ] || exit 0
+
+# Established TLS sockets owned by the daemon's main process. Matching pid=<MainPID>
+# excludes connections belonging to spawned session children — we want the
+# daemon's own control-plane link specifically.
+conns=$(ss -tnpH state established 2>/dev/null | grep "pid=$pid," | grep -c ':443' || true)
+
+if [ "${conns:-0}" -ge 1 ]; then
+	rm -f "$STATE"
+	exit 0
+fi
+
+count=$(cat "$STATE" 2>/dev/null || echo 0)
+count=$((count + 1))
+echo "$count" >"$STATE"
+
+if [ "$count" -ge "$THRESHOLD" ]; then
+	echo "claude-remote-control has no backend connection after $count checks — restarting (wedged reconnect)" >&2
+	systemctl --user restart "$UNIT"
+	rm -f "$STATE"
+fi

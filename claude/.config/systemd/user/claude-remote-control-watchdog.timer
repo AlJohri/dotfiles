@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodic health check for claude-remote-control
+
+[Timer]
+# Start shortly after login, then probe every 90s. With THRESHOLD=2 in the
+# health check, a wedged daemon is recovered within ~3 minutes.
+OnBootSec=2min
+OnUnitActiveSec=90s
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,8 @@
+[Unit]
+Description=Health watchdog for claude-remote-control
+# Advisory ordering only; the check no-ops if the main unit isn't active.
+After=claude-remote-control.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/claude-remote-control-healthcheck
