@@ -1,0 +1,272 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["websocket-client"]
+# ///
+"""Screenshot a live Chrome tab to disk via the DevTools Protocol.
+
+Works with Chrome 144+ consent-mode remote debugging (no restart, real
+profile): open chrome://inspect/#remote-debugging and tick
+"Allow remote debugging for this browser instance". Chrome then writes the
+port + browser ws path to ~/.config/google-chrome/DevToolsActivePort.
+
+Chrome shows an "Allow remote debugging?" dialog once *per websocket
+connection*. A one-shot CLI opens a new connection every run, so it would
+prompt every run. To avoid that, the CLI keeps a persistent background daemon
+holding a single connection open: the FIRST capture (which spawns the daemon)
+prompts once per Chrome session, then every later capture reuses it — instant,
+no prompt. The daemon is spawned detached (start_new_session) so it survives
+the shell closing; you never launch it by hand.
+
+    ./chrome-shot.py out.png --match youtube --full   # auto-spawns daemon
+
+Other usage:
+    ./chrome-shot.py --serve                # run the daemon in the foreground
+    ./chrome-shot.py --stop                 # stop a running daemon
+    ./chrome-shot.py --list                 # print open page targets
+    OUT          output PNG path (default: ./shot.png)
+    --match      pick the tab whose title/url contains SUBSTR (default: first)
+    --full       capture the full scrollable page, not just the viewport
+    --port-file  DevToolsActivePort path (default: chrome's default profile)
+    --ws         browser ws endpoint, overrides --port-file discovery
+"""
+import argparse, base64, json, os, socket, subprocess, sys, time
+from websocket import create_connection  # provided by uv via inline deps
+
+DEFAULT_PORT_FILE = os.path.expanduser("~/.config/google-chrome/DevToolsActivePort")
+RUNTIME = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+SOCK_PATH = os.path.join(RUNTIME, "chrome-shot.sock")
+LOG_PATH = os.path.join(RUNTIME, "chrome-shot.daemon.log")
+
+
+def browser_ws(port_file, ws_override):
+    if ws_override:
+        return ws_override
+    if not os.path.exists(port_file):
+        sys.exit(f"{port_file} not found — tick 'Allow remote debugging' at "
+                 f"chrome://inspect/#remote-debugging first.")
+    port, path = open(port_file).read().split("\n")[:2]
+    return f"ws://127.0.0.1:{port}{path}"
+
+
+class CDP:
+    def __init__(self, url):
+        # Chrome rejects WS handshakes carrying a browser Origin header (403)
+        # unless launched with --remote-allow-origins; native clients omit it.
+        self.ws = create_connection(url, max_size=None, suppress_origin=True)
+        self.mid = 0
+
+    def send(self, method, params=None, session=None):
+        self.mid += 1
+        msg = {"id": self.mid, "method": method, "params": params or {}}
+        if session:
+            msg["sessionId"] = session
+        self.ws.send(json.dumps(msg))
+        while True:
+            m = json.loads(self.ws.recv())
+            if m.get("id") == self.mid:
+                if "error" in m:
+                    raise RuntimeError(f"CDP {method}: {m['error']}")
+                return m["result"]
+
+    def pages(self):
+        return [t for t in self.send("Target.getTargets")["targetInfos"]
+                if t["type"] == "page"]
+
+    def active_target(self, tabs):
+        """The foreground tab. CDP exposes no 'focused' flag, so probe each
+        page: visibilityState=='visible' is the foreground tab of its window
+        (robust even when the OS focus is on the terminal); hasFocus() breaks
+        ties if several windows each have a visible tab."""
+        visible = None
+        for t in tabs:
+            sess = self.send("Target.attachToTarget",
+                             {"targetId": t["targetId"], "flatten": True})["sessionId"]
+            try:
+                def js(expr):
+                    return self.send("Runtime.evaluate",
+                                     {"expression": expr, "returnByValue": True},
+                                     session=sess)["result"].get("value")
+                if js("document.visibilityState") == "visible":
+                    if js("document.hasFocus()"):
+                        return t
+                    visible = visible or t
+            finally:
+                self.send("Target.detachFromTarget", {"sessionId": sess})
+        return visible
+
+    def capture(self, match, full, out, active=False):
+        tabs = self.pages()
+        if not tabs:
+            raise RuntimeError("no page targets found")
+        tgt = tabs[0]
+        if active:
+            tgt = self.active_target(tabs)
+            if not tgt:
+                raise RuntimeError("no visible/active tab found")
+        elif match:
+            hits = [t for t in tabs if match.lower()
+                    in (t.get("title", "") + t.get("url", "")).lower()]
+            if not hits:
+                raise RuntimeError(f"no tab matching {match!r}")
+            tgt = hits[0]
+        sess = self.send("Target.attachToTarget",
+                         {"targetId": tgt["targetId"], "flatten": True})["sessionId"]
+        try:
+            params = {"format": "png"}
+            if full:
+                m = self.send("Page.getLayoutMetrics", session=sess)["cssContentSize"]
+                params.update(captureBeyondViewport=True,
+                              clip={"x": 0, "y": 0, "width": m["width"],
+                                    "height": m["height"], "scale": 1})
+            data = self.send("Page.captureScreenshot", params, session=sess)["data"]
+        finally:
+            self.send("Target.detachFromTarget", {"sessionId": sess})
+        with open(out, "wb") as f:
+            f.write(base64.b64decode(data))
+        return tgt.get("title", "")
+
+    def close(self):
+        self.ws.close()
+
+
+def daemon_alive():
+    """True if a daemon is accepting on the socket."""
+    try:
+        c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        c.connect(SOCK_PATH)
+        c.close()
+        return True
+    except OSError:
+        return False
+
+
+def serve(cdp):
+    if daemon_alive():  # another daemon already won the race
+        cdp.close()
+        return
+    if os.path.exists(SOCK_PATH):
+        os.unlink(SOCK_PATH)  # stale socket from a dead daemon
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    srv.bind(SOCK_PATH)
+    srv.listen(4)
+    print(f"chrome-shot daemon on {SOCK_PATH} — connection is live, "
+          f"click Allow once if prompted. Ctrl-C to stop.")
+    try:
+        while True:
+            conn, _ = srv.accept()
+            with conn:
+                raw = conn.recv(65536)
+                if not raw:
+                    continue
+                req = json.loads(raw.decode())
+                if req.get("stop"):
+                    return
+                try:
+                    title = cdp.capture(req["match"], req["full"], req["out"],
+                                        req.get("active", False))
+                    resp = {"ok": True, "title": title}
+                except Exception as e:  # keep daemon alive across bad requests
+                    resp = {"ok": False, "error": str(e)}
+                conn.sendall(json.dumps(resp).encode())
+    finally:
+        srv.close()
+        os.unlink(SOCK_PATH)
+        cdp.close()
+
+
+def via_daemon(match, full, out, active=False):
+    try:
+        c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        c.connect(SOCK_PATH)
+    except OSError:
+        return None  # no daemon / stale socket
+    with c:
+        c.sendall(json.dumps({"match": match, "full": full, "out": out,
+                              "active": active}).encode())
+        # capture may block on the one-time Allow prompt; wait indefinitely.
+        buf = b""
+        while True:
+            chunk = c.recv(65536)
+            if not chunk:
+                break
+            buf += chunk
+        return json.loads(buf.decode())
+
+
+def spawn_daemon(extra):
+    """Launch the daemon detached so it outlives this process and the shell."""
+    with open(LOG_PATH, "a") as log:
+        subprocess.Popen(
+            [sys.executable, os.path.abspath(__file__), "--serve", *extra],
+            stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+            start_new_session=True, close_fds=True,
+        )
+    for _ in range(50):  # ~5s for the socket to come up
+        if daemon_alive():
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("out", nargs="?", default="shot.png")
+    ap.add_argument("--match")
+    ap.add_argument("--active", action="store_true",
+                    help="shoot the focused/visible tab instead of --match")
+    ap.add_argument("--full", action="store_true")
+    ap.add_argument("--list", action="store_true")
+    ap.add_argument("--serve", action="store_true")
+    ap.add_argument("--stop", action="store_true")
+    ap.add_argument("--port-file", default=DEFAULT_PORT_FILE)
+    ap.add_argument("--ws")
+    a = ap.parse_args()
+
+    if a.stop:
+        try:
+            c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            c.connect(SOCK_PATH)
+            c.sendall(json.dumps({"stop": True}).encode())
+            c.close()
+            print("daemon stopped")
+        except OSError:
+            print("no daemon running")
+        return
+
+    if a.serve:
+        serve(CDP(browser_ws(a.port_file, a.ws)))
+        return
+
+    out = os.path.abspath(a.out)
+
+    if not a.list:
+        # Prefer the persistent daemon (no re-prompt). Auto-spawn it if down.
+        extra = []
+        if a.port_file != DEFAULT_PORT_FILE:
+            extra += ["--port-file", a.port_file]
+        if a.ws:
+            extra += ["--ws", a.ws]
+        if not daemon_alive():
+            spawn_daemon(extra)
+        r = via_daemon(a.match, a.full, out, a.active)
+        if r is not None:
+            if not r["ok"]:
+                sys.exit(r["error"])
+            print(f"wrote {out}  (tab: {r['title']!r}) [via daemon]")
+            return
+
+    cdp = CDP(browser_ws(a.port_file, a.ws))
+    try:
+        if a.list:
+            for t in cdp.pages():
+                print(f"{t.get('title','')[:50]!r}  {t.get('url','')[:70]}")
+            return
+        title = cdp.capture(a.match, a.full, out, a.active)
+    finally:
+        cdp.close()
+    print(f"wrote {out}  (tab: {title!r})")
+
+
+if __name__ == "__main__":
+    main()
