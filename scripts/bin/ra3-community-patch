@@ -12,12 +12,18 @@ set -euo pipefail
 #   ra3-community-patch status    # report installed / enabled state
 #   ra3-community-patch           # same as status
 #
-# WINE-FREE, contrary to long-held belief. The patch's GUI installer is an NSIS exe whose
-# payload is a nested LZMA archive at $OUTDIR/.installcache/temp.7z holding the .big maps --
-# 7z extracts it statically. (Two dead ends, ruled out: the maps are NOT locked behind the
-# Nsis7z runtime plugin -- 7z reads them fine; and `wine installer /S [/D=...]` deploys
-# NOTHING -- the file copy is gated behind a wizard page that silent mode skips.) Enable and
-# disable are a pure SkuDef swap -- the installer never has to run.
+# WINE-FREE, contrary to long-held belief -- but NOT via `7z e`. The GUI installer is a
+# doubly-nested NSIS: the outer exe stores, as a raw (uncompressed) data block, an inner NSIS
+# (ManageCommunityPatch.exe) whose deflate-compressed payload block is temp.7z -- a solid LZMA
+# archive of the .big files (the game-data patch + map packs). Every 7-Zip release (tested p7zip
+# 16.02 through 26.02) bails on the NSIS install script at an unmodeled opcode (`BadCmd=11`/`13`)
+# BEFORE it reaches temp.7z, so `7z e '$OUTDIR/.installcache/temp.7z'` silently extracts nothing
+# (exit 0, zero files). Instead we walk the NSIS data blocks ourselves (locate each `NullsoftInst`
+# firstheader, recurse into the raw inner NSIS, inflate the payload block with zlib) to recover
+# temp.7z, then 7z extracts the bigs from that plain archive -- no install-script interpretation,
+# no Nsis7z runtime plugin.
+# (`wine installer /S [/D=...]` also deploys NOTHING -- the file copy is gated behind a wizard
+# page that silent mode skips.) Enable and disable are a pure SkuDef swap -- the installer never runs.
 #
 # The patch is incompatible with Steam's v1.13 Workshop. A Steam update that rewrites
 # RA3_english_1.13.SkuDef silently disables the patch -- re-run `enable` to restore it.
@@ -30,9 +36,15 @@ PATCH_MODDB_SLUG="red-alert-3-community-patch-v1128"
 PATCH_EXE="RA3CommunityPatchSetup_v1.12.8.exe"
 PATCH_EXE_SIZE=680078873                                  # bytes (moddb-published)
 PATCH_EXE_MD5="03decd6ddd484ca26e3e003135246ca4"          # moddb-published
-# The 9 .big maps the GUI installer's default component set deploys (temp.7z holds 12 --
-# the other 3 are Chinese locale + a standalone Misc.big the default install omits). This
-# list is also the exact body of CommunityPatch/RA3_.SkuDef, in this order.
+# The 9 bigs the GUI installer's default component set deploys, and the exact body of
+# CommunityPatch/RA3_.SkuDef (one add-big per entry, in this order). NOT all maps: the first,
+# Misc_WinterScouts.big, IS the game patch -- it carries data\static.patch.bin, a binary
+# override of RA3's compiled game database (unit balance + bugfixes), plus scripts.lua and
+# recompiled shaders. Enabling it changes the whole game; the 8 Maps_* bigs are just map packs.
+# temp.7z holds 12 bigs; we skip 3: the two Chinese-locale bigs and the plain Misc.big -- that
+# last one is the NON-WinterScouts variant of the same patch (an alternative, not additional),
+# and the default install picks WinterScouts, so skipping it loses only the winter scout
+# cosmetic, no gameplay.
 PATCH_BIGS=(
     Patch1.12.8_Misc_WinterScouts.big
     Patch1.12.8_Maps_Community2Player.big
@@ -87,6 +99,7 @@ cmd_install() {
         note "Maps already present -- skipping download/extract."
     else
         command -v 7z >/dev/null 2>&1 || die "7z not found. Install it: sudo pacman -S --needed 7zip"
+        command -v python3 >/dev/null 2>&1 || die "python3 not found (needed to carve the installer payload). Install it: sudo pacman -S --needed python"
         mkdir -p "$CACHE_DIR"
         local installer="$CACHE_DIR/$PATCH_EXE"
         # acquire the installer: use a cached copy of the right size, else fetch from moddb.
@@ -115,12 +128,104 @@ cmd_install() {
         [ "$got_md5" = "$PATCH_EXE_MD5" ] || die "installer md5 $got_md5 != $PATCH_EXE_MD5; delete $installer and re-run."
         note "Installer verified (size + md5)."
 
-        note "Extracting maps (~4.5GB; the inner archive is solid LZMA, takes a minute)..."
+        note "Extracting maps (~4.5GB; carve the payload, then solid-LZMA decompress -- a minute or two)..."
         local tmp7z; tmp7z="$(mktemp -d)"; trap 'rm -rf "$tmp7z"' RETURN
-        # stage 1: pull the inner temp.7z out of the NSIS exe; stage 2: extract just the
-        # maps our default-component SkuDef references (temp.7z also holds 3 we don't ship).
-        7z e -y -o"$tmp7z" "$installer" '$OUTDIR/.installcache/temp.7z' >/dev/null \
-            || die "could not extract inner temp.7z (installer layout changed?)."
+        # Stage 1: carve the inner temp.7z out of the installer. 7z's NSIS parser bails before
+        # it reaches temp.7z (see header comment), so `7z e '$OUTDIR/.installcache/temp.7z'`
+        # extracts nothing. We walk the NSIS data blocks by hand and inflate the payload instead.
+        local carve="$tmp7z/nsis_carve.py"
+        cat >"$carve" <<'PYEOF'
+#!/usr/bin/env python3
+# Carve the inner temp.7z out of the RA3 Community Patch installer without going through
+# 7-Zip's NSIS parser (which bails on the install script -- `BadCmd` -- before naming temp.7z).
+#
+# The installer is a doubly-nested NSIS archive:
+#     outer NSIS  ->  raw data block = inner NSIS (ManageCommunityPatch.exe)
+#                     ->  deflate data block = temp.7z (solid LZMA of the .big files:
+#                                                        game-data patch + map packs)
+# Each NSIS is found by its "NullsoftInst" firstheader signature. The archive is non-solid, so
+# every file is an independent block: a 4-byte little-endian size (high bit = deflate-compressed)
+# followed by the data. We recurse through the nesting and inflate the block that starts with the
+# 7z magic -- no install-script interpretation required.
+import sys, os, mmap, struct, zlib
+
+SEVENZ   = bytes.fromhex("377abcaf271c")   # 7z archive magic
+NSIS_SIG = b"NullsoftInst"                  # firstheader nsinst[3] signature
+DEADBEEF = b"\xef\xbe\xad\xde"              # firstheader siginfo (0xDEADBEEF), little-endian
+
+def blocks(mm, fh):
+    """Yield (compressed, data_offset, size) for each NSIS data block at firstheader fh."""
+    (siginfo,) = struct.unpack_from("<I", mm, fh + 4)
+    if siginfo != 0xDEADBEEF:
+        return
+    (len_all,) = struct.unpack_from("<i", mm, fh + 24)
+    pos = fh + 28
+    end = min(pos + len_all, mm.size())
+    while pos + 4 <= end:
+        (raw,) = struct.unpack_from("<I", mm, pos)
+        compressed = bool(raw & 0x80000000)
+        size = raw & 0x7FFFFFFF
+        dpos = pos + 4
+        if size == 0 or dpos + size > mm.size():
+            break
+        yield compressed, dpos, size
+        pos = dpos + size
+
+def head(mm, compressed, dpos, size, n=20):
+    if compressed:
+        return zlib.decompressobj(-15).decompress(mm[dpos:dpos + min(size, 4096)], n)[:n]
+    return mm[dpos:dpos + n]
+
+def find_payload(mm, fh, depth=0):
+    """Recurse through nested NSIS archives; return (compressed, dpos, size) of the 7z block."""
+    for compressed, dpos, size in blocks(mm, fh):
+        h = head(mm, compressed, dpos, size)
+        if h[:6] == SEVENZ:
+            return compressed, dpos, size
+        # a raw block that itself begins with an NSIS firstheader is a nested archive
+        if not compressed and h[4:8] == DEADBEEF and h[8:20] == NSIS_SIG and depth < 4:
+            found = find_payload(mm, dpos, depth + 1)
+            if found:
+                return found
+    return None
+
+def main():
+    installer, out = sys.argv[1], sys.argv[2]
+    with open(installer, "rb") as f:
+        mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+        sig = mm.find(NSIS_SIG)
+        if sig < 0:
+            sys.exit("no NSIS firstheader (NullsoftInst) found -- not an NSIS installer?")
+        found = find_payload(mm, sig - 8)
+        if not found:
+            sys.exit("no embedded 7z payload found -- installer layout changed?")
+        compressed, dpos, size = found
+        with open(out, "wb") as w:
+            off = 0
+            if compressed:
+                d = zlib.decompressobj(-15)
+                while off < size and not d.eof:
+                    n = min(8 << 20, size - off)
+                    w.write(d.decompress(mm[dpos + off:dpos + off + n]))
+                    off += n
+                w.write(d.flush())
+            else:
+                while off < size:
+                    n = min(8 << 20, size - off)
+                    w.write(mm[dpos + off:dpos + off + n])
+                    off += n
+    with open(out, "rb") as r:
+        if r.read(6) != SEVENZ:
+            sys.exit("carved payload is not a valid 7z archive")
+
+if __name__ == "__main__":
+    main()
+PYEOF
+        python3 "$carve" "$installer" "$tmp7z/temp.7z" \
+            || die "could not carve temp.7z out of the installer (layout changed?)."
+        # Stage 2: temp.7z is a plain solid-LZMA archive now -- extract the 9 bigs our
+        # default-component SkuDef references (the game patch + 8 map packs; see PATCH_BIGS).
+        # temp.7z also holds 3 locale/alternate bigs we skip.
         mkdir -p "$patch_dir"
         7z x -y -o"$patch_dir" "$tmp7z/temp.7z" "${PATCH_BIGS[@]}" >/dev/null \
             || die "could not extract maps from temp.7z."
