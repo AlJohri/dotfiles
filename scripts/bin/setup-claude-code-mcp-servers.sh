@@ -7,3 +7,4 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 "${SCRIPT_DIR}/setup-claude-code-local-incident-io-mcp-server.sh"
+"${SCRIPT_DIR}/setup-claude-code-google-workspace-mcp-server.sh"
