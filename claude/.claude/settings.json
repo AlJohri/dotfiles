@@ -14,9 +14,7 @@
       "WebFetch(domain:zsh.sourceforge.io)",
       "Bash(systemctl:*)"
     ],
-    "deny": [
-      "mcp__incidentio__create_incident_update"
-    ],
+    "deny": [],
     "ask": [],
     "defaultMode": "auto"
   },
