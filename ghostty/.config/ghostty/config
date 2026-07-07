@@ -40,3 +40,9 @@ mouse-scroll-multiplier = 0.95
 
 # Fix general slowness on hyprland (https://github.com/ghostty-org/ghostty/discussions/3224)
 async-backend = epoll
+
+# Skip the per-surface systemd transient scope: a D-Bus round-trip to systemd on
+# every new tab/window, measured at ~40ms of shell-spawn latency (A/B, 2026-07-06,
+# al-private worklog ghostty-shell-startup-slowness). The scopes carried no
+# CPU/IO/memory limits anyway; tradeoff is per-surface OOM-kill granularity.
+linux-cgroup = never

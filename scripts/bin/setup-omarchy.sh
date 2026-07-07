@@ -74,9 +74,16 @@ fi
 # Ensure the signing-key scope is present even if `gh auth login` was run
 # previously without -s (e.g. on machines set up before this change).
 if ! gh auth status 2>&1 | grep -q 'admin:ssh_signing_key'; then
-    echo "==> Adding admin:ssh_signing_key scope to gh token..."
-    BROWSER=echo gh auth refresh -h github.com -s admin:ssh_signing_key \
-        || echo "    Skipped. Add ~/.ssh/id_ed25519.pub manually later: https://github.com/settings/ssh/new"
+    # The refresh is a device-code flow (interactive). Guard on a TTY so headless
+    # runs skip it instead of hanging forever waiting for a browser confirmation.
+    if [ -t 0 ]; then
+        echo "==> Adding admin:ssh_signing_key scope to gh token..."
+        BROWSER=echo gh auth refresh -h github.com -s admin:ssh_signing_key \
+            || echo "    Skipped. Add ~/.ssh/id_ed25519.pub manually later: https://github.com/settings/ssh/new"
+    else
+        echo "==> gh token lacks admin:ssh_signing_key scope; no TTY, skipping interactive refresh."
+        echo "    Run: gh auth refresh -h github.com -s admin:ssh_signing_key"
+    fi
 fi
 
 if ! gh extension list | grep -q '^gh image'; then
@@ -237,6 +244,27 @@ for net in 192.168.0.0/16 10.0.0.0/8 172.16.0.0/12; do
     sudo ufw allow from "$net" to any port 22 proto tcp comment 'ssh lan'
 done
 
+# Size zram to hold real workloads instead of zram-generator's upstream default
+# min(ram/2, 4G): on a 27G machine that left a 4G zram permanently full and
+# spilled ~13G of cold pages (mostly ghostty scrollback) to the disk swapfile —
+# faulting them back from disk made new terminal tabs take ~1s. min(ram, 16G)
+# equals ram on <=16G laptops and caps larger machines; the measured workload
+# (16G swapped, ~7:1 zstd on terminal text) costs only ~2.3G real RAM compressed.
+# The btrfs swapfile is untouched — it stays for hibernation + overflow (pri=0
+# vs zram pri=100). page-cluster=0 disables swap readahead, the standard zram
+# tuning. Precedent: Fedora 34 "Scale ZRAM to full memory size"; Arch Wiki zram.
+# zram resize takes full effect on reboot (device must be recreated).
+echo "==> Configuring zram sizing..."
+sudo tee /etc/systemd/zram-generator.conf >/dev/null <<'EOF'
+[zram0]
+zram-size = min(ram, 16384)
+compression-algorithm = zstd
+EOF
+sudo tee /etc/sysctl.d/99-zram.conf >/dev/null <<'EOF'
+vm.page-cluster = 0
+EOF
+sudo sysctl -q -p /etc/sysctl.d/99-zram.conf
+
 # `omarchy install browser chrome` installs google-chrome (AUR), creates the
 # /etc/opt/chrome/policies/managed policy dir, drops in ~/.config/chrome-flags.conf,
 # and wires up theme integration. Guarded on `command -v google-chrome-stable` so
@@ -285,6 +313,20 @@ if ! command -v ghostty &>/dev/null; then
 fi
 echo "==> Setting ghostty as the default terminal..."
 omarchy default terminal ghostty
+
+# Enable ghostty's resident D-Bus service so `ghostty +new-window` (bound to
+# SUPER+ENTER in hypr/bindings.conf) dispatches a new window to an already-running
+# instance (~20ms) instead of spawning a fresh ghostty and re-initializing GTK
+# every time (~450ms surface creation on Hyprland). Unlike code-server/
+# claude-remote-control, this unit ships with the ghostty package
+# (/usr/lib/systemd/user/app-com.mitchellh.ghostty.service), so it needs no stow
+# and no daemon-reload -- just enable it. `--initial-window=false` (in the unit)
+# keeps it windowless until a window is requested; it's graphical-session-scoped,
+# so no enable-linger. is-enabled reports "disabled" until wired up.
+if [ "$(systemctl --user is-enabled app-com.mitchellh.ghostty.service 2>/dev/null)" != "enabled" ]; then
+    echo "==> Enabling ghostty D-Bus service (fast new-window)..."
+    systemctl --user enable --now app-com.mitchellh.ghostty.service
+fi
 
 # Enable code-server now that its unit (code-server/.config/systemd/user/) has been
 # stowed above -- on a fresh machine the unit doesn't exist until stow runs.
