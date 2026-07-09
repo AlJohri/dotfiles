@@ -72,7 +72,9 @@ else
 end
 THEME
 
-echo "==> Stowing dotfiles..."
-make stow-ubuntu
+# Centralized stow: interactive (TTY) -> --adopt + per-file review; non-interactive
+# -> safe --restow. See scripts/bin/stow-review.sh.
+echo "==> Stowing dotfiles (review any incoming changes per file)..."
+"$DOTFILES_DIR/scripts/bin/stow-review.sh" stow-ubuntu
 
 echo "==> Done! Restart your shell or run: exec fish"

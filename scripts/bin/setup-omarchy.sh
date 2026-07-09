@@ -272,12 +272,11 @@ fi
 echo "==> Allowing direnv..."
 mise exec direnv -- direnv allow "$DOTFILES_DIR"
 
-# This is THE stow step (runs `make stow-omarchy` internally), not just a review --
-# it creates all the ~/.config symlinks. Load-bearing for what follows: the systemd
-# unit enables and the Chrome/ghostty default handoffs below all rely on the symlinks
-# it lays down. The interactive per-file review only fires on genuine collisions (a
-# real file in ~ differing from ours); on a steady-state machine it's a silent no-op.
-# Requires a clean git tree -- it uses `git checkout`/`git add` to resolve collisions.
+# THE stow step (runs stow internally), not just a review -- it creates all the
+# ~/.config symlinks. Load-bearing for what follows: the systemd unit enables and the
+# Chrome/ghostty default handoffs below rely on the symlinks it lays down. Interactive
+# (TTY): --adopt + per-file review, firing only on genuine collisions; needs a clean
+# git tree. Non-interactive: safe --restow, no prompts. See scripts/bin/stow-review.sh.
 echo "==> Stowing dotfiles (review any incoming changes per file)..."
 "$DOTFILES_DIR/scripts/bin/stow-review.sh"
 

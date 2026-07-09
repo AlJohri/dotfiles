@@ -72,7 +72,9 @@ eval "$("$MISE" env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 echo "==> Initializing git submodules..."
 git submodule update --init
 
-echo "==> Stowing dotfiles..."
-make stow-portable
+# Centralized stow: interactive (TTY) -> --adopt + per-file review; non-interactive
+# -> safe --restow. See scripts/bin/stow-review.sh.
+echo "==> Stowing dotfiles (review any incoming changes per file)..."
+"$DOTFILES_DIR/scripts/bin/stow-review.sh" stow-portable
 
 echo "==> Done! Restart your shell or run: exec fish"

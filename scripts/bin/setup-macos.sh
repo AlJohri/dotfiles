@@ -124,29 +124,10 @@ if ! command -v yabai &> /dev/null; then
     curl -L https://raw.githubusercontent.com/asmvik/yabai/master/scripts/install.sh | sh /dev/stdin
 fi
 
-echo "==> Stowing dotfiles..."
-make stow-macos
-
-# --adopt pulls existing files into the repo, which on a fresh install means
-# system defaults overwrite our tracked files. Show what changed and let
-# the user decide whether to restore their versions.
-if ! git diff --quiet; then
-    echo ""
-    echo "==> stow --adopt imported the following changes from system defaults:"
-    echo "    (These are files in ~ that differed from your dotfiles.)"
-    echo ""
-    git --no-pager diff --stat
-    echo ""
-    git --no-pager diff
-    echo ""
-    read -rp "==> Restore your dotfiles versions? (Y/n) " answer
-    if [[ "${answer:-Y}" =~ ^[Yy]$ ]]; then
-        git checkout .
-        echo "==> Restored dotfiles to your tracked versions."
-    else
-        echo "==> Keeping adopted changes."
-    fi
-fi
+# Centralized stow: interactive (TTY) -> --adopt + per-file review; non-interactive
+# -> safe --restow. See scripts/bin/stow-review.sh.
+echo "==> Stowing dotfiles (review any incoming changes per file)..."
+"$DOTFILES_DIR/scripts/bin/stow-review.sh" stow-macos
 
 echo "==> Configuring macOS defaults..."
 defaults write -g NSWindowShouldDragOnGesture -bool true

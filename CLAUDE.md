@@ -69,6 +69,7 @@ User bindings override the base config. If a binding isn't in the user file, che
 ## Notes
 
 - **After adding, removing, or moving files within a stow package, re-stow it** so the new symlinks are created (e.g., `stow scripts` after adding a new script to `scripts/bin/`, or run the appropriate `make stow-*` target). Editing a file that's already symlinked does not require re-stowing — but a brand-new file is invisible from `~/` until you re-stow.
+- **Stow conflict strategy (`STOW_FLAGS`):** `make stow-*` defaults to `--restow` — safe and idempotent; it re-creates symlinks and *fails loudly* if a real file has replaced one (drift) instead of silently absorbing it. The interactive first-install / post-`omarchy update` reconcile path (`scripts/bin/stow-review.sh`, which all `setup-*.sh` scripts call) overrides to `STOW_FLAGS=--adopt` **only when stdin is a TTY** — it pulls pre-existing real files into the repo and prompts per-file (keep/take/skip). A non-interactive run always uses safe `--restow`, so automated re-runs never adopt drift or hang on a prompt.
 - App-specific scripts go in the relevant stow package's `bin/` folder (e.g., `hypr/bin/` for Hyprland scripts). Generic scripts go in the top-level `scripts/bin/` package.
 - The `.envrc` sets `RIPGREP_CONFIG_PATH` to use `.ripgreprc`, which enables `--hidden` since most dotfiles are hidden
 - Tmux plugins are git submodules under `tmux/.config/tmux/plugins/` (TPM and omarchy-tmux)
