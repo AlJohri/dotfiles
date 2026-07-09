@@ -30,6 +30,11 @@ echo "==> Installing mise..."
 if [ ! -f "$HOME/.local/bin/mise" ]; then
     curl https://mise.run | sh
 fi
+# `mise bootstrap packages apply` (below) needs a recent mise -- the [bootstrap.packages]
+# parser + subcommand landed ~2026.6.11. A previously installed mise may be older, so
+# self-update before relying on it.
+echo "==> Updating mise (needed for bootstrap packages support)..."
+mise self-update -y || echo "    (self-update failed; continuing on $(mise --version 2>/dev/null))"
 
 echo "==> Initializing git submodules..."
 git submodule update --init

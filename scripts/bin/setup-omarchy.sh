@@ -83,6 +83,13 @@ if [ ! -x "$MISE" ]; then
     curl https://mise.run | sh
 fi
 
+# `mise bootstrap packages apply` (below) needs a recent mise -- the [bootstrap.packages]
+# parser + subcommand landed ~2026.6.11. A previously curl-installed mise may be older
+# (e.g. 2026.6.0 flags `bootstrap` as an unknown field and treats `mise bootstrap` as a
+# task name, aborting the run), so self-update before relying on it.
+echo "==> Updating mise (needed for bootstrap packages support)..."
+"$MISE" self-update -y || echo "    (self-update failed; continuing on $("$MISE" --version 2>/dev/null))"
+
 echo "==> Installing mise tools..."
 # MISE_EXPERIMENTAL=1: `experimental` is a global-only setting, so the experimental
 # backends in our config (conda:) are NOT enabled by the project config
