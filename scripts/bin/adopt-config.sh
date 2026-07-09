@@ -22,7 +22,10 @@ fi
 # Get absolute path
 TARGET_PATH=$(readlink -f "$TARGET_PATH")
 
-REPO_ROOT="$HOME/dotfiles"
+# Derive the repo root from this script's location (scripts/bin/adopt-config.sh)
+# rather than hardcoding ~/dotfiles.
+REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
 
 # Validate that the target path is not inside the dotfiles repo
 if [[ "$TARGET_PATH" == "$REPO_ROOT"* ]]; then
@@ -74,23 +77,25 @@ cp -r "$TARGET_PATH" "$(dirname "$TARGET_DIR")/"
 echo "Removing original: $TARGET_PATH"
 rm -rf "$TARGET_PATH"
 
-# Stow the package
+# Stow the package. The original was just removed, so the target path is free --
+# a plain stow creates the symlinks (no --adopt needed).
 echo "Stowing package: $PACKAGE_NAME"
-stow "$PACKAGE_NAME"
+stow -t ~ "$PACKAGE_NAME"
 
-# Update Makefile to add the package to the 'all' target if not already present
+# The Makefile groups packages into CORE / DESKTOP / WAYLAND / MACOS variables (not
+# on the stow lines), and which tier a new package belongs to is a judgment call.
+# Rather than guess-edit the Makefile, report whether it's already listed and, if
+# not, point at exactly where to add it.
 MAKEFILE="$REPO_ROOT/Makefile"
-if [ -f "$MAKEFILE" ]; then
-    # Check if package is already in the Makefile
-    if ! grep -q "stow.*$PACKAGE_NAME" "$MAKEFILE"; then
-        echo "Adding $PACKAGE_NAME to Makefile"
-        # Use sed to add the package to the first stow line (the one without -t flag)
-        sed -i "/stow.*--restow [^-]/s/$/ $PACKAGE_NAME/" "$MAKEFILE"
-    else
-        echo "$PACKAGE_NAME already in Makefile"
-    fi
+echo ""
+if grep -qE "^(CORE|DESKTOP|WAYLAND|MACOS) =.*\\b$PACKAGE_NAME\\b" "$MAKEFILE"; then
+    echo "✓ '$PACKAGE_NAME' is already listed in a Makefile package group."
+else
+    echo "NEXT STEP: add '$PACKAGE_NAME' to the right package group in $MAKEFILE:"
+    grep -nE "^(CORE|DESKTOP|MACOS|WAYLAND) =" "$MAKEFILE" | sed 's/^/    /'
+    echo "    (CORE = portable/core, DESKTOP = +desktop, WAYLAND = +wayland, MACOS = +macos)"
 fi
 
+echo ""
 echo "✓ Successfully adopted $TARGET_PATH"
 echo "✓ Package '$PACKAGE_NAME' is now managed by stow"
-echo "✓ Makefile updated"
