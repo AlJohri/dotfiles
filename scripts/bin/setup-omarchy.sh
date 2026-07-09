@@ -3,6 +3,15 @@ set -euo pipefail
 
 # Setup script for Omarchy Linux (Arch-based)
 
+# Ensure omarchy's own bin dir is on PATH. Interactive fish adds it via
+# conf.d/omarchy.fish, but this script may run from a non-interactive or SSH bash shell
+# where it's absent, and later steps invoke `omarchy`, `omarchy-install-terminal`,
+# `omarchy-setup-security-fingerprint`, etc.
+OMARCHY_BIN="$HOME/.local/share/omarchy/bin"
+if [[ ":$PATH:" != *":$OMARCHY_BIN:"* ]]; then
+    export PATH="$OMARCHY_BIN:$PATH"
+fi
+
 # Sync package databases only if they don't exist yet (fresh system).
 # On an already-synced system, skip `pacman -Sy` to avoid the partial-upgrade
 # trap: refreshing DBs without `-u` can pull new deps (e.g. libcbor soname bumps)
