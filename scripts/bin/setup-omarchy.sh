@@ -277,7 +277,7 @@ else
 fi
 
 echo "==> Allowing direnv..."
-mise exec direnv -- direnv allow "$DOTFILES_DIR"
+"$MISE" exec direnv -- direnv allow "$DOTFILES_DIR"
 
 # THE stow step (runs stow internally), not just a review -- it creates all the
 # ~/.config symlinks. Load-bearing for what follows: the systemd unit enables and the
