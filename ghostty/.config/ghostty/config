@@ -10,7 +10,10 @@ font-size = 14
 window-theme = ghostty
 window-padding-x = 14
 window-padding-y = 14
-confirm-close-surface = true
+# false so closing a tmux window doesn't prompt — ghostty can't tell tmux is
+# safe to close (session persists), and there's no per-process allowlist yet:
+# https://github.com/ghostty-org/ghostty/discussions/12719
+confirm-close-surface = false
 resize-overlay = never
 gtk-toolbar-style = flat
 
