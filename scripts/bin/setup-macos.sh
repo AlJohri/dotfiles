@@ -73,15 +73,6 @@ if ! gh api user/ssh_signing_keys --jq '.[].key' 2>/dev/null | grep -qF "$(awk '
         || echo "    Add ~/.ssh/id_ed25519.pub manually: https://github.com/settings/ssh/new (Key type: Signing)"
 fi
 
-# Keep allowed_signers (gpg.ssh.allowedSignersFile) in sync so `git log --show-signature`
-# verifies locally: append this machine's signing key if it isn't already listed.
-ALLOWED_SIGNERS="$DOTFILES_DIR/git/.config/git/allowed_signers"
-key_field="$(awk '{print $1, $2}' "$SSH_SIGNING_KEY.pub")"
-if ! grep -qF "${key_field#* }" "$ALLOWED_SIGNERS" 2>/dev/null; then
-    echo "==> Adding this machine's key to git allowed_signers (commit the change to track it)..."
-    echo "$(git config -f "$DOTFILES_DIR/git/.config/git/config" --get user.email) $key_field" >>"$ALLOWED_SIGNERS"
-fi
-
 echo "==> Installing mise tools..."
 mise trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
 # System formulae from [bootstrap.packages], scoped to brew so the pacman: entries
@@ -128,6 +119,17 @@ fi
 # -> safe --restow. See scripts/bin/stow-review.sh.
 echo "==> Stowing dotfiles (review any incoming changes per file)..."
 "$DOTFILES_DIR/scripts/bin/stow-review.sh" stow-macos
+
+# Sync allowed_signers AFTER stowing. This appends to a TRACKED file, so doing it
+# before stow-review would dirty the git tree and trip stow-review's clean-tree guard
+# on a fresh install (new machine key). Keeps `git log --show-signature` verifying
+# locally once this machine's key is listed; left uncommitted for you to commit.
+ALLOWED_SIGNERS="$DOTFILES_DIR/git/.config/git/allowed_signers"
+key_field="$(awk '{print $1, $2}' "$SSH_SIGNING_KEY.pub")"
+if ! grep -qF "${key_field#* }" "$ALLOWED_SIGNERS" 2>/dev/null; then
+    echo "==> Adding this machine's key to git allowed_signers (commit the change to track it)..."
+    echo "$(git config -f "$DOTFILES_DIR/git/.config/git/config" --get user.email) $key_field" >>"$ALLOWED_SIGNERS"
+fi
 
 echo "==> Configuring macOS defaults..."
 defaults write -g NSWindowShouldDragOnGesture -bool true
