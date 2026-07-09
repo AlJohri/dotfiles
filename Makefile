@@ -2,7 +2,7 @@
 
 # Package groups
 CORE = nvim tmux git fish mise delta claude-history zsh
-DESKTOP = bash alacritty ghostty xdg zed applications code-server
+DESKTOP = bash alacritty ghostty xdg applications code-server
 MACOS = yabai skhd
 WAYLAND = hypr waybar uwsm omarchy wireplumber elephant imv makima wiremix
 
@@ -38,13 +38,22 @@ stow-core:
 	stow $(STOW_FLAGS) -t ~ $(CORE)
 	stow $(STOW_FLAGS) --no-folding -t ~ claude starship scripts
 
+# zed reads a single settings.json and has no per-machine override, so the theme
+# lives in a per-OS package (zed-linux = Omazed, zed-macos = native system
+# light/dark) while shared config (keymap) stays in the base `zed` package. Both
+# are stowed --no-folding (like claude/starship/scripts) so ~/.config/zed stays a
+# real dir: that keeps omazed's generated themes/omazed.json a plain local file
+# instead of folding it back into a repo symlink.
 stow-omarchy: stow-core
 	stow $(STOW_FLAGS) -t ~ $(DESKTOP) $(WAYLAND)
+	stow $(STOW_FLAGS) --no-folding -t ~ zed zed-linux
 
 stow-ubuntu: stow-core
 	stow $(STOW_FLAGS) -t ~ $(DESKTOP)
+	stow $(STOW_FLAGS) --no-folding -t ~ zed zed-linux
 
 stow-macos: stow-core
 	stow $(STOW_FLAGS) -t ~ $(DESKTOP) $(MACOS)
+	stow $(STOW_FLAGS) --no-folding -t ~ zed zed-macos
 
 stow-portable: stow-core
