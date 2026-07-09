@@ -282,13 +282,13 @@ if ! grep -qF "${key_field#* }" "$ALLOWED_SIGNERS" 2>/dev/null; then
     echo "$(git config -f "$DOTFILES_DIR/git/.config/git/config" --get user.email) $key_field" >>"$ALLOWED_SIGNERS"
 fi
 
-# Now that ~/.config/mimeapps.list is our symlink (which already maps http/https
-# to google-chrome.desktop), register Chrome as the xdg default. xdg-mime writes
-# through the symlink in place, so this is idempotent and leaves the repo clean.
-echo "==> Setting Chrome as the default browser..."
-omarchy default browser chrome
+# NOTE: we deliberately do NOT run `omarchy default browser chrome` here. Our stowed
+# ~/.config/mimeapps.list already sets the browser defaults -- and routes http/https/
+# html to google-chrome-link.desktop (a custom link handler). `omarchy default browser
+# chrome` overwrites those with plain google-chrome.desktop, reverting the customization
+# and dirtying the repo on every run. The stowed mimeapps.list is the source of truth.
 
-# Same install+default handoff as the browser above, split into two steps.
+# omarchy terminal install + default handoff, split into two steps.
 # omarchy-install-terminal installs the ghostty package and its desktop entry
 # (guarded on `command -v ghostty` so re-runs don't re-prompt for sudo). Then
 # `omarchy default terminal ghostty` -- run every time -- asserts ghostty as the
@@ -316,7 +316,14 @@ omarchy default terminal ghostty
 # so no enable-linger. is-enabled reports "disabled" until wired up.
 if [ "$(systemctl --user is-enabled app-com.mitchellh.ghostty.service 2>/dev/null)" != "enabled" ]; then
     echo "==> Enabling ghostty D-Bus service (fast new-window)..."
-    systemctl --user enable --now app-com.mitchellh.ghostty.service
+    systemctl --user enable app-com.mitchellh.ghostty.service
+    # Start it this session too, but tolerate failure: if a ghostty is already running
+    # it owns the com.mitchellh.ghostty D-Bus name, so the resident instance can't claim
+    # it and `start` fails with a protocol error. Harmless -- the service is enabled (it
+    # starts on next login) and `ghostty +new-window` dispatches to the running instance
+    # either way. Without this guard the failure would abort the whole script (set -e).
+    systemctl --user start app-com.mitchellh.ghostty.service 2>/dev/null \
+        || echo "    (immediate start skipped -- a ghostty is already running; enabled for next login)"
 fi
 
 # Enable code-server now that its unit (code-server/.config/systemd/user/) has been
