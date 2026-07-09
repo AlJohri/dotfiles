@@ -126,7 +126,12 @@ fi
 
 echo "==> Installing yabai..."
 if ! command -v yabai &> /dev/null; then
-    curl -L https://raw.githubusercontent.com/asmvik/yabai/master/scripts/install.sh | sh /dev/stdin
+    # Pass the Homebrew prefix as the install target (BIN_DIR MAN_DIR). The installer
+    # defaults to /usr/local, which on Apple Silicon isn't the Homebrew prefix and isn't
+    # user-writable -- `brew --prefix` is /opt/homebrew there and /usr/local on Intel.
+    brew_prefix="$(brew --prefix)"
+    curl -L https://raw.githubusercontent.com/asmvik/yabai/master/scripts/install.sh \
+        | sh /dev/stdin "$brew_prefix/bin" "$brew_prefix/share/man/man1"
 fi
 
 # Centralized stow: interactive (TTY) -> --adopt + per-file review; non-interactive
