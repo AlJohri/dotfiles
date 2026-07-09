@@ -10,6 +10,15 @@ REAL_SCRIPT="$(realpath "${BASH_SOURCE[0]}")"
 DOTFILES_DIR="$(dirname "$(dirname "$(dirname "$REAL_SCRIPT")")")"
 cd "$DOTFILES_DIR"
 
+# Put an already-installed Homebrew (and mise) on PATH. A non-interactive/SSH shell
+# doesn't load the login-shell setup (~/.zprofile's `brew shellenv`, ~/.local/bin), so
+# brew/mise/stow/make would be missing -- and the brew check below would wrongly try to
+# REINSTALL Homebrew. `brew shellenv` is a no-op-safe way to hydrate PATH if brew exists.
+for _brew in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    [ -x "$_brew" ] && eval "$("$_brew" shellenv)" && break
+done
+[ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
+
 echo "==> Checking for Homebrew..."
 if ! command -v brew &> /dev/null; then
     echo "==> Installing Homebrew..."
