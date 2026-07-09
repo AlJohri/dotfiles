@@ -109,12 +109,65 @@ mermaid-ascii = "latest"
 sccache = "0.15.0"
 "cargo:spr" = "latest"
 yarn = "latest"
+# build-dep: pacman:webkitgtk-6.0 in [bootstrap.packages] — remove both together
 "cargo:https://github.com/mipmip/mip.rs" = { version = "latest", os = ["linux"] }
 "github:openclaw/gogcli" = "latest"
 k3d = "5.9.0"
 vercel = { version = "54.15.1", allow_builds = ["esbuild"] }
 stripe = "1.42.15"
 rclone = "1.74.3"
+
+# System packages, applied by `mise bootstrap packages apply` in setup-omarchy.sh /
+# setup-macos.sh (replacing the big imperative pacman/brew blocks). mise applies only
+# the entries matching the current OS's package manager. What stays imperative in the
+# scripts: AUR (yay), `omarchy install …` wrappers, curl installers, one-off
+# install-then-configure steps, and the early-ordering github-cli/git/gh (needed before
+# the mise binary exists). pacman can't pin (Arch repos keep only latest), so "latest".
+[bootstrap.packages]
+
+# --- Linux / omarchy (pacman) ---
+"pacman:bc" = "latest"                    # decimal shell arithmetic in scripts
+"pacman:bind-tools" = "latest"
+"pacman:stow" = "latest"
+"pacman:7zip" = "latest"
+"pacman:make" = "latest"
+"pacman:most" = "latest"
+"pacman:moreutils" = "latest"             # provides `sponge` (used in setup-omarchy)
+"pacman:strace" = "latest"
+"pacman:fish" = "latest"
+"pacman:omarchy-fish" = "latest"
+"pacman:omarchy-zsh" = "latest"
+"pacman:bolt" = "latest"
+"pacman:caligula" = "latest"
+"pacman:nvtop" = "latest"
+"pacman:fprintd" = "latest"
+"pacman:sshpass" = "latest"
+"pacman:tcpdump" = "latest"
+"pacman:tigervnc" = "latest"
+"pacman:tmux" = "latest"
+"pacman:wayvnc" = "latest"
+"pacman:wget" = "latest"
+"pacman:xclip" = "latest"
+"pacman:git-delta" = "latest"             # NOTE: also a [tools] entry (delta); redundant, cleanup TBD
+"pacman:sublime-text-4" = "latest"
+"pacman:tree" = "latest"
+"pacman:visual-studio-code-bin" = "latest"
+"pacman:pandoc-cli" = "latest"
+"pacman:kitty" = "latest"                 # kitten icat for terminal image rendering
+"pacman:chafa" = "latest"                 # terminal image rendering
+# webkitgtk-6.0: build dep of mip.rs (cargo tool in [tools] above). Remove both together;
+# to uninstall: delete + `sudo pacman -Rns webkitgtk-6.0`.
+"pacman:webkitgtk-6.0" = "latest"
+"pacman:wine" = "latest"
+"pacman:wine-mono" = "latest"
+"pacman:fwupd" = "latest"
+"pacman:dmidecode" = "latest"
+
+# --- macOS (brew) ---
+"brew:stow" = "latest"
+"brew:make" = "latest"
+"brew:fish" = "latest"
+"brew:duti" = "latest"
 
 [settings]
 experimental = true

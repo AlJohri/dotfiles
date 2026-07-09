@@ -12,49 +12,13 @@ if ! compgen -G "/var/lib/pacman/sync/*.db" > /dev/null; then
     sudo pacman -Sy
 fi
 
-# github-cli is also installed via mise, but we need it here early so
-# `gh auth token` is available to provide GITHUB_TOKEN for mise install,
-# avoiding GitHub API rate limits.
-echo "==> Installing extra packages (not in omarchy-base)..."
-# bc: arbitrary-precision calculator language, also used by scripts that need shell arithmetic with decimals
-# rendering images: kitten icat image.png, chafa image.png
-# webkitgtk-6.0: GTK4 web engine required to build/run mip.rs (markdown instant preview)
-sudo pacman -S --noconfirm --needed \
-    bc \
-    bind-tools \
-    stow \
-    7zip \
-    make \
-    most \
-    moreutils \
-    strace \
-    fish \
-    omarchy-fish \
-    omarchy-zsh \
-    bolt \
-    caligula \
-    nvtop \
-    fprintd \
-    sshpass \
-    tcpdump \
-    tigervnc \
-    tmux \
-    wayvnc \
-    github-cli \
-    wget \
-    xclip \
-    git-delta \
-    sublime-text-4 \
-    tree \
-    visual-studio-code-bin \
-    pandoc-cli \
-    kitty \
-    chafa \
-    webkitgtk-6.0 \
-    wine \
-    wine-mono \
-    fwupd \
-    dmidecode
+# github-cli must be installed before mise: `gh auth token` provides GITHUB_TOKEN for
+# `mise install` (avoids GitHub API rate limits), and it's needed before the mise binary
+# even exists (installed via curl below). The rest of the system packages are declared in
+# [bootstrap.packages] and installed by `mise bootstrap packages apply --manager pacman`
+# further down — after the mise binary is available.
+echo "==> Installing github-cli (needed early for gh auth token)..."
+sudo pacman -S --noconfirm --needed github-cli
 
 echo "==> Initializing git submodules..."
 REAL_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -134,6 +98,12 @@ echo "==> Installing mise tools..."
 # passed via -C at install time. The stowed global ~/.config/mise/config.toml sets
 # experimental=true for runtime; pass it via env here so the install itself works.
 "$MISE" trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
+# System packages from [bootstrap.packages], scoped to pacman so the brew: entries
+# (macOS) are skipped -- without --manager, apply would set up linuxbrew and build them.
+# Runs before `mise install` because some tools build against these (e.g. mip.rs needs
+# webkitgtk-6.0's pkg-config files at compile time).
+echo "==> Installing system packages via mise bootstrap (pacman)..."
+MISE_EXPERIMENTAL=1 "$MISE" bootstrap packages apply --manager pacman -C "$DOTFILES_DIR/mise/.config/mise"
 GITHUB_TOKEN="$(gh auth token)" MISE_EXPERIMENTAL=1 "$MISE" install -C "$DOTFILES_DIR/mise/.config/mise"
 eval "$("$MISE" env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 
@@ -142,29 +112,43 @@ eval "$("$MISE" env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 # - aqua backend only lists macOS: https://github.com/aquaproj/aqua-registry/blob/main/pkgs/aws/session-manager-plugin/registry.yaml
 # - non-standard Go project structure prevents use of the go backend: https://github.com/aws/session-manager-plugin
 echo "==> Installing AUR packages..."
-# PATH override: mise (activated above) injects toolchain shims that can hijack
-# `ld` during AUR builds, causing source-built packages (snapd, lib32-gstreamer,
-# etc.) to fail linking against the system glibc/glib. Scope yay's PATH to the
-# system toolchain for this one invocation; mise stays active for later steps.
-#
-# --assume-installed lib32-jack=lib32-pipewire-jack: lib32-gstreamer (pulled in
-# transitively by proton-ge-custom / Steam / Wine) depends on the virtual
-# `lib32-jack`, which has two providers: lib32-jack2 and lib32-pipewire-jack.
-# With --noconfirm, yay silently picks the default (lib32-jack2), which would
-# uninstall lib32-pipewire-jack and break PipeWire's JACK routing. Pin the
-# PipeWire shim explicitly.
-PATH=/usr/bin:/usr/local/bin yay -S --noconfirm --needed \
-    --assume-installed lib32-jack=lib32-pipewire-jack \
-    hyprmon-bin \
-    slack-desktop \
-    volumeboost \
-    aws-session-manager-plugin \
-    dropbox \
-    dropbox-cli \
-    nautilus-dropbox \
-    libappindicator-gtk3 \
-    proton-ge-custom \
+# Only install packages that are missing. `yay -S --needed` still REBUILDS an AUR
+# package when its AUR version is newer than what's installed -- for proton-ge-custom
+# that's a multi-minute source build on every re-run. Filtering to the missing set
+# keeps re-runs fast and matches the install-if-absent guards used elsewhere
+# (steam/zed/chrome). Pulling AUR updates is `yay -Syu`'s job, not setup's.
+aur_pkgs=(
+    hyprmon-bin
+    slack-desktop
+    volumeboost
+    aws-session-manager-plugin
+    dropbox
+    dropbox-cli
+    nautilus-dropbox
+    libappindicator-gtk3
+    proton-ge-custom
     protontricks
+)
+aur_missing=()
+for p in "${aur_pkgs[@]}"; do
+    pacman -Q "$p" &>/dev/null || aur_missing+=("$p")
+done
+if (( ${#aur_missing[@]} )); then
+    # PATH override: mise (activated above) injects toolchain shims that can hijack
+    # `ld` during AUR builds, causing source-built packages (snapd, lib32-gstreamer,
+    # etc.) to fail linking against the system glibc/glib. Scope yay's PATH to the
+    # system toolchain for this one invocation; mise stays active for later steps.
+    #
+    # --assume-installed lib32-jack=lib32-pipewire-jack: lib32-gstreamer (pulled in
+    # transitively by proton-ge-custom / Steam / Wine) depends on the virtual
+    # `lib32-jack`, which has two providers: lib32-jack2 and lib32-pipewire-jack.
+    # With --noconfirm, yay silently picks the default (lib32-jack2), which would
+    # uninstall lib32-pipewire-jack and break PipeWire's JACK routing. Pin the
+    # PipeWire shim explicitly.
+    PATH=/usr/bin:/usr/local/bin yay -S --noconfirm --needed \
+        --assume-installed lib32-jack=lib32-pipewire-jack \
+        "${aur_missing[@]}"
+fi
 
 # Replaces the old AMD-only `lib32-vulkan-radeon` step: `omarchy install gaming
 # steam` installs steam and auto-detects the lib32 Vulkan/NVIDIA drivers for any
@@ -288,6 +272,12 @@ fi
 echo "==> Allowing direnv..."
 mise exec direnv -- direnv allow "$DOTFILES_DIR"
 
+# This is THE stow step (runs `make stow-omarchy` internally), not just a review --
+# it creates all the ~/.config symlinks. Load-bearing for what follows: the systemd
+# unit enables and the Chrome/ghostty default handoffs below all rely on the symlinks
+# it lays down. The interactive per-file review only fires on genuine collisions (a
+# real file in ~ differing from ours); on a steady-state machine it's a silent no-op.
+# Requires a clean git tree -- it uses `git checkout`/`git add` to resolve collisions.
 echo "==> Stowing dotfiles (review any incoming changes per file)..."
 "$DOTFILES_DIR/scripts/bin/stow-review.sh"
 

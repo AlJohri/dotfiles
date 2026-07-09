@@ -17,15 +17,14 @@ if ! command -v brew &> /dev/null; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-echo "==> Installing system packages..."
-brew install \
-    stow \
-    make \
-    git \
-    fish \
-    duti
+# git + gh must be installed before mise: git for `git submodule update` and gh for
+# `gh auth token` (provides GITHUB_TOKEN for `mise install`), both of which run before the
+# mise binary is available. The rest of the formulae are declared in [bootstrap.packages]
+# and installed by `mise bootstrap packages apply --manager brew` further down.
+echo "==> Installing git + gh (needed early)..."
+brew install git gh
+# 1password-cli is a cask; bootstrap's brew backend handles formulae, so keep it imperative.
 brew install --cask 1password-cli
-brew install gh
 
 echo "==> Installing mise..."
 if [ ! -f "$HOME/.local/bin/mise" ]; then
@@ -85,6 +84,10 @@ fi
 
 echo "==> Installing mise tools..."
 mise trust "$DOTFILES_DIR/mise/.config/mise/config.toml"
+# System formulae from [bootstrap.packages], scoped to brew so the pacman: entries
+# (omarchy) are skipped. --manager brew handles the formulae; casks stay imperative above.
+echo "==> Installing system packages via mise bootstrap (brew)..."
+MISE_EXPERIMENTAL=1 mise bootstrap packages apply --manager brew -C "$DOTFILES_DIR/mise/.config/mise"
 GITHUB_TOKEN="$(gh auth token)" mise install -C "$DOTFILES_DIR/mise/.config/mise"
 eval "$(mise env -s bash --cd "$DOTFILES_DIR/mise/.config/mise")"
 
