@@ -228,6 +228,65 @@ trust_mise_configs() {
   done
 }
 
+# Fast-forward the local default branch to origin before it's used as a fork
+# point, so new worktrees never branch off a stale main. We never commit
+# directly to the default branch, so its worktree should be pristine — if it
+# has tracked-file modifications we abort rather than clobber them. Untracked
+# files (build output, scratch files) are ignored. Best-effort: a failed fetch
+# or a diverged local branch leaves the local ref untouched and proceeds.
+refresh_default_branch() {
+  local def="$1"
+
+  if ! git fetch origin "$def" >&2; then
+    echo "Warning: 'git fetch origin $def' failed; using local '$def' as-is." >&2
+    return 0
+  fi
+
+  local local_sha remote_sha
+  local_sha=$(git rev-parse --verify --quiet "refs/heads/$def" 2>/dev/null || true)
+  remote_sha=$(git rev-parse --verify --quiet "refs/remotes/origin/$def" 2>/dev/null || true)
+
+  # No remote/local ref, or already up to date — nothing to do.
+  [ -z "$remote_sha" ] && return 0
+  [ -z "$local_sha" ] && return 0
+  [ "$local_sha" = "$remote_sha" ] && return 0
+
+  # Only fast-forward when local is strictly behind origin. If the local
+  # branch has commits origin lacks (something was committed to it), leave it.
+  if ! git merge-base --is-ancestor "$local_sha" "$remote_sha"; then
+    echo "Local '$def' has diverged from origin/$def; leaving it untouched." >&2
+    return 0
+  fi
+
+  # Find the worktree (if any) with the default branch checked out.
+  local def_wt="" wt="" b=""
+  while IFS= read -r line; do
+    case "$line" in
+      "worktree "*) wt="${line#worktree }" ;;
+      "branch "*)
+        b="${line#branch }"; b="${b#refs/heads/}"
+        [ "$b" = "$def" ] && def_wt="$wt"
+        ;;
+    esac
+  done < <(git worktree list --porcelain)
+
+  if [ -n "$def_wt" ]; then
+    # Abort if the default worktree has tracked-file changes we'd clobber.
+    if [ -n "$(git -C "$def_wt" status --porcelain --untracked-files=no)" ]; then
+      echo "Default branch worktree at $def_wt has uncommitted tracked changes:" >&2
+      git -C "$def_wt" status --short --untracked-files=no >&2
+      echo "Refusing to fast-forward '$def'. Commit, stash, or discard these first." >&2
+      exit 1
+    fi
+    echo "Fast-forwarding '$def' ($def_wt) to origin/$def..." >&2
+    git -C "$def_wt" merge --ff-only "origin/$def" >&2
+  else
+    # Not checked out anywhere — move the ref directly.
+    echo "Fast-forwarding local '$def' to origin/$def..." >&2
+    git update-ref "refs/heads/$def" "$remote_sha" "$local_sha" >&2
+  fi
+}
+
 # If the branch is already checked out in an existing worktree, go there —
 # but only when no explicit source-branch was given. With a source-branch the
 # user's intent is to create a NEW branch off it, so an existing branch by
@@ -295,6 +354,7 @@ elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
   BASE_BRANCH="$BRANCH"
 else
   echo "Branch '$BRANCH' not found locally or in origin." >&2
+  refresh_default_branch "$DEFAULT_BRANCH"
   echo "Creating new branch from $DEFAULT_BRANCH." >&2
   git worktree add -b "$BRANCH" "$WORKTREE_DIR" "$DEFAULT_BRANCH" >&2
   BASE_BRANCH="$DEFAULT_BRANCH"
