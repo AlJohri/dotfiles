@@ -63,8 +63,10 @@
 	helper = !gh auth git-credential
 [credential]
 	helper = cache --timeout 7200
-	# Git automatically prepends "git-credential-" to the helper name
-	helper = oauth
+	# 2026-07-11: removed `helper = oauth` (git-credential-oauth) for now.
+	# It mass-launched browser OAuth flows when the gh helper recursed
+	# (git credential fill -> gh auth git-credential -> git credential fill).
+	# Re-add once that recursion is understood.
 
 [gpg]
 	format = ssh
