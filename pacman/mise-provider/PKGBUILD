@@ -1,0 +1,23 @@
+# Empty provider package: satisfies omarchy-fish/omarchy-zsh's `mise` dependency
+# so the real (pacman) mise package can be removed. The actual mise is the
+# curl-installed, self-updating ~/.local/bin/mise (see setup-omarchy.sh), which
+# also owns the shims. Rationale (2026-07): the pacman mise lagged months behind
+# (Arch snapshot predated jdx/mise#8802) and the shims pointed at it, causing a
+# git-credential-helper fork bomb in non-shell contexts (waybar). One mise,
+# self-managed, everywhere.
+#
+# Install/refresh: cd here && makepkg -f && sudo pacman -U --noconfirm mise-provider-*.pkg.tar.zst
+# (setup-omarchy.sh does this automatically when the real mise package is present.)
+pkgname=mise-provider
+pkgver=1
+pkgrel=1
+pkgdesc='Empty package providing mise; real mise is self-managed in ~/.local/bin'
+arch=('any')
+url='https://mise.jdx.dev'
+license=('MIT')
+provides=('mise')
+conflicts=('mise')
+
+package() {
+  :
+}

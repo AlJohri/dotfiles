@@ -99,6 +99,25 @@ fi
 echo "==> Updating mise (needed for bootstrap packages support)..."
 "$MISE" self-update -y || echo "    (self-update failed; continuing on $("$MISE" --version 2>/dev/null))"
 
+# Replace the pacman mise (an omarchy-fish/omarchy-zsh dependency) with the empty
+# mise-provider package so only the self-managed ~/.local/bin/mise exists. A stale
+# /usr/bin/mise is not just a PATH nuisance: mise shims symlink to whichever binary
+# ran reshim, and a months-old pacman mise behind the shims caused a
+# git-credential-helper fork bomb (pre-jdx/mise#8802). pacman -Rdd first because
+# pacman -U --noconfirm auto-DECLINES conflict removals, so the conflicts=('mise')
+# in the PKGBUILD can't do the swap unattended.
+# Exact-name match (-Qq + grep -x): `pacman -Q mise` resolves virtual provides,
+# so after the swap it happily reports mise-provider and would re-enter this
+# block, where `pacman -Rdd mise` then fails ("target not found") and aborts
+# the run via set -e.
+if pacman -Qq | grep -qx mise; then
+    echo "==> Replacing pacman mise with mise-provider (real mise is ~/.local/bin/mise)..."
+    (cd "$DOTFILES_DIR/pacman/mise-provider" && makepkg -f --noconfirm)
+    sudo pacman -Rdd --noconfirm mise
+    sudo pacman -U --noconfirm "$DOTFILES_DIR"/pacman/mise-provider/mise-provider-*.pkg.tar.zst
+    "$MISE" reshim --force
+fi
+
 echo "==> Installing mise tools..."
 # MISE_EXPERIMENTAL=1: `experimental` is a global-only setting, so the experimental
 # backends in our config (conda:) are NOT enabled by the project config
