@@ -37,13 +37,21 @@ if (( ${#missing[@]} )); then
     exit 1
 fi
 
+# 1Password availability check that stays OFF the desktop app. Any real `op`
+# command (even `op account list`) connects to the app socket under desktop-app
+# integration and pops the unlock/authorize dialog — on every setup run, even
+# when there's nothing to materialize. Reading the CLI config file is passive.
+op_available() {
+    command -v op-fast &>/dev/null \
+        && grep -qs "$OP_ACCT" "$HOME/.config/op/config" "${XDG_CONFIG_HOME:-$HOME/.config}/op/config" 2>/dev/null
+}
+
 # Materialize the OAuth client secret from 1Password if the local file is
 # absent (gog needs this exact file too). Skip rather than register a broken
 # entry when neither the file nor 1Password is available — mirrors the
 # incident.io script's "no 1Password → skip" path.
 if [ ! -f "$CLIENT_SECRET" ]; then
-    if ! command -v op-fast &>/dev/null \
-       || ! OP_ACCOUNT="$OP_ACCT" op account list --format=json 2>/dev/null | grep -q '"url"'; then
+    if ! op_available; then
         echo "WARNING: $CLIENT_SECRET missing and 1Password ($OP_ACCT) unavailable, skipping." >&2
         echo "         Sign in to the 1Password CLI (or provision the gog Desktop" >&2
         echo "         OAuth client per the gog runbook), then re-run this script." >&2
@@ -60,12 +68,15 @@ if [ ! -f "$CLIENT_SECRET" ]; then
     echo "    Wrote $CLIENT_SECRET (chmod 600)."
 fi
 
-# Materialize per-account OAuth tokens from 1Password if not already on disk.
-# The `tokens` field is a JSON object { "<email>": <token json>, ... }; iterate
-# its keys. Non-fatal: a missing/unreadable token just means that account needs a
+# Materialize per-account OAuth tokens from 1Password — but only on bootstrap
+# (creds dir empty/missing). The email list lives inside the 1Password field, so
+# checking for "new accounts" would itself require an op read (and a possible
+# app prompt) on every run; skipping when any credential exists keeps re-runs
+# silent. To pull a newly-stashed account: rm -r ~/.google_workspace_mcp/credentials
+# and re-run, or let the server trigger browser consent on first use.
+# Non-fatal: a missing/unreadable token just means that account needs a
 # one-time interactive consent later (the server auto-triggers it on first call).
-if command -v op-fast &>/dev/null \
-   && OP_ACCOUNT="$OP_ACCT" op account list --format=json 2>/dev/null | grep -q '"url"'; then
+if [ -z "$(ls -A "$CREDS_DIR" 2>/dev/null)" ] && op_available; then
     tokens_json="$(OP_ACCOUNT="$OP_ACCT" op-fast read "$OP_TOKENS_REF" 2>/dev/null || true)"
     if [ -n "$tokens_json" ] && printf '%s' "$tokens_json" | jq -e . >/dev/null 2>&1; then
         while IFS= read -r email; do
