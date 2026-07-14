@@ -106,6 +106,8 @@ buf = "latest"
 markdownlint-cli2 = "latest"
 mermaid-ascii = "latest"
 "npm:@mermaid-js/mermaid-cli" = "latest"
+# Obsidian Headless (Sync/Publish without the desktop app); CLI is `ob`. Needs node 22+.
+"npm:obsidian-headless" = "latest"
 sccache = "0.15.0"
 "cargo:spr" = "latest"
 yarn = "latest"
@@ -116,6 +118,7 @@ k3d = "5.9.0"
 vercel = { version = "54.15.1", allow_builds = ["esbuild"] }
 stripe = "1.42.15"
 rclone = "1.74.3"
+atlas = "latest"
 
 # System packages, applied by `mise bootstrap packages apply` in setup-omarchy.sh /
 # setup-macos.sh (replacing the big imperative pacman/brew blocks). mise applies only
