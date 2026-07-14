@@ -130,7 +130,9 @@ atlas = "latest"
 
 # --- Linux / omarchy (pacman) ---
 "pacman:bc" = "latest"                    # decimal shell arithmetic in scripts
-"pacman:bind-tools" = "latest"
+# `bind` (the real package; bind-tools is only a provides/replaces alias). Using the
+# alias makes mise's installed-check miss every run and re-prompt "install bind-tools?".
+"pacman:bind" = "latest"
 "pacman:stow" = "latest"
 "pacman:7zip" = "latest"
 "pacman:make" = "latest"
