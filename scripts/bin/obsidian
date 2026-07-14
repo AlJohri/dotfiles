@@ -58,6 +58,10 @@ if pid == 0:
     except Exception:
         pass
     os.close(parent_fd)
+    # stdin must ALSO be the PTY: the CLI client only waits for the app
+    # response when isatty(stdin). A tty stdout alone is not enough --
+    # fully-piped contexts (cron, CI, agent shells) still got empty output.
+    os.dup2(child_fd, 0)
     os.dup2(child_fd, 1)
     if child_fd > 2:
         os.close(child_fd)
