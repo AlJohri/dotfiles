@@ -157,19 +157,21 @@ fi
 
 # ---------------------------------------------------------------------------
 # PR state
-# ---------------------------------------------------------------------------
-# In-repo session: Claude Code already gave us .pr — use it, no network.
-# Derived (parent-dir) session: ask gh for the worktree's branch, cached 120s
-# and timeout-guarded so a slow network never stalls the status line.
+# Prefer Claude Code's own .pr field (no network). Fall back to gh whenever it's
+# absent but we resolved a branch — this covers both the parent-dir case AND
+# in-repo bare-repo worktrees where Claude Code fails to populate .pr (see
+# github.com/anthropics/claude-code issues #63516). Cached 120s, timeout-guarded
+# so a slow network never stalls the status line.
 PR_NUM=""
 PR_URL=""
 PR_GLYPH_TOK=""
+pr_repo="$ctx_repo"
 if [ -n "$pr_number" ]; then
   PR_NUM="$pr_number"
   PR_URL="$pr_url"
   PR_GLYPH_TOK=$(echo "$pr_state" | sed 's/changes_requested/changes/')
-elif [ "$derived" -eq 1 ] && [ -n "$GIT_BRANCH" ]; then
-  slug=$(printf '%s' "${ctx_repo}_${GIT_BRANCH}" | tr '/ .' '___')
+elif [ -n "$GIT_BRANCH" ] && [ -n "$ctx_dir" ]; then
+  slug=$(printf '%s' "${GIT_BRANCH}" | tr '/ .' '___')
   pr_cache="${TMPDIR:-/tmp}/claude-statusline-pr-${session_id:-x}-${slug}"
   pr_stale=1
   if [ -f "$pr_cache" ]; then
@@ -198,6 +200,13 @@ elif [ "$derived" -eq 1 ] && [ -n "$GIT_BRANCH" ]; then
   fi
   IFS='|' read -r PR_NUM PR_URL PR_GLYPH_TOK < "$pr_cache"
 fi
+
+# Repo label for "<repo>#<num>": parse from the PR url (authoritative — handles
+# bare-repo worktrees where .workspace.repo is null), else fall back to ctx_repo.
+if [ -n "$PR_URL" ]; then
+  pr_repo=$(printf '%s' "$PR_URL" | sed -nE 's#^https?://[^/]+/[^/]+/([^/]+)/pull/[0-9]+.*#\1#p')
+fi
+[ -z "$pr_repo" ] && pr_repo="$ctx_repo"
 
 # ---------------------------------------------------------------------------
 # Output composition
@@ -253,7 +262,7 @@ fi
 
 # PR segment: "<repo>#<num>" (clickable), then a review-state glyph.
 if [ -n "$PR_NUM" ]; then
-  label="${ctx_repo:-PR}#${PR_NUM}"
+  label="${pr_repo:-PR}#${PR_NUM}"
   printf " | ${BOLD}"
   if [ -n "$PR_URL" ]; then
     # OSC 8 hyperlink: ESC ]8;;URL ST  TEXT  ESC ]8;; ST
