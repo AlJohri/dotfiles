@@ -88,6 +88,14 @@ When the user says "add X to my journal" (or similar), run
 + body to `~/Obsidian/journals/YYYYMMDD.md`, creating today's file if
 needed. Pick a 3–8 word title summarizing the entry.
 
+**After creating or editing ANY file under `~/Obsidian/`** (journal entries,
+pages, anything), end the reply with a code-server deep link to that file so
+it can be reviewed immediately (works from iPad). See "share a code-server
+link" in `~/Obsidian/CLAUDE.md` for the full URL template. Build the host from
+this machine's Tailscale MagicDNS name so nothing tailnet-specific is hardcoded:
+`HOST=$(tailscale status --json | jq -r '.Self.DNSName' | sed 's/\.$//')`, then
+`http://$HOST:8080/?folder=$HOME/Obsidian&payload=<url-encoded [["openFile","vscode-remote:///abs/path"]]>`.
+
 ## Work-specific overrides
 
 Work-specific preferences (paths, conventions, internal tooling) live in a
