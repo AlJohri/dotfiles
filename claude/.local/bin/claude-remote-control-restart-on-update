@@ -1,0 +1,42 @@
+#!/bin/sh
+# Restart claude-remote-control when its binary is no longer the installed latest.
+#
+# Triggered by claude-remote-control-restart.path whenever
+# ~/.local/share/claude/versions/ changes. The daemon pins process.execPath at
+# launch and spawns every session child from that exact path, but the
+# auto-updater keeps only the ~4 newest binaries in versions/ — so a daemon
+# left running for ~4 days has its spawn path pruned out from under it and
+# every new session fails with posix_spawn ENOENT (see
+# https://github.com/anthropics/claude-code/issues/47253). Restarting on every
+# version-set change keeps the daemon pinned to the newest binary, which the
+# pruner never deletes.
+#
+# Restarting kills in-flight session children (they're stdio-coupled to the
+# daemon), but session state lives server-side: idle sessions reattach
+# automatically and interrupted ones resume with full history on the next
+# message, so we deliberately skip any idle-gating.
+set -eu
+
+UNIT=claude-remote-control.service
+VERSIONS="$HOME/.local/share/claude/versions"
+
+# Debounce: the updater writes a temp file and renames it into place, which can
+# fire several path events in quick succession.
+sleep 10
+
+[ "$(systemctl --user is-active "$UNIT" 2>/dev/null || true)" = active ] || exit 0
+pid=$(systemctl --user show -p MainPID --value "$UNIT" 2>/dev/null || echo 0)
+[ -n "$pid" ] && [ "$pid" != 0 ] || exit 0
+
+# The daemon's true binary, e.g. .../versions/2.1.210 — or ".../2.1.210 (deleted)"
+# if the pruner already unlinked it.
+exe=$(readlink "/proc/$pid/exe" 2>/dev/null || echo "")
+latest=$(ls "$VERSIONS" 2>/dev/null | sort -V | tail -1)
+[ -n "$latest" ] || exit 0
+
+if [ "$exe" = "$VERSIONS/$latest" ]; then
+	exit 0
+fi
+
+echo "claude-remote-control runs '$exe' but latest is $latest — restarting" >&2
+systemctl --user restart "$UNIT"

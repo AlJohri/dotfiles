@@ -1,0 +1,7 @@
+[Unit]
+Description=Restart claude-remote-control after a CLI update
+After=claude-remote-control.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/claude-remote-control-restart-on-update

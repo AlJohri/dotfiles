@@ -1,0 +1,12 @@
+[Unit]
+Description=Restart claude-remote-control when the CLI version set changes
+
+[Path]
+# Fires on create/delete/write inside versions/ — i.e. whenever the
+# auto-updater installs a new binary or prunes an old one. The triggered
+# service no-ops if the daemon already runs the newest version, so spurious
+# events are harmless.
+PathModified=%h/.local/share/claude/versions
+
+[Install]
+WantedBy=default.target
