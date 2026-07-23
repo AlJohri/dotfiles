@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# What does SLACK'S SERVER think my presence is right now?
+#
+# This is the ground truth for the dot everyone else sees -- better than
+# eyeballing your own avatar, which renders optimistically.
+#
+# Fields that matter:
+#   presence      active | away -- what others see
+#   auto_away     true when a CLIENT reported itself idle (the interesting bit)
+#   manual_away   true when you clicked "set yourself as away"
+#   connections   how many clients are connected (desktop, phone, browser).
+#                 Presence is the OR across all of them, so a phone with Slack
+#                 in the foreground shows you green no matter what this
+#                 computer reports.
+#   last_activity newest activity across all connected clients
+#
+# Usage:
+#   slack-presence            one reading
+#   slack-presence -w [secs]  refresh until interrupted (default 5s)
+#   slack-presence --json     raw API response
+set -euo pipefail
+
+watch_mode=false
+interval=5
+json=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -w|--watch) watch_mode=true; [[ "${2:-}" =~ ^[0-9]+$ ]] && { interval="$2"; shift; } ;;
+    --json) json=true ;;
+    -h|--help) sed -n '2,26p' "$0" | sed 's/^# \?//'; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+eval "$(slack-token)"
+: "${SLACK_TOKEN:?slack-token did not export SLACK_TOKEN}"
+
+reading() {
+  curl -sS --max-time 10 \
+    -H "Authorization: Bearer $SLACK_TOKEN" \
+    -H "Cookie: $SLACK_COOKIE" \
+    "https://slack.com/api/users.getPresence"
+}
+
+ago() {  # epoch -> "3m 12s ago"
+  local then=$1 now delta
+  [[ "$then" == "null" || -z "$then" ]] && { echo "never"; return; }
+  now=$(date +%s); delta=$((now - then))
+  printf '%s (%dm %02ds ago)' "$(date -d "@$then" +%H:%M:%S)" $((delta / 60)) $((delta % 60))
+}
+
+show() {
+  local resp dot
+  resp=$(reading)
+
+  if [[ $(jq -r '.ok' <<<"$resp") != "true" ]]; then
+    echo "API error: $(jq -c . <<<"$resp")" >&2
+    return 1
+  fi
+  if $json; then jq . <<<"$resp"; return; fi
+
+  local presence auto manual conns last
+  presence=$(jq -r '.presence'         <<<"$resp")
+  auto=$(jq -r     '.auto_away'        <<<"$resp")
+  manual=$(jq -r   '.manual_away'      <<<"$resp")
+  conns=$(jq -r    '.connection_count' <<<"$resp")
+  last=$(jq -r     '.last_activity'    <<<"$resp")
+
+  if   [[ "$manual" == "true"   ]]; then dot="AWAY (you set it manually)"
+  elif [[ "$presence" == "away" ]]; then dot="AWAY (auto -- idle)"
+  elif [[ "$conns" == "0"       ]]; then dot="AWAY (nothing connected)"
+  else                                   dot="GREEN"
+  fi
+
+  printf 'Slack server says: %s\n' "$dot"
+  printf '  presence       %s\n'   "$presence"
+  printf '  auto_away      %s\n'   "$auto"
+  printf '  manual_away    %s\n'   "$manual"
+  printf '  connections    %s'     "$conns"
+  [[ "$conns" -gt 1 ]] && printf '   <- more than this computer; a phone can hold you green'
+  printf '\n'
+  printf '  last activity  %s\n'   "$(ago "$last")"
+}
+
+if $watch_mode; then
+  while true; do
+    clear; date '+%H:%M:%S'; echo; show || true
+    sleep "$interval"
+  done
+else
+  show
+fi

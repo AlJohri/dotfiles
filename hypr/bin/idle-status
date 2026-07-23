@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Is this computer considered idle right now -- and does Slack agree?
+#
+# Walks the whole chain that decides your Slack dot, one link per section, so
+# you can see exactly where it breaks:
+#
+#   your hands -> Hyprland (ext-idle-notify) -> hypridle -> mutter-idle-bridge
+#              -> D-Bus org.gnome.Mutter.IdleMonitor -> Slack client -> Slack server
+#
+# WHAT COUNTS AS ACTIVITY: only physical input on the Wayland seat -- keyboard,
+# mouse, touchpad, touch. NOT ssh sessions, NOT tmux, NOT cron, NOT a busy CPU,
+# NOT a video playing. So `ssh`-ing into this box and typing all night leaves it
+# fully idle here, and Slack will mark you away. (An app holding an idle
+# INHIBITOR -- a video call, some players -- does suppress idle.)
+#
+# Granularity: hypridle only reports after its listener `timeout` (30s), so
+# idle time is accurate to about half a minute. That is irrelevant to Slack,
+# whose own auto-away threshold is 10 minutes.
+#
+# Usage: idle-status [-w [secs]]
+set -euo pipefail
+
+watch_mode=false
+interval=5
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -w|--watch) watch_mode=true; [[ "${2:-}" =~ ^[0-9]+$ ]] && { interval="$2"; shift; } ;;
+    -h|--help) sed -n '2,22p' "$0" | sed 's/^# \?//'; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+SLACK_LOG="$HOME/.config/Slack/logs/default/webapp-console.log"
+ok()   { printf '  \033[32m%-4s\033[0m %s\n' "OK"   "$1"; }
+bad()  { printf '  \033[31m%-4s\033[0m %s\n' "FAIL" "$1"; }
+warn() { printf '  \033[33m%-4s\033[0m %s\n' "WARN" "$1"; }
+
+section() { printf '\n\033[1m%s\033[0m\n' "$1"; }
+
+show() {
+  section "1. idle source (hypridle -> bridge)"
+  if pgrep -x hypridle >/dev/null; then
+    ok "hypridle running (pid $(pgrep -x hypridle | head -1))"
+  else
+    bad "hypridle NOT running -- no idle will ever be reported"
+  fi
+  if grep -q "mutter-idle-bridge notify" "$HOME/.config/hypr/hypridle.conf" 2>/dev/null; then
+    ok "listener present in hypridle.conf"
+  else
+    bad "listener MISSING from hypridle.conf (did omarchy regenerate it?)"
+  fi
+
+  section "2. the bridge (answers Chromium's D-Bus question)"
+  if [[ "$(systemctl --user is-active mutter-idle-bridge.service 2>/dev/null)" == "active" ]]; then
+    ok "mutter-idle-bridge.service active"
+  else
+    bad "mutter-idle-bridge.service NOT active -- Slack sees idle=0 forever"
+  fi
+
+  local owner idle_ms idle_s
+  owner=$(busctl --user list --no-pager 2>/dev/null | awk '/org.gnome.Mutter.IdleMonitor/ {print $2" ("$3")"}')
+  if [[ -n "$owner" ]]; then
+    ok "bus name owned by pid $owner"
+  else
+    bad "nobody owns org.gnome.Mutter.IdleMonitor -- this is the original bug"
+  fi
+
+  section "3. is this computer idle?"
+  idle_ms=$(busctl --user call org.gnome.Mutter.IdleMonitor /org/gnome/Mutter/IdleMonitor/Core \
+              org.gnome.Mutter.IdleMonitor GetIdletime 2>/dev/null | awk '{print $2}')
+  if [[ -n "${idle_ms:-}" ]]; then
+    idle_s=$((idle_ms / 1000))
+    if [[ "$idle_s" -eq 0 ]]; then
+      printf '  \033[1mACTIVE\033[0m -- input within the last %ss\n' "30"
+    else
+      printf '  \033[1mIDLE for %dm %02ds\033[0m\n' $((idle_s / 60)) $((idle_s % 60))
+      [[ "$idle_s" -ge 600 ]] && printf '         (past Slack'"'"'s 10-minute auto-away threshold)\n'
+    fi
+  else
+    bad "could not query idle time"
+  fi
+
+  section "4. what the Slack CLIENT believes"
+  if [[ -r "$SLACK_LOG" ]]; then
+    local last_idle last_focus
+    last_idle=$(grep "SET_SYSTEM_IDLE" "$SLACK_LOG" | tail -1)
+    last_focus=$(grep "FOCUS-EVENT" "$SLACK_LOG" | tail -1)
+    if [[ -n "$last_idle" ]]; then
+      # Anchor on the LEADING bracket; a greedy .*\[ would match the later
+      # [FOCUS-EVENT] / [PRESENCE] tags instead of the timestamp.
+      printf '  system idle state : %s\n' \
+        "$(sed -E 's/^\[([^]]*)\].*SET_SYSTEM_IDLE (\w+).*/\2   (as of \1)/' <<<"$last_idle")"
+    else
+      warn "no SET_SYSTEM_IDLE lines yet (restart Slack so it picks up the bridge)"
+    fi
+    [[ -n "$last_focus" ]] && printf '  last window focus : %s\n' \
+      "$(sed -E 's/^\[([^]]*)\].*Main window (\w+).*/\2   (at \1)/' <<<"$last_focus")"
+    printf '  note              : typing IN the Slack window counts as activity\n'
+    printf '                      independently of system idle\n'
+  else
+    warn "Slack log not found -- is Slack installed/running?"
+  fi
+
+  section "5. what SLACK'S SERVER says (the dot others see)"
+  if command -v slack-presence >/dev/null; then
+    slack-presence | sed 's/^/  /'
+  else
+    warn "slack-presence not on PATH"
+  fi
+}
+
+if $watch_mode; then
+  while true; do clear; date '+%H:%M:%S'; show; sleep "$interval"; done
+else
+  show
+fi

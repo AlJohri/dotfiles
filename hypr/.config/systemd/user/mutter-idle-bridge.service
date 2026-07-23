@@ -1,0 +1,20 @@
+[Unit]
+Description=org.gnome.Mutter.IdleMonitor bridge (fixes Electron idle detection on Hyprland)
+Documentation=https://github.com/AlJohri/dotfiles
+# Chromium apps resolve this bus name ONCE at their own startup, so the bridge
+# must already be up before Slack/1Password launch. Binding to the graphical
+# session gets us started at login, well before anything is opened by hand.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=exec
+ExecStart=%h/bin/mutter-idle-bridge --log-level INFO
+Restart=always
+RestartSec=2
+SyslogIdentifier=mutter-idle-bridge
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,454 @@
+#!/usr/bin/env -S uv run --script --quiet
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["dbus-fast"]
+# ///
+"""
+Serve org.gnome.Mutter.IdleMonitor on the session bus, backed by hypridle.
+
+WHY THIS EXISTS
+---------------
+Chromium/Electron apps (Slack, 1Password, ...) ask the desktop "how long has
+the user been idle?" over D-Bus. On Linux the answer comes from
+`WaylandScreen::CalculateIdleTime()`, which tries exactly two providers:
+
+  1. the org_kde_kwin_idle Wayland protocol -- Hyprland does not implement it
+  2. org.gnome.Mutter.IdleMonitor over D-Bus -- nothing owns that name here
+
+Both miss, so Chromium returns 0 forever. Slack therefore believes you are
+always at the keyboard and pins your presence dot green 24/7. Chromium is NOT
+wired to ext-idle-notify, which is the only idle protocol Hyprland offers, so
+there is no compositor-side fix. This daemon fills the gap by answering the
+D-Bus call Chromium is already making.
+
+Verified on 2026-07-22: with this interface served, Slack logs
+`Store: SET_SYSTEM_IDLE idle` ~25s after an idle edge and auto-aways ten
+minutes later (users.getPresence reports auto_away=true).
+
+IDLE SOURCE
+-----------
+A plain program cannot watch your keyboard on Wayland -- only the compositor
+sees input. hypridle already runs on this machine and speaks ext-idle-notify,
+so it does the sensing and pokes us over a unix socket:
+
+    listener {
+        timeout = 30
+        on-timeout = mutter-idle-bridge notify idle
+        on-resume  = mutter-idle-bridge notify active
+    }
+
+Keep --source-timeout in sync with that `timeout` value; it is how we know how
+long the user had already been idle when the poke arrives.
+
+IMPORTANT: Chromium resolves this bus name ONCE, at process startup. If this
+daemon is not running when Slack starts, Slack ignores it until it is
+restarted. The systemd unit starts us with the graphical session; if the
+daemon is restarted, restart Slack too.
+
+FAIL-SAFE DIRECTION
+-------------------
+When the idle source is unavailable or its state is unknown, we report
+ACTIVE (idle time 0). Worst case you keep the always-green dot you had before
+this existed. We must never report idle we cannot substantiate, because that
+would falsely mark you away while you are working.
+"""
+
+import argparse
+import asyncio
+import logging
+import os
+import socket
+import sys
+import time
+from pathlib import Path
+
+from dbus_fast import BusType, Message, MessageType, RequestNameReply
+from dbus_fast.aio import MessageBus
+from dbus_fast.service import ServiceInterface, method, signal
+
+BUS_NAME = "org.gnome.Mutter.IdleMonitor"
+OBJECT_PATH = "/org/gnome/Mutter/IdleMonitor/Core"
+
+DEFAULT_SOURCE_TIMEOUT = 30  # must match the hypridle listener's `timeout`
+WATCHDOG_INTERVAL = 3600
+WATCHDOG_SILENCE_LIMIT = 6 * 3600
+
+log = logging.getLogger("mutter-idle-bridge")
+
+
+def socket_path():
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    return Path(runtime) / "mutter-idle-bridge.sock"
+
+
+class IdleMonitor(ServiceInterface):
+    """The subset of org.gnome.Mutter.IdleMonitor that real consumers call.
+
+    Chromium uses GetIdletime, AddIdleWatch, AddUserActiveWatch, RemoveWatch
+    and the WatchFired signal -- the same subset k4yt3x/idlemon settled on
+    independently for X11. Per-device monitors are deliberately not
+    implemented; nothing asks for them.
+    """
+
+    def __init__(self, source_timeout):
+        super().__init__(BUS_NAME)
+        self._source_timeout = source_timeout
+        self._next_id = 1
+        self._idle_watches = {}   # wid -> threshold in ms
+        self._active_watches = set()
+        self._fired = set()       # idle watches already fired this idle period
+        self._timers = {}         # wid -> asyncio.TimerHandle
+        self._idle_since = None   # monotonic timestamp, or None when active
+        self._last_poke = time.monotonic()
+
+    # ---------------------------------------------------------------- state
+
+    def idle_ms(self):
+        if self._idle_since is None:
+            return 0
+        return int((time.monotonic() - self._idle_since) * 1000)
+
+    def on_idle_start(self):
+        """The user stopped touching the machine `source_timeout` seconds ago."""
+        if self._idle_since is not None:
+            log.debug("idle poke while already idle (%d ms) -- ignoring", self.idle_ms())
+            return
+        self._idle_since = time.monotonic() - self._source_timeout
+        self._fired.clear()
+        log.info(
+            "IDLE START (backdated %ds to when input actually stopped); "
+            "%d idle watch(es), %d user-active watch(es)",
+            self._source_timeout, len(self._idle_watches), len(self._active_watches),
+        )
+        self._schedule_idle_watches()
+
+    def on_user_active(self, reason="poke"):
+        """The user came back, or we lost confidence in the idle state."""
+        was_idle_for = self.idle_ms()
+        self._idle_since = None
+        self._fired.clear()
+        self._cancel_timers()
+        if was_idle_for:
+            log.info("USER ACTIVE (%s) after %.1fs idle", reason, was_idle_for / 1000)
+        else:
+            log.debug("user active (%s), was not idle", reason)
+        for wid in sorted(self._active_watches):
+            log.info("FIRE WatchFired(%d) [user active]", wid)
+            self.WatchFired(wid)
+        # GNOME's user-active watches are one-shot; consumers re-register.
+        self._active_watches.clear()
+
+    # --------------------------------------------------------------- timers
+
+    def _cancel_timers(self):
+        for timer in self._timers.values():
+            timer.cancel()
+        self._timers.clear()
+
+    def _schedule_idle_watches(self):
+        """Fire each idle watch when its threshold is crossed.
+
+        A watch whose threshold has ALREADY been passed fires promptly -- real
+        Mutter behaves this way, and getting it wrong cost a full 10-minute
+        test cycle during development: Slack registered a watch, we only fired
+        on transitions, and it waited forever for an edge that never came.
+        """
+        self._cancel_timers()
+        if self._idle_since is None:
+            return
+        now_ms = self.idle_ms()
+        loop = asyncio.get_running_loop()
+        for wid, threshold in self._idle_watches.items():
+            if wid in self._fired:
+                continue
+            remaining = (threshold - now_ms) / 1000
+            if remaining <= 0:
+                loop.call_soon(self._fire_idle_watch, wid, threshold, "already past")
+            else:
+                self._timers[wid] = loop.call_later(
+                    remaining, self._fire_idle_watch, wid, threshold, "threshold"
+                )
+
+    def _fire_idle_watch(self, wid, threshold, why):
+        self._timers.pop(wid, None)
+        if self._idle_watches.get(wid) != threshold or wid in self._fired:
+            return
+        if self._idle_since is None:
+            return
+        self._fired.add(wid)
+        log.info("FIRE WatchFired(%d) [idle >= %d ms, %s]", wid, threshold, why)
+        self.WatchFired(wid)
+
+    # -------------------------------------------------------------- D-Bus API
+
+    @method()
+    def GetIdletime(self) -> "t":
+        value = self.idle_ms()
+        log.info("CALL GetIdletime -> %d ms", value)
+        return value
+
+    @method()
+    def AddIdleWatch(self, interval_ms: "t") -> "u":
+        wid = self._next_id
+        self._next_id += 1
+        self._idle_watches[wid] = interval_ms
+        log.info("CALL AddIdleWatch(interval=%d ms) -> watch %d", interval_ms, wid)
+        self._schedule_idle_watches()
+        return wid
+
+    @method()
+    def AddUserActiveWatch(self) -> "u":
+        wid = self._next_id
+        self._next_id += 1
+        self._active_watches.add(wid)
+        log.info("CALL AddUserActiveWatch() -> watch %d", wid)
+        return wid
+
+    @method()
+    def RemoveWatch(self, wid: "u"):
+        existed = self._idle_watches.pop(wid, None) is not None
+        if wid in self._active_watches:
+            self._active_watches.discard(wid)
+            existed = True
+        self._fired.discard(wid)
+        if timer := self._timers.pop(wid, None):
+            timer.cancel()
+        log.info("CALL RemoveWatch(%d)%s", wid, "" if existed else " [unknown watch]")
+
+    @signal()
+    def WatchFired(self, wid: "u") -> "u":
+        return wid
+
+
+class Bridge:
+    def __init__(self, args):
+        self.args = args
+        self.iface = IdleMonitor(args.source_timeout)
+        self.bus = None
+        self._sender_names = {}
+
+    async def start(self):
+        self.bus = await MessageBus(bus_type=BusType.SESSION).connect()
+        self.bus.add_message_handler(self._trace_incoming)
+        self.bus.export(OBJECT_PATH, self.iface)
+
+        reply = await self.bus.request_name(BUS_NAME)
+        if reply not in (RequestNameReply.PRIMARY_OWNER, RequestNameReply.ALREADY_OWNER):
+            log.error(
+                "could not acquire %s (reply=%s) -- another process owns it. "
+                "A real GNOME session, or a leftover test stub, is already serving "
+                "this interface. Refusing to fight over it.",
+                BUS_NAME, reply.name,
+            )
+            return False
+
+        log.info("owning %s at %s", BUS_NAME, OBJECT_PATH)
+        log.info(
+            "idle source: hypridle listener poking %s (source-timeout=%ds)",
+            socket_path(), self.args.source_timeout,
+        )
+        self._warn_if_consumers_already_running()
+        return True
+
+    def _warn_if_consumers_already_running(self):
+        """Chromium resolves this bus name once at startup, so anything already
+        running will never notice us until it restarts."""
+        running = []
+        for proc in Path("/proc").iterdir():
+            if not proc.name.isdigit():
+                continue
+            try:
+                comm = (proc / "comm").read_text().strip()
+            except OSError:
+                continue
+            if comm in ("slack", "1password") and comm not in running:
+                running.append(comm)
+        for name in running:
+            log.warning(
+                "%s is ALREADY RUNNING -- it resolved this bus name at its own "
+                "startup and will not pick us up until you restart it",
+                name,
+            )
+
+    def _trace_incoming(self, msg):
+        """Log every inbound method call with the caller's identity.
+
+        Returning None lets normal dispatch continue. Knowing that *Slack*
+        asked for a 5000ms watch, rather than "someone did", is the single
+        most useful line in this log.
+        """
+        if msg.message_type is MessageType.METHOD_CALL and msg.interface == BUS_NAME:
+            sender = msg.sender
+            known = self._sender_names.get(sender)
+            log.debug("<- %s from %s", msg.member, known or sender)
+            if known is None and sender:
+                self._sender_names[sender] = ""  # in-flight marker
+                asyncio.create_task(self._resolve_sender(sender))
+        return None
+
+    async def _resolve_sender(self, sender):
+        try:
+            reply = await self.bus.call(
+                Message(
+                    destination="org.freedesktop.DBus",
+                    path="/org/freedesktop/DBus",
+                    interface="org.freedesktop.DBus",
+                    member="GetConnectionUnixProcessID",
+                    signature="s",
+                    body=[sender],
+                )
+            )
+            pid = reply.body[0]
+            comm = Path(f"/proc/{pid}/comm").read_text().strip()
+            label = f"{comm}[{pid}]"
+            self._sender_names[sender] = label
+            log.info("caller %s identified as %s", sender, label)
+        except Exception as exc:  # identification is best-effort only
+            log.debug("could not identify caller %s: %s", sender, exc)
+            self._sender_names.pop(sender, None)
+
+    # ------------------------------------------------------------------ IPC
+
+    async def serve_ipc(self):
+        path = socket_path()
+        if path.exists():
+            path.unlink()
+
+        async def handle(reader, writer):
+            try:
+                raw = await asyncio.wait_for(reader.readline(), timeout=5)
+            except asyncio.TimeoutError:
+                writer.close()
+                return
+            msg = raw.decode(errors="replace").strip()
+            self.iface._last_poke = time.monotonic()
+            if msg == "idle":
+                self.iface.on_idle_start()
+            elif msg == "active":
+                self.iface.on_user_active("hypridle resume")
+            else:
+                log.warning("ignoring unknown IPC message: %r", msg)
+            writer.close()
+
+        server = await asyncio.start_unix_server(handle, path=str(path))
+        path.chmod(0o600)
+        log.info("listening for hypridle pokes on %s", path)
+        async with server:
+            await server.serve_forever()
+
+    async def watchdog(self):
+        """The cost of using hypridle as the source: we cannot see it die.
+
+        A stopped hypridle, a config regenerated by `omarchy update`, or a
+        typo'd listener all look exactly like "he simply has not gone idle
+        yet". All we can do is notice an implausibly long silence and say so.
+        """
+        while True:
+            await asyncio.sleep(WATCHDOG_INTERVAL)
+            silent_for = time.monotonic() - self.iface._last_poke
+            if silent_for > WATCHDOG_SILENCE_LIMIT:
+                log.warning(
+                    "no idle poke in %.1f hours. Either you really have not "
+                    "idled, or the source is broken: check `pgrep hypridle` and "
+                    "that the mutter-idle-bridge listener is still in "
+                    "~/.config/hypr/hypridle.conf. Reporting ACTIVE meanwhile.",
+                    silent_for / 3600,
+                )
+            else:
+                log.debug("watchdog ok; last poke %.1f min ago", silent_for / 60)
+
+
+# ------------------------------------------------------------------ commands
+
+
+def cmd_notify(args):
+    """Called by hypridle's on-timeout / on-resume. Must be fast and quiet."""
+    path = socket_path()
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(5)
+            sock.connect(str(path))
+            sock.sendall(f"{args.state}\n".encode())
+    except OSError as exc:
+        print(f"mutter-idle-bridge: cannot reach daemon at {path}: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+async def _probe():
+    bus = await MessageBus(bus_type=BusType.SESSION).connect()
+    reply = await bus.call(
+        Message(
+            destination=BUS_NAME,
+            path=OBJECT_PATH,
+            interface=BUS_NAME,
+            member="GetIdletime",
+        )
+    )
+    if reply.message_type is MessageType.ERROR:
+        print(f"error: {reply.error_name}: {reply.body}", file=sys.stderr)
+        return 1
+    idle_ms = reply.body[0]
+    print(f"idle for {idle_ms} ms ({idle_ms / 1000:.1f}s)")
+    return 0
+
+
+def cmd_probe(args):
+    return asyncio.run(_probe())
+
+
+async def _run_daemon(args):
+    bridge = Bridge(args)
+    if not await bridge.start():
+        return 1
+    await asyncio.gather(bridge.serve_ipc(), bridge.watchdog())
+    return 0
+
+
+def cmd_daemon(args):
+    try:
+        return asyncio.run(_run_daemon(args))
+    except KeyboardInterrupt:
+        return 0
+    finally:
+        path = socket_path()
+        if path.exists():
+            path.unlink(missing_ok=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Serve org.gnome.Mutter.IdleMonitor backed by hypridle.",
+    )
+    parser.add_argument("--log-level", default="INFO",
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    parser.add_argument("--source-timeout", type=int, default=DEFAULT_SOURCE_TIMEOUT,
+                        help="the hypridle listener's `timeout`, in seconds; "
+                             "used to backdate when input actually stopped")
+    sub = parser.add_subparsers(dest="command")
+
+    p_notify = sub.add_parser("notify", help="poke the daemon (used by hypridle)")
+    p_notify.add_argument("state", choices=["idle", "active"])
+    p_notify.set_defaults(func=cmd_notify)
+
+    sub.add_parser("probe", help="ask the running daemon for current idle time") \
+       .set_defaults(func=cmd_probe)
+
+    sub.add_parser("daemon", help="run the bridge (default)") \
+       .set_defaults(func=cmd_daemon)
+
+    args = parser.parse_args()
+    if args.command is None:
+        args.func = cmd_daemon
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s.%(msecs)03d %(levelname)-7s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+        stream=sys.stderr,
+    )
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main() or 0)
